@@ -305,6 +305,11 @@ dependencies = [
     { name = "python-dotenv" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "rich" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "browser-cookie3", specifier = ">=0.20.1" },
@@ -312,6 +317,9 @@ requires-dist = [
     { name = "gemini-webapi", specifier = ">=1.15.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "rich", specifier = ">=14.1.0" }]
 
 [[package]]
 name = "loguru"

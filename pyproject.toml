@@ -10,3 +10,8 @@ dependencies = [
     "gemini-webapi>=1.15.0",
     "python-dotenv>=1.1.1",
 ]
+
+[dependency-groups]
+dev = [
+    "rich>=14.1.0",
+]
