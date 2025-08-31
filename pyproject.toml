@@ -1,0 +1,12 @@
+[project]
+name = "klique-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12.4"
+dependencies = [
+    "browser-cookie3>=0.20.1",
+    "fastapi[standard]>=0.116.1",
+    "gemini-webapi>=1.15.0",
+    "python-dotenv>=1.1.1",
+]
