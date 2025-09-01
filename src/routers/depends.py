@@ -7,18 +7,8 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
 from pydantic import BaseModel
-from config import SECRET_KEY, ALGORITHM
-
-fake_users_db = {
-    "usertest": {
-        "username": "usertest",
-        "full_name": "John Doe",
-        "email": "usertest@example.com",
-        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-        "disabled": False,
-    }
-}
-
+from ..config import SECRET_KEY, ALGORITHM
+from ..services.mongodb import get_users_collection
 
 class Token(BaseModel):
     access_token: str
@@ -38,6 +28,12 @@ class User(BaseModel):
 
 class UserInDB(User):
     hashed_password: str
+
+
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -93,7 +89,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = TokenData(username=username)
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(fake_users_db, username=token_data.username)
+    user = get_user(get_users_collection(), username=token_data.username)
     if user is None:
         raise credentials_exception
     return user
