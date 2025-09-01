@@ -2,7 +2,6 @@ import asyncio
 import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from gemini_webapi import GeminiClient
 
 # inicializa o logger antes de qualquer outra coisa
 from src.logger import logger
@@ -14,6 +13,10 @@ from src.services.mongo_service import MongoService
 from src.config import settings
 
 
+# Logging já configurado via src.logger
+logger.opt(colors=True).info(f"[main.py] <cyan>MONGO_DB_CONNECTION_STRING</cyan>: <yellow>{os.environ.get('MONGO_DB_CONNECTION_STRING')}</yellow>")
+logger.opt(colors=True).info(f"[main.py] <cyan>GOOGLE_APPLICATION_CREDENTIALS</cyan>: <yellow>{os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')}</yellow>")
+logger.opt(colors=True).debug(f"[main.py] Variáveis carregadas: {list(os.environ.keys())}")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Inicia os serviços e os armazena no estado da aplicação

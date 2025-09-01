@@ -1,7 +1,7 @@
-import os
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict, field_validator
-
+load_dotenv(dotenv_path=".env", override=True)
 
 class Settings(BaseSettings):
     # Configurações do Gemini
@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     MONGO_DB_CONNECTION_STRING: str
     GOOGLE_APPLICATION_CREDENTIALS: str
     GOOGLE_DRIVE_ROOT_FOLDER_ID: str
+
+    # Configurações de Autenticação
+    AUTH_TOKEN: str
 
     model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
 

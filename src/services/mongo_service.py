@@ -9,10 +9,12 @@ class MongoService:
         Initializes the MongoDB service, connecting to the database and
         selecting the collections.
         """
+        from src.logger import logger
         if connection_string is None:
             connection_string = os.getenv("MONGO_DB_CONNECTION_STRING")
-        
+        logger.error(f"[MongoService] Valor de MONGO_DB_CONNECTION_STRING: {connection_string!r}")
         if not connection_string:
+            logger.critical("[MongoService] Variável de ambiente MONGO_DB_CONNECTION_STRING não está definida!")
             raise ValueError("MONGO_DB_CONNECTION_STRING environment variable not set.")
         
         self.client = MongoClient(str(connection_string))
