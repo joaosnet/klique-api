@@ -1,118 +1,117 @@
 import asyncio
 import base64
 import io
-import logging
 import uuid
-from typing import Dict, List, Optional
+from typing import Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
-from gemini_webapi import GeminiClient, ChatSession
-from gemini_webapi.constants import Model
-from gemini_webapi.exceptions import (
-    APIError,
-    ModelInvalid,
-    TemporarilyBlocked,
-    TimeoutError,
-    UsageLimitExceeded,
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    Security,
+    Header,
 )
+from fastapi.security import HTTPBearer
 from PIL import Image
-from pydantic import BaseModel
 
 from src.services.gemini import GeminiService
+from src.services.firebase_service import FirebaseService
+from src.services.drive_service import DriveService
+from src.services.mongo_service import MongoService
+from src.logger import logger
 
 router = APIRouter()
-
-
-class GenerateIn(BaseModel):
-    prompt: str
-    model: Optional[str] = (
-        None  # ex: "gemini-1.5-flash" | "gemini-1.5-pro" | "unspecified"
-    )
-    gem: Optional[str] = None  # id de gem opcional
-    files: Optional[List[str]] = None  # caminhos para arquivos opcionais
-    chat_metadata: Optional[dict] = None  # para continuar conversa (opcional)
-
-
-@router.post("/generate")
-async def generate(req: GenerateIn, request: Request):
-    client: GeminiClient = request.app.state.gemini
-    sem: asyncio.Semaphore = request.app.state.sem
-
-    chat = None
-    if req.chat_metadata:
-        chat = client.start_chat(metadata=req.chat_metadata)
-
-    async with sem:
-        try:
-            output = await client.generate_content(
-                prompt=req.prompt,
-                files=req.files,
-                model=req.model or Model.UNSPECIFIED,
-                gem=req.gem,
-                chat=chat,
-            )
-        except UsageLimitExceeded as e:
-            raise HTTPException(status_code=429, detail=str(e))
-        except TimeoutError as e:
-            raise HTTPException(status_code=504, detail=str(e))
-        except ModelInvalid as e:
-            raise HTTPException(status_code=400, detail=str(e))
-        except TemporarilyBlocked as e:
-            raise HTTPException(status_code=403, detail=str(e))
-        except APIError as e:
-            raise HTTPException(status_code=502, detail=str(e))
-
-    return {
-        "text": output.text,
-        "candidates": [c.text for c in output.candidates],
-        "images": [img.url for img in output.images],
-        "metadata": output.metadata,  # útil p/ continuar a conversa
-    }
+auth_scheme = HTTPBearer()
 
 
 @router.post("/generate/image")
 async def generate_image(
     request: Request,
     prompt: str = Form(...),
-    session_id: Optional[str] = Form(None),
     image_file: Optional[UploadFile] = File(None),
+    authorization: Optional[str] = Header(None),
 ):
+    # Extrair serviços do estado da aplicação
+    firebase_service: FirebaseService = request.app.state.firebase_service
+    mongo_service: MongoService = request.app.state.mongo_service
+    drive_service: DriveService = request.app.state.drive_service
     gemini_service: GeminiService = request.app.state.gemini_service
-    chat_sessions: Dict[str, ChatSession] = request.app.state.chat_sessions
-    chat_session = None
 
-    if session_id and session_id in chat_sessions:
-        chat_session = chat_sessions[session_id]
-    else:
-        chat_session = await gemini_service.start_chat()
-        new_session_id = str(uuid.uuid4())
-        chat_sessions[new_session_id] = chat_session
-        session_id = new_session_id
+    # 1. Autenticação e Extração do Token
+    if authorization is None:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
 
+    try:
+        # O cabeçalho vem como "Bearer <token>", então pegamos a segunda parte
+        token = authorization.split(" ")[1]
+        user_data = firebase_service.verify_firebase_token(token)
+        uid = user_data["uid"]
+        logger.info(f"Usuário autenticado com sucesso: {uid}")
+    except IndexError:
+        raise HTTPException(
+            status_code=401, detail="Invalid Authorization header format"
+        )
+    except HTTPException as e:
+        logger.warning(f"Falha na autenticação: {e.detail}")
+        raise e
+
+    # 2. Verificação de Limite de Uso
+    if await mongo_service.is_rate_limited(uid):
+        raise HTTPException(status_code=429, detail="Limite de uso excedido.")
+
+    # 3. Geração de Imagem
     image = None
     if image_file:
         contents = await image_file.read()
         image = Image.open(io.BytesIO(contents))
 
     try:
+        # Inicia uma nova sessão de chat para cada requisição, já que não há estado
+        chat_session = await gemini_service.start_chat()
+
         response = await gemini_service.send_message(
             chat=chat_session, prompt=prompt, image=image
         )
 
-        generated_image_base64 = None
-        if response.images:
-            # Assumindo que a imagem gerada está em response.images[0]
-            # e que é um objeto com um método para obter os bytes
-            img_buffer = io.BytesIO()
-            await response.images[0].save(img_buffer)
-            img_bytes = img_buffer.getvalue()
-            generated_image_base64 = base64.b64encode(img_bytes).decode("utf-8")
+        if not response.images:
+            raise HTTPException(status_code=500, detail="Nenhuma imagem foi gerada.")
+
+        generated_image = response.images[0]
+        
+        # Converte a imagem para bytes para upload e para a resposta
+        img_buffer = io.BytesIO()
+        await generated_image.save(img_buffer, format="JPEG")
+        img_bytes = img_buffer.getvalue()
+
+        # 4. Upload para o Google Drive
+        filename = f"{uid}_{uuid.uuid4()}.jpg"
+        drive_file_id = drive_service.upload_image(
+            user_id=uid, image_bytes=img_bytes, filename=filename
+        )
+        logger.info(f"Imagem carregada para o Drive com ID: {drive_file_id}")
+
+        # 5. Salvar Prompt e Metadados no MongoDB
+        await mongo_service.save_prompt(
+            user_id=uid,
+            prompt_text=prompt,
+            drive_file_id=drive_file_id,
+        )
+        logger.info(f"Prompt salvo para o usuário: {uid}")
+
+        # 6. Retornar a Imagem Gerada em Base64 e o ID do Drive
+        encoded_image = base64.b64encode(img_bytes).decode("utf-8")
 
         return {
-            "session_id": session_id,
-            "generated_image": generated_image_base64,
+            "generated_image": encoded_image,
+            "drive_file_id": drive_file_id,
             "response_text": response.text,
+            "session_id": chat_session.session_id,
         }
+
     except Exception as e:
-        logging.error(f"Erro inesperado em generate_image: {e}", exc_info=True)
+        logger.error(f"Erro inesperado em generate_image para o usuário {uid}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Erro interno no servidor: {e}")

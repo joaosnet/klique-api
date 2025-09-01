@@ -1,4 +1,5 @@
 import asyncio
+import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from gemini_webapi import GeminiClient
@@ -7,18 +8,39 @@ from gemini_webapi import GeminiClient
 from src.logger import logger
 from src.routers import generate, batch
 from src.services.gemini import GeminiService
+from src.services.firebase_service import FirebaseService
+from src.services.drive_service import DriveService
+from src.services.mongo_service import MongoService
+from src.config import settings
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Inicia o cliente Gemini e o armazena no estado da aplicação
-    client = GeminiClient()
-    await client.init()
-    app.state.gemini = client
-    app.state.gemini_service = GeminiService()
-    app.state.chat_sessions = {}
-    app.state.sem = asyncio.Semaphore(5)  # Limita a 5 requisições concorrentes
-    logger.info("Cliente Gemini e serviço inicializados.")
+    # Inicia os serviços e os armazena no estado da aplicação
+    try:
+        app.state.firebase_service = FirebaseService()
+        app.state.drive_service = DriveService(settings.GOOGLE_APPLICATION_CREDENTIALS)
+        app.state.mongo_service = MongoService()
+
+        client = GeminiClient()
+        await client.init(
+            timeout=settings.GEMINI_TIMEOUT,
+            auto_close=settings.GEMINI_AUTO_CLOSE,
+            close_delay=settings.GEMINI_CLOSE_DELAY,
+        )
+        app.state.gemini = client
+        app.state.gemini_service = GeminiService(client)
+        # app.state.chat_sessions = {} # Removido, não é mais necessário
+        app.state.sem = asyncio.Semaphore(settings.GEMINI_CONCURRENCY_LIMIT)
+
+        logger.info("Serviços inicializados com sucesso.")
+    except Exception as e:
+        logger.critical(f"Falha ao inicializar os serviços: {e}", exc_info=True)
+        # Em um cenário real, você pode querer parar a aplicação se os serviços essenciais falharem
+        raise
+        
     yield
+    
     # Limpeza (se necessário)
     logger.info("Encerrando a API.")
 

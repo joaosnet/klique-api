@@ -7,8 +7,8 @@ customModes:
       - read
       - command
       - - edit
-        - fileRegex: \.(test|spec)\.(js|ts|jsx|tsx)$
-          description: Test files only
+        - fileRegex: ^(?:test_.*|.*_test)\.py$
+          description: Python test files (pytest/unittest)
     customInstructions: |
       Prioritize test readability, comprehensive edge cases, and clear assertion messages. Always consider both happy path and error scenarios.
     source: project

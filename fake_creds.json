@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "klique-6630b",
+  "private_key_id": "bfece4101cdfc95159a674e3b92c61d6c27d2041",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDCIao3zqLdxexr\nUNPL4mjPdxtBISMdIFL8aOapPX7IyexHSGXCZkihdaqwu5ZKBGR1G6Jqtzysgksb\nenHmIkqIRbz5ioCTnb3oXib0nJNI/sjKZIDATmTUPYxMxwRHS1IPXN/b2hsd3R4/\nfcmxoDPfi4R0BWr46tEtt26jN5u1h4uQJeKNc8JrTzq8vug3UtU5gc5LTKexZjYf\njGJC46iJzNSf6b5Bdg5xYBV+lRYU1aUfuxGmQjqeDU0yf4epVdVnLCObSrtcOCrp\ncZXRTxHkCQ4qRdCP6ybnn8G9Enf+3bvEK38N0db8m3BPGfLVz4X+efJNNVxGKFpb\nOQK15RmtAgMBAAECggEARWpYPUBMCFTfZrguI3c/1v9V5YH91kpaohq4b8encBCT\nxiFjEZIVYnZ6pFtPMARGD4HkH5iJv32PcbHkzE9yqyuUmP4nX6FF6LLR5yGdoLpJ\n/eTWDO17LFEdu85l/0A1hXzGJwzkKVeJm1ZVKoiIQ+TVZc8SIxOD3H78tqwJp2zC\noGsDOuYABkBFj2PClpxmsxOjwN6t/H/nimBRd9TVUt37+6O/NDp+/IApdvuAUN+m\n/om+VbzQbNqSCzV6AmJeCplby8qkanhn48WTufJRaKUAUl+z7djOGWg/pJYD0clb\n47W1yqIcaZb83eth/wrami5IUR+qvjoRGoZOua5cmQKBgQDqU4dtBlkzPRK70Alv\n51y5kM0odsInm/PhIlnPW4Gm2YBcwFdgXbAn4EQOCyePEXPSvORA0Lq8nLzfCK3j\ngzd85CgMWykma1M2AIOh/xbdfWNSYD5z1WNnl8XuJ4pBsRuU/iIij5rRHx9RecCR\n6L45ZEqkeW+Dv87zCk/yZRzO3wKBgQDUFmNMBDIDvXjz8w1pKs7U8NiUY7XLfgPj\nC6mxr9clahW6baJfYC6mwg9FGFoy9SMeJ6pBxnDxU13bfwMHDxucKpRUuEst5A9t\nKaEHbLBKp3e7ULmfIaXKKxkF5G5cXb0bpBaVzFMhcP3D2I7jAghuvYaxZdS0TQ2p\nbGcB2hbE8wKBgCQoqZAwV5lphjeHHb2v5QYZix8AXGuCTDrkcxllVHdrvrwRTipn\nqqQsnjPQktUn60iMr2g1DWvHf/mmvDaMbAaQqoFlm8765sdBgw5/b4bUL3xpr5lu\nRz2YFQnv/gyvCMOQB7JvmINGmy2WbRnW4Wu3xzDkMEoTUhr872NHKQ/fAoGACMeY\nergdvevlCuw/3N+pykTiIlpyVyczT/3Wm4V0+ZaHqb0KILqhk8Oq0Chu63ccag4o\nTSrC2CqkUwbSAEPO18sncs5iRlcPkGxNvznvnleKbFWuKXlCHLlmAslvDCHRR0im\nqrLXqiW8S5Q2bg1SfgsYfVWC1afu7dmP9hKqKKMCgYEAt9pk9qXx47FZSuRKNUCv\nNjUvplKwsvrKku9AbGZtrqMAbg5g+BPQVnY+KMMMmh3jcw0cPy+fAcqBZp6tTdoJ\nLeaqAsMRSunDxFw4MNM/oVHDKNQ1IKHOXByxH8cOQv9Vb0hiCdPMQrEG+gGFJkBT\ndrbzvvlFqlFVRjhJzW6aGDY=\n-----END PRIVATE KEY-----\n",
+  "client_email": "klique-service@klique-6630b.iam.gserviceaccount.com",
+  "client_id": "107696639711439680370",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/klique-service%40klique-6630b.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

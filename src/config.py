@@ -1,11 +1,25 @@
 import os
+from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 
-GEMINI_1PSID = os.getenv("GEMINI_1PSID", "")
-GEMINI_1PSIDTS = os.getenv("GEMINI_1PSIDTS", "")
-PROXY = os.getenv("HTTP_PROXY") or os.getenv("HTTPS_PROXY")
-TIMEOUT = float(os.getenv("GEMINI_TIMEOUT", "30"))
-AUTO_CLOSE = os.getenv("GEMINI_AUTO_CLOSE", "false").lower() == "true"
-CLOSE_DELAY = float(os.getenv("GEMINI_CLOSE_DELAY", "300"))
-CONCURRENCY_LIMIT = int(
-    os.getenv("GEMINI_CONCURRENCY", "4")
-)  # ajuste conforme sua conta/infra
+
+class Settings(BaseSettings):
+    # Configurações do Gemini
+    GEMINI_1PSID: str = ""
+    GEMINI_1PSIDTS: str = ""
+    GEMINI_TIMEOUT: float = 30.0
+    GEMINI_AUTO_CLOSE: bool = False
+    GEMINI_CLOSE_DELAY: float = 300.0
+    GEMINI_CONCURRENCY_LIMIT: int = 4
+
+    # Configurações do Firebase e Google Drive
+    MONGO_DB_CONNECTION_STRING: str
+    GOOGLE_DRIVE_SHARED_FOLDER_ID: str
+    FIREBASE_CREDENTIALS_JSON: str
+    GOOGLE_APPLICATION_CREDENTIALS: str
+    GOOGLE_DRIVE_ROOT_FOLDER_ID: str
+
+    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+
+settings = Settings()

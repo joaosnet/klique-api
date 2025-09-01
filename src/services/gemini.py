@@ -6,18 +6,16 @@ import tempfile
 import os
 
 class GeminiService:
-    def __init__(self):
+    def __init__(self, client: GeminiClient):
         """
-        Inicializa o GeminiService.
+        Inicializa o GeminiService com um cliente Gemini existente.
         """
-        self.client = GeminiClient()
-        self.loop = asyncio.get_event_loop()
+        self.client = client
 
     async def start_chat(self):
         """
-        Inicia o cliente Gemini e uma nova sessão de chat.
+        Inicia uma nova sessão de chat usando o cliente existente.
         """
-        await self.client.init()
         return self.client.start_chat()
 
     async def send_message(self, chat, prompt: str, image: Optional[Image.Image] = None):
