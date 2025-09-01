@@ -7,3 +7,4 @@ se o pacote for uma dependência de desenvolvimento, usamos:
 uv add --dev <pacote>
 ```
 Esse projetos é orientado a testes, logo todas as funcionalidades novas devem ser acompanhadas de testes e testadas com o modo de Test Engineer.
+Sempre usamos o mcp do context7 para termos a versão mais recente de como implementar uma funcionalidade.

@@ -4,16 +4,18 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
 class MongoService:
-    def __init__(self):
+    def __init__(self, connection_string: Optional[str] = None):
         """
         Initializes the MongoDB service, connecting to the database and
         selecting the collections.
         """
-        connection_string = os.getenv("MONGO_DB_CONNECTION_STRING")
+        if connection_string is None:
+            connection_string = os.getenv("MONGO_DB_CONNECTION_STRING")
+        
         if not connection_string:
             raise ValueError("MONGO_DB_CONNECTION_STRING environment variable not set.")
         
-        self.client = MongoClient(connection_string)
+        self.client = MongoClient(str(connection_string))
         self.db = self.client.get_database("klique")
         self.users_collection = self.db.get_collection("users")
         self.prompts_collection = self.db.get_collection("prompts")
@@ -96,3 +98,16 @@ class MongoService:
             {"$inc": {"request_count": 1}}
         )
         return False
+
+    def ping(self) -> bool:
+        """
+        Checks if the connection to the database is alive.
+
+        Returns:
+            True if the connection is alive, False otherwise.
+        """
+        try:
+            self.client.admin.command('ping')
+            return True
+        except Exception:
+            return False
