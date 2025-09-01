@@ -18,6 +18,7 @@ class BatchIn(BaseModel):
 
 @router.post("/batch")
 async def batch(req: BatchIn, request: Request):
+    """Processa múltiplos prompts em batch."""
     client: GeminiClient = request.app.state.gemini
     sem: asyncio.Semaphore = request.app.state.sem
 

@@ -35,6 +35,7 @@ class GenerateIn(BaseModel):
 
 @router.post("/generate")
 async def generate(req: GenerateIn, request: Request):
+    """Gera conteúdo baseado em um prompt, com suporte opcional para arquivos e metadados de chat."""
     client: GeminiClient = request.app.state.gemini
     sem: asyncio.Semaphore = request.app.state.sem
 
@@ -77,6 +78,7 @@ async def generate_image(
     session_id: Optional[str] = Form(None),
     image_file: Optional[UploadFile] = File(None),
 ):
+    """Gera uma imagem a partir de um prompt, opcionalmente continuando uma sessão de chat existente."""
     gemini_service: GeminiService = request.app.state.gemini_service
     chat_sessions: Dict[str, ChatSession] = request.app.state.chat_sessions
     chat_session = None
