@@ -6,11 +6,12 @@ import tempfile
 import os
 
 class GeminiService:
-    def __init__(self, client: GeminiClient):
+    def __init__(self):
         """
-        Inicializa o GeminiService com um cliente Gemini existente.
+        Inicializa o GeminiService com um cliente Gemini.
+        Os cookies são carregados automaticamente pelo browser-cookie3.
         """
-        self.client = client
+        self.client = GeminiClient()
 
     async def start_chat(self):
         """

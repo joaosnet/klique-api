@@ -22,14 +22,13 @@ async def lifespan(app: FastAPI):
         app.state.drive_service = DriveService(settings.GOOGLE_APPLICATION_CREDENTIALS)
         app.state.mongo_service = MongoService()
 
-        client = GeminiClient()
-        await client.init(
+        gemini_service = GeminiService()
+        await gemini_service.client.init(
             timeout=settings.GEMINI_TIMEOUT,
             auto_close=settings.GEMINI_AUTO_CLOSE,
             close_delay=settings.GEMINI_CLOSE_DELAY,
         )
-        app.state.gemini = client
-        app.state.gemini_service = GeminiService(client)
+        app.state.gemini_service = gemini_service
         # app.state.chat_sessions = {} # Removido, não é mais necessário
         app.state.sem = asyncio.Semaphore(settings.GEMINI_CONCURRENCY_LIMIT)
 
