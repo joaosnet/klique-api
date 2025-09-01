@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import asyncio
 import os
 from fastapi import FastAPI
@@ -46,15 +45,6 @@ async def lifespan(app: FastAPI):
     
     # Limpeza (se necessário)
     logger.info("Encerrando a API.")
-=======
-from fastapi import FastAPI
-
-# inicializa o logger antes de qualquer outra coisa
-from src.logger import logger
-
-from src.services.gemini import lifespan
-from src.routers import generate, batch
->>>>>>> parent of 10cb0bb (Refactor code structure for improved readability and maintainability)
 
 app = FastAPI(lifespan=lifespan)
 
