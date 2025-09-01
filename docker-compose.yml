@@ -1,10 +1,58 @@
 services:
-  mongo:
+  mongodb:
     image: mongo:latest
+    container_name: mongodb
     ports:
       - "27017:27017"
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=password
     volumes:
-      - ./mongo-data:/data/db
+      - ./backups:/data/backups  # Pasta local de backups
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: dmovel  # Nome do banco padrão
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+      
+  fastapi-app:
+    container_name: fastapi-app
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      DB_USERNAME: root
+      DB_PASSWORD: example
+      DB_HOST: mongodb
+      DB_DATABASE: dmovel  # Mesmo nome do banco padrão
+    env_file:
+      - ./.env
+    volumes:
+      - ./app:/app/app
+    develop:
+      # Create a `watch` configuration to update the app
+      # https://docs.docker.com/compose/file-watch/#compose-watch-versus-bind-mounts
+      watch:
+        # Sync the working directory with the `/app` directory in the container
+        - action: sync
+          path: .
+          target: /app
+          # Exclude the project virtual environment — it could be for a
+          # different platform in the container
+          ignore:
+            - .venv/
+
+        # Rebuild the image if dependencies change by checking uv.lock
+        - action: rebuild
+          path: ./uv.lock
+          
+volumes:
+  mongodb_data:
+  .cookies:

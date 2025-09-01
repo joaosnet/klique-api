@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
         app.state.drive_service = DriveService(settings.GOOGLE_APPLICATION_CREDENTIALS)
         app.state.mongo_service = MongoService()
 
-        gemini_service = GeminiService()
+        gemini_service = GeminiService(settings.Secure_1PSID, settings.Secure_1PSIDTS)
         await gemini_service.client.init(
             timeout=settings.GEMINI_TIMEOUT,
             auto_close=settings.GEMINI_AUTO_CLOSE,
