@@ -6,7 +6,7 @@ customModes:
     groups:
       - read
       - command
-      - edit
+      - - edit
         - fileRegex: ^(?:test_.*|.*_test)\.py$
           description: Python test files (pytest/unittest)
     customInstructions: |

@@ -11,14 +11,14 @@ router = APIRouter()
 
 
 class BatchIn(BaseModel):
-    prompts: List[str]
-    model: Optional[str] = None
+    prompts: List[str] = ["Não sei o que escrever, me de uma lista de opções de filtros para edição de imagens"]
+    model: Optional[str] = "unspecified"
     gem: Optional[str] = None
 
 
 @router.post("/batch")
 async def batch(req: BatchIn, request: Request):
-    client: GeminiClient = request.app.state.gemini
+    client: GeminiClient = request.app.state.gemini_service.client
     sem: asyncio.Semaphore = request.app.state.sem
 
     async def run_one(p: str):

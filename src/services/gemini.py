@@ -1,17 +1,20 @@
-import asyncio
 from gemini_webapi import GeminiClient
 from typing import Optional
 from PIL import Image
 import tempfile
 import os
-
+from dotenv import dotenv_values
 class GeminiService:
     def __init__(self):
         """
         Inicializa o GeminiService com um cliente Gemini.
         Os cookies são carregados automaticamente pelo browser-cookie3.
         """
-        self.client = GeminiClient()
+        config = dotenv_values(".env")
+        self.client = GeminiClient(
+            secure_1psid=config["Secure_1PSID"],
+            secure_1psidts=config["Secure_1PSIDTS"]
+        )
 
     async def start_chat(self):
         """

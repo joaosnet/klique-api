@@ -1,14 +1,15 @@
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict, field_validator
-load_dotenv(dotenv_path=".env", override=True)
-
+load_dotenv()
 class Settings(BaseSettings):
     # Configurações do Gemini
     GEMINI_TIMEOUT: float = 30.0
     GEMINI_AUTO_CLOSE: bool = False
     GEMINI_CLOSE_DELAY: float = 300.0
     GEMINI_CONCURRENCY_LIMIT: int = 4
+    Secure_1PSID: str
+    Secure_1PSIDTS: str
 
     # Configurações do Firebase e Google Drive
     MONGO_DB_CONNECTION_STRING: str
