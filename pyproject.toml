@@ -8,6 +8,7 @@ dependencies = [
     "browser-cookie3>=0.20.1",
     "fastapi[standard]>=0.116.1",
     "gemini-webapi>=1.15.0",
+    "pillow>=11.3.0",
     "python-dotenv>=1.1.1",
 ]
 
@@ -15,5 +16,6 @@ dependencies = [
 dev = [
     "httpx>=0.28.1",
     "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
     "rich>=14.1.0",
 ]
