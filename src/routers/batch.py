@@ -2,10 +2,9 @@ import asyncio
 from typing import List, Optional
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel
-
 from gemini_webapi import GeminiClient
 from gemini_webapi.constants import Model
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -16,7 +15,7 @@ class BatchIn(BaseModel):
     gem: Optional[str] = None
 
 
-@router.post("/batch")
+@router.post('/batch')
 async def batch(req: BatchIn, request: Request):
     """Processa múltiplos prompts em batch."""
     client: GeminiClient = request.app.state.gemini
@@ -38,8 +37,8 @@ async def batch(req: BatchIn, request: Request):
     formatted = []
     for i, r in enumerate(results):
         if isinstance(r, Exception):
-            formatted.append({"index": i, "error": str(r)})
+            formatted.append({'index': i, 'error': str(r)})
         else:
-            formatted.append({"index": i, "text": r})
+            formatted.append({'index': i, 'text': r})
 
-    return {"results": formatted}
+    return {'results': formatted}

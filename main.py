@@ -1,11 +1,14 @@
 import asyncio
-from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from gemini_webapi import GeminiClient
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from gemini_webapi import GeminiClient
+
 from src.logger import logger
-from src.routers import generate, batch, auth
+from src.routers import auth, batch, generate
 from src.services.gemini import GeminiService
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,32 +19,31 @@ async def lifespan(app: FastAPI):
     app.state.gemini_service = GeminiService()
     app.state.chat_sessions = {}
     app.state.sem = asyncio.Semaphore(5)  # Limita a 5 requisições concorrentes
-    logger.info("Cliente Gemini e serviço inicializados.")
+    logger.info('Cliente Gemini e serviço inicializados.')
     yield
     # Limpeza (se necessário)
-    logger.info("Encerrando a API.")
-
+    logger.info('Encerrando a API.')
 
 
 app = FastAPI(lifespan=lifespan)
 
 origins = [
-    "http://localhost.tiangolo.com",
-    "https://localhost.tiangolo.com",
-    "http://localhost",
-    "http://localhost:8080",
+    'http://localhost.tiangolo.com',
+    'https://localhost.tiangolo.com',
+    'http://localhost',
+    'http://localhost:8080',
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
 app.include_router(generate.router)
 app.include_router(batch.router)
 app.include_router(auth.router)
 
-logger.info("API iniciada. Acesse http://127.0.0.1:8000/docs")
+logger.info('API iniciada. Acesse http://127.0.0.1:8000/docs')

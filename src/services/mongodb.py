@@ -24,6 +24,7 @@ def get_mongodb_url(db: str = DB_DATABASE, host: str = DB_HOST) -> str:
     else:
         return f'{DB_CONNECTION}://{host}:{DB_PORT}/{db}?authSource=admin'
 
+
 # Cliente e banco de dados para conexões
 _client: AsyncIOMotorClient = None
 
@@ -33,6 +34,7 @@ def get_client() -> AsyncIOMotorClient:
     if _client is None:
         _client = AsyncIOMotorClient(get_mongodb_url())
     return _client
+
 
 # Dependency injection para bancos de dados
 def get_db() -> AsyncIOMotorDatabase:

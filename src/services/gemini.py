@@ -1,9 +1,11 @@
 import asyncio
-from gemini_webapi import GeminiClient
-from typing import Optional
-from PIL import Image
-import tempfile
 import os
+import tempfile
+from typing import Optional
+
+from gemini_webapi import GeminiClient
+from PIL import Image
+
 
 class GeminiService:
     def __init__(self):
@@ -20,7 +22,10 @@ class GeminiService:
         await self.client.init()
         return self.client.start_chat()
 
-    async def send_message(self, chat, prompt: str, image: Optional[Image.Image] = None):
+    @classmethod
+    async def send_message(
+        self, chat, prompt: str, image: Optional[Image.Image] = None
+    ):
         """
         Envia uma mensagem para o chat, opcionalmente com uma imagem.
 
@@ -30,10 +35,12 @@ class GeminiService:
         :return: A resposta do modelo.
         """
         if image:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+            with tempfile.NamedTemporaryFile(
+                delete=False, suffix='.png'
+            ) as tmp:
                 image.save(tmp.name)
                 tmp_path = tmp.name
-            
+
             try:
                 response = await chat.send_message(prompt, files=[tmp_path])
             finally:

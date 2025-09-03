@@ -21,4 +21,42 @@ dev = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
     "rich>=14.1.0",
+    "ruff>=0.12.11",
+    "taskipy>=1.14.1",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = "-v --tb=short -p no:warnings"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+required_plugins = ["pytest-asyncio"]
+
+[tool.ruff]
+line-length = 79
+extend-exclude = ['migrations']
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+# ignore = ["E501", "PLR2004"]
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
+
+[tool.taskipy.tasks]
+lint = 'ruff check . && ruff check . --diff'
+pre_format = 'uv sync --dev'
+format = 'ruff check . --fix && ruff format .'
+pre_run = 'task format'
+run = 'fastapi dev main.py --host 0.0.0.0'
+prod = 'uvicorn --host 0.0.0.0 main:app'
+pre_test = 'task format'
+start = 'sudo supervisorctl stop fastapi & task run'
+back = 'sudo supervisorctl start fastapi'
+test = 'pytest -s -x --cov=app -vv'
+post_test = 'coverage html' 
+nav = 'python -c "from pathlib import Path; import webbrowser; webbrowser.open(Path(\"htmlcov/index.html\").resolve().as_uri())"'
