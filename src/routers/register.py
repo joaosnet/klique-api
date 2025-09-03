@@ -95,18 +95,12 @@ async def register(
         data={'sub': created_user['email']},
         expires_delta=timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
     )
-
-    user_response = UserResponse(
-        id=str(created_user['_id']),
-        name=created_user['name'],
-        email=created_user['email'],
-        user_type=created_user['user_type'],
-        confirmed_code=created_user['confirmed_code'],
-        confirmation_code=created_user['confirmation_code'],
-        created_at=created_user.get('created_at'),
-        updated_at=created_user.get('updated_at'),
-        profile_id=created_user['profile_id'],
-    ).model_dump(by_alias=True)
+    # Instanciação robusta usando model_validate para garantir suporte ao alias
+    if '_id' in created_user:
+        created_user['_id'] = str(created_user['_id'])
+    user_response = UserResponse.model_validate(created_user).model_dump(
+        by_alias=True
+    )
 
     user_response['created_at'] = user_response['created_at'].isoformat()
     user_response['updated_at'] = user_response['updated_at'].isoformat()
@@ -226,7 +220,6 @@ async def _send_email(to_email: str, subject: str, body: str):
     port = 587
     sender_email = GMAIL_EMAIL
     password = GMAIL_PASSWORD
-    print(password)
 
     message = MIMEMultipart()
     message['From'] = f'KliqueApp <{sender_email}>'
