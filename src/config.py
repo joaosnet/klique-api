@@ -21,7 +21,7 @@ GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 # Auth Settings
 ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv('ACCESS_TOKEN_EXPIRE_DAYS', '30'))
 GMAIL_EMAIL = os.getenv('GMAIL_EMAIL')
-GMAIL_PASSWORD = os.getenv('GMAIL_PASSWORD')
+GMAIL_PASSWORD = os.getenv('GMAIL_APP_PASSWORD')
 
 # MongoDB Settings
 DB_CONNECTION = os.getenv('DB_CONNECTION', 'mongodb')

@@ -1,6 +1,6 @@
 import random
 import smtplib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from http import HTTPStatus
@@ -64,9 +64,7 @@ async def register(
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
-    new_profile = db_profiles.insert_one(
-        profile.model_dump(exclude={'id'})
-    )
+    new_profile = db_profiles.insert_one(profile.model_dump(exclude={'id'}))
 
     # Criar usuário
     hashed_password = get_password_hash(user_data.password)
@@ -95,11 +93,11 @@ async def register(
     # Criar token JWT
     access_token = create_access_token(
         data={'sub': created_user['email']},
-        expires_delta=datetime.timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
+        expires_delta=timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
     )
 
     user_response = UserResponse(
-        id=created_user['_id'],
+        id=str(created_user['_id']),
         name=created_user['name'],
         email=created_user['email'],
         user_type=created_user['user_type'],
@@ -158,7 +156,7 @@ async def verify_email(
 
         # Preparar resposta sem confirmation_code
         user_response = UserSimplified(
-            id=created_user['_id'],
+            id=str(created_user['_id']),
             name=created_user['name'],
             email=created_user['email'],
             confirmed_code=created_user['confirmed_code'],
@@ -228,12 +226,13 @@ async def _send_email(to_email: str, subject: str, body: str):
     port = 587
     sender_email = GMAIL_EMAIL
     password = GMAIL_PASSWORD
+    print(password)
 
     message = MIMEMultipart()
     message['From'] = f'KliqueApp <{sender_email}>'
     message['To'] = to_email
     message['Subject'] = subject
-    message.attach(MIMEText(body, 'plain', 'utf-8'))
+    message.attach(MIMEText(body, 'html', 'utf-8'))
 
     try:
         with smtplib.SMTP(smtp_server, port) as server:
@@ -250,9 +249,29 @@ async def send_confirmation_code(
     confirmation_code: str, user_email: str, user_name: str
 ):
     subject = 'Código de confirmação de e-mail | Klique'
-    body = (
-        f'Olá, {user_name}! Seu código de confirmação é: {confirmation_code}'
-    )
+    body = f"""
+    <html>
+    <head>
+        <style>
+            body {{ font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }}
+            .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
+            h1 {{ color: #333; }}
+            p {{ color: #666; }}
+            .code {{ background-color: #e7f3ff; border: 1px solid #007bff; padding: 10px; font-size: 24px; font-weight: bold; text-align: center; border-radius: 4px; margin: 20px 0; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Confirmação de E-mail - Klique</h1>
+            <p>Olá, {user_name}!</p>
+            <p>Obrigado por se registrar no Klique. Para confirmar seu e-mail, use o código abaixo:</p>
+            <div class="code">{confirmation_code}</div>
+            <p>Se você não solicitou este código, ignore este e-mail.</p>
+            <p>Atenciosamente,<br>Equipe Klique</p>
+        </div>
+    </body>
+    </html>
+    """  # noqa: E501
     return await _send_email(user_email, subject, body)
 
 
