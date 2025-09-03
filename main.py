@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from gemini_webapi import GeminiClient
 
+from src.database import close_mongo_connection, connect_to_mongo
 from src.logger import logger
 from src.routers import auth, batch, generate
 from src.services.gemini import GeminiService
@@ -13,6 +14,7 @@ from src.services.gemini import GeminiService
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Inicia o cliente Gemini e o armazena no estado da aplicação
+    connect_to_mongo()
     client = GeminiClient()
     await client.init()
     app.state.gemini = client
@@ -22,6 +24,7 @@ async def lifespan(app: FastAPI):
     logger.info('Cliente Gemini e serviço inicializados.')
     yield
     # Limpeza (se necessário)
+    close_mongo_connection()
     logger.info('Encerrando a API.')
 
 
@@ -46,4 +49,7 @@ app.include_router(generate.router)
 app.include_router(batch.router)
 app.include_router(auth.router)
 
-logger.info('API iniciada. Acesse http://127.0.0.1:8000/docs')
+if __name__ == '__main__':
+    import uvicorn
+
+    uvicorn.run(app, host='0.0.0.0', port=8000)

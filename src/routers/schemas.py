@@ -1,0 +1,137 @@
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field
+
+
+class User(BaseModel):
+    id: str = Field(..., alias='_id')
+    profile_id: str
+    name: str
+    email: EmailStr
+    user_type: str
+    confirmed_code: bool
+    created_at: datetime
+    updated_at: datetime
+    password: Optional[str] = None
+
+
+class Profile(BaseModel):
+    id: str = Field(..., alias='_id')
+    name: str
+    nickname: str
+    country: str
+    state: str
+    city: str
+    district: str
+    deficiency: str
+    avatar_url: Optional[str] = None
+    email: EmailStr
+    created_at: datetime
+    updated_at: datetime
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class LoginForm(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class LoginRequest(BaseModel):
+    success: bool
+    user: dict
+    token: str
+    access_token: str
+    token_type: str
+
+
+class RegisterRequest(BaseModel):
+    id: str
+    name: str
+    country: str
+    state: str
+    city: str
+    district: str
+    deficiency: str
+    avatar_url: Optional[str] = None
+    email: EmailStr
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: str = Field(..., alias='_id')
+    name: str
+    email: EmailStr
+    user_type: str
+    confirmed_code: bool
+    confirmation_code: str
+    created_at: datetime
+    updated_at: datetime
+    profile_id: str
+
+
+class RegisterResponse(BaseModel):
+    success: bool
+    user: dict
+    message: str
+    token: str
+
+
+class ValidToken(BaseModel):
+    success: bool
+    message: str
+
+
+class ChangePasswordRequest(BaseModel):
+    email: EmailStr
+    password: str
+    new_password: str
+
+
+class DefautMessage(BaseModel):
+    success: bool
+    message: str
+
+
+class RequestChangeEmail(BaseModel):
+    email: EmailStr
+    password: str
+    new_email: EmailStr
+    confirmation_code: Optional[str] = None
+
+
+class SearchByEmailRequest(BaseModel):
+    email: EmailStr
+
+
+class UserSimplified(BaseModel):
+    id: str = Field(..., alias='_id')
+    name: str
+    email: EmailStr
+    confirmed_code: bool
+
+
+class verifyEmailRequest(BaseModel):
+    email: EmailStr
+    name: str
+    google: bool
+
+
+class verifyEmailResponse(BaseModel):
+    success: bool
+    message: str
+    user: UserSimplified
+
+
+class confirmCodeRequest(BaseModel):
+    id: str
+    confirmation_code: str
+
+
+class confirmCodeResponse(BaseModel):
+    success: bool
+    message: str

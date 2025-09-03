@@ -3,15 +3,40 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-GEMINI_1PSID = os.getenv('GEMINI_1PSID', '')
-GEMINI_1PSIDTS = os.getenv('GEMINI_1PSIDTS', '')
-PROXY = os.getenv('HTTP_PROXY') or os.getenv('HTTPS_PROXY')
-TIMEOUT = float(os.getenv('GEMINI_TIMEOUT', '30'))
-AUTO_CLOSE = os.getenv('GEMINI_AUTO_CLOSE', 'false').lower() == 'true'
-CLOSE_DELAY = float(os.getenv('GEMINI_CLOSE_DELAY', '300'))
-CONCURRENCY_LIMIT = int(
-    os.getenv('GEMINI_CONCURRENCY', '4')
-)  # ajuste conforme sua conta/infra
+
+# Gemini API Settings
 SECRET_KEY = os.getenv('SECRET_KEY')
-ALGORITHM = 'HS256'
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECURE_1PSID = os.getenv('Secure_1PSID')
+SECURE_1PSIDTS = os.getenv('Secure_1PSIDTS')
+GEMINI_TIMEOUT = int(os.getenv('GEMINI_TIMEOUT', '30'))
+GEMINI_AUTO_CLOSE = os.getenv('GEMINI_AUTO_CLOSE', 'true').lower() == 'true'
+GEMINI_CLOSE_DELAY = int(os.getenv('GEMINI_CLOSE_DELAY', '10'))
+GEMINI_CONCURRENCY_LIMIT = int(os.getenv('GEMINI_CONCURRENCY_LIMIT', '5'))
+
+# Google Cloud Settings
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+GOOGLE_DRIVE_ROOT_FOLDER_ID = os.getenv('GOOGLE_DRIVE_ROOT_FOLDER_ID')
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+
+# Auth Settings
+ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv('ACCESS_TOKEN_EXPIRE_DAYS', '30'))
+GMAIL_EMAIL = os.getenv('GMAIL_EMAIL')
+GMAIL_PASSWORD = os.getenv('GMAIL_PASSWORD')
+
+# MongoDB Settings
+DB_CONNECTION = os.getenv('DB_CONNECTION', 'mongodb')
+DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_PORT = int(os.getenv('DB_PORT', '27017'))
+DB_DATABASE = os.getenv('DB_DATABASE', 'klique')
+DB_USERNAME = os.getenv('DB_USERNAME')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+
+
+def get_mongodb_url() -> str:
+    """Constructs the MongoDB connection URL from environment variables."""
+    if DB_USERNAME and DB_PASSWORD:
+        return f'{DB_CONNECTION}://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/'
+    return f'{DB_CONNECTION}://{DB_HOST}:{DB_PORT}/'
+
+
+MONGO_URL = get_mongodb_url()
