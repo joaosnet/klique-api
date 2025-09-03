@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
+from fastapi import Form
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -17,7 +18,7 @@ class User(BaseModel):
 
 
 class Profile(BaseModel):
-    id: str = Field(..., alias='_id')
+    id: Optional[str] = Field(None, alias='_id')
     name: str
     nickname: str
     country: str
@@ -36,6 +37,10 @@ class Token(BaseModel):
     token_type: str
 
 
+class TokenData(BaseModel):
+    username: str | None = None
+
+
 class LoginForm(BaseModel):
     email: EmailStr
     password: str
@@ -49,17 +54,20 @@ class LoginRequest(BaseModel):
     token_type: str
 
 
-class RegisterRequest(BaseModel):
-    id: str
-    name: str
-    country: str
-    state: str
-    city: str
-    district: str
-    deficiency: str
+class GoogleLoginRequest(BaseModel):
+    token: str
+
+
+class UserCreate(BaseModel):
+    name: str = Form('João Neto')
+    country: str = Form('Brasil')
+    state: str = Form('SP')
+    city: str = Form('São Paulo')
+    district: str = Form('Centro')
+    deficiency: str = Form('Nenhuma')
     avatar_url: Optional[str] = None
-    email: EmailStr
-    password: str
+    email: EmailStr = Form('joao@example.com')
+    password: str = Form('senha')
 
 
 class UserResponse(BaseModel):

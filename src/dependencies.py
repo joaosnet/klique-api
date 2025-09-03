@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -79,12 +79,22 @@ async def get_current_active_user(
     return current_user
 
 
+def get_token_from_header(
+    authorization: Annotated[str | None, Header()] = None,
+) -> str | None:
+    if authorization and authorization.startswith('Bearer '):
+        return authorization.split(' ')[1]
+    return authorization
+
+
 def invalidate_token(token: str):
     invalidated_tokens.add(token)
     return True
 
 
-async def authenticate_user(db_users, username, password):
+async def authenticate_user(
+    db_users: Collection, username: str, password: str
+):
     user = await db_users.find_one({'email': username})
     if not user:
         return False

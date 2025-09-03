@@ -7,7 +7,7 @@ from gemini_webapi import GeminiClient
 
 from src.database import close_mongo_connection, connect_to_mongo
 from src.logger import logger
-from src.routers import auth, batch, generate
+from src.routers import auth, batch, generate, register
 from src.services.gemini import GeminiService
 
 
@@ -28,7 +28,8 @@ async def lifespan(app: FastAPI):
     logger.info('Encerrando a API.')
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, title='Klique AI API', version='1.0.0')
+
 
 origins = [
     'http://localhost.tiangolo.com',
@@ -48,6 +49,7 @@ app.add_middleware(
 app.include_router(generate.router)
 app.include_router(batch.router)
 app.include_router(auth.router)
+app.include_router(register.router)
 
 if __name__ == '__main__':
     import uvicorn

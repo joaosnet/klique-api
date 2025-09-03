@@ -6,7 +6,7 @@ logger.remove()
 
 # 2. Adiciona o RichHandler para logs bonitos no console (exceto gemini_webapi)
 logger.add(
-    RichHandler(markup=True),
+    RichHandler(markup=True, rich_tracebacks=True),
     level='INFO',
     filter=lambda record: 'gemini_webapi' not in record['name'],
     format='{message}',

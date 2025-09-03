@@ -1,15 +1,12 @@
-import json
 import random
 import smtplib
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from http import HTTPStatus
 from typing import Annotated
 
-from bson import ObjectId
-from fastapi import APIRouter, Depends, Header, HTTPException, status
-from fastapi.responses import PlainTextResponse
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 
@@ -21,7 +18,6 @@ from src.config import (
 )
 from src.database import (
     get_mail_confirmation_collection,
-    get_profiles_collection,
 )
 from src.dependencies import (
     authenticate_token,
@@ -29,6 +25,7 @@ from src.dependencies import (
     create_access_token,
     get_current_active_user,
     get_password_hash,
+    get_token_from_header,
     get_users_collection,
     invalidate_token,
     verify_password,
@@ -38,245 +35,79 @@ from ..logger import logger
 from .schemas import (
     ChangePasswordRequest,
     DefautMessage,
-    LoginForm,
-    LoginRequest,
-    Profile,
-    RegisterRequest,
-    RegisterResponse,
+    GoogleLoginRequest,
     RequestChangeEmail,
     SearchByEmailRequest,
     Token,
     User,
-    UserResponse,
-    UserSimplified,
     ValidToken,
-    confirmCodeRequest,
-    confirmCodeResponse,
-    verifyEmailRequest,
-    verifyEmailResponse,
 )
 
 router = APIRouter()
 
 
-@router.post(
-    '/auth/login',
-    tags=['auth'],
-    status_code=status.HTTP_200_OK,
-    response_model=LoginForm,
-    responses={
-        401: {
-            'description': 'Código de segurança não confirmado',
-            'content': {
-                'application/json': {
-                    'example': {
-                        'success': False,
-                        'message': 'Código de segurança não confirmado',
-                    }
-                }
-            },
-        }
-    },
-)
-async def login(form_data: LoginForm, db_users=Depends(get_users_collection)):
+@router.post('/auth/google', response_model=Token, tags=['auth'])
+async def google_login(
+    request: GoogleLoginRequest, db_users=Depends(get_users_collection)
+):
     try:
-        # Verificar se o usuário está cadastrado
-        # com o Google usando google-auth
-        # Para isso, email é o email do Google e
-        # password é o user idToken do Google
-        user = await db_users.find_one({'email': form_data.email})
+        id_info = id_token.verify_oauth2_token(
+            request.token, google_requests.Request(), GOOGLE_CLIENT_ID
+        )
+        email = id_info.get('email')
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Email not found in Google token',
+            )
+
+        user = await db_users.find_one({'email': email})
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail='Email não cadastrado',
+                detail='User not registered',
             )
 
-        try:
-            # Verificar o token do Google (recebido no campo password)
-            id_info = id_token.verify_oauth2_token(
-                form_data.password,
-                google_requests.Request(),
-                GOOGLE_CLIENT_ID,
-            )
-
-            # Verificar se o email do token corresponde ao email da conta
-            if id_info.get('email') != user['email']:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail='Token inválido - email não corresponde',
-                )
-
-            # Se chegarmos aqui, o token Google é válido
-            # Não é necessário verificar a senha neste caso
-        except Exception as e:
-            logger.error(
-                'Erro ao verificar token do Google, verificando senha normal: '
-                + str(e)
-            )
-            # Para contas não-Google, verificar senha normal
-            if not verify_password(form_data.password, user['password']):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail='Senha incorreta',
-                )
-
-        user_data = User(
-            id=user['_id'],
-            profile_id=user.get('profile_id', '').encode('utf-8'),
-            name=user['name'],
-            email=user['email'],
-            user_type=user['user_type'],
-            confirmed_code=user['confirmed_code'],
-            created_at=user.get('created_at', datetime.now(timezone.utc)),
-            updated_at=user.get('updated_at', datetime.now(timezone.utc)),
-            password=user.get('password', 'Não possui senha'),
-        )
-
-        user_data_dict = user_data.model_dump(
-            by_alias=True, exclude_unset=True
-        )
-        user_data_dict['created_at'] = user_data_dict['created_at'].isoformat()
-        user_data_dict['updated_at'] = user_data_dict['updated_at'].isoformat()
-
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_DAYS)
         access_token = create_access_token(
-            data={'sub': user['email']},
-            expires_delta=timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
+            data={'sub': user['email']}, expires_delta=access_token_expires
         )
+        return {'access_token': access_token, 'token_type': 'bearer'}
 
-        request = LoginRequest(
-            success=True,
-            user=user_data_dict,
-            token=access_token,
-            access_token=access_token,
-            token_type='bearer',
-        ).model_dump(by_alias=True, exclude_unset=True)
-        request = json.dumps(request, ensure_ascii=True)
-
-        return PlainTextResponse(
-            content=request,
-            status_code=status.HTTP_200_OK,
-            media_type='application/json',
-        )
-
-    except HTTPException:
-        # logger.info(str(e),exc_info=True)cl
-        raise
-
-    except Exception as e:
-        logger.info(str(e), exc_info=True)
+    except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            detail='Invalid Google token',
         )
 
 
-@router.post(
-    '/auth/register',
-    status_code=HTTPStatus.CREATED,
-    response_model=RegisterResponse,
-    tags=['auth'],
-)
-async def register(
-    user: RegisterRequest,
+@router.post('/token', response_model=Token, tags=['auth'])
+async def login_for_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db_users=Depends(get_users_collection),
-    db_profiles=Depends(get_profiles_collection),
 ):
-    try:
-        # Criar perfil
-        profile = Profile(
-            id=user.id,
-            name=user.name,
-            nickname=user.name,
-            country=user.country,
-            state=user.state,
-            city=user.city,
-            district=user.district,
-            deficiency=user.deficiency,
-            avatar_url=user.avatar_url,
-            email=user.email,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+    user = await authenticate_user(
+        db_users, form_data.username, form_data.password
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Incorrect username or password',
+            headers={'WWW-Authenticate': 'Bearer'},
         )
-        new_profile = await db_profiles.insert_one(
-            profile.model_dump(exclude={'id'})
-        )
-
-        # Atualizar usuário
-        hashed_password = get_password_hash(user.password)
-        await db_users.update_one(
-            {'_id': ObjectId(user.id)},
-            {
-                '$set': {
-                    'password': hashed_password,
-                    'profile_id': str(new_profile.inserted_id),
-                }
-            },
-        )
-
-        user = await db_users.find_one({'_id': ObjectId(user.id)})
-
-        # Criar token JWT
-        access_token = create_access_token(
-            data={'sub': user['email']},
-            expires_delta=timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
-        )
-        user_response = UserResponse(
-            id=user['_id'],
-            name=user['name'],
-            email=user['email'],
-            user_type=user['user_type'],
-            confirmed_code=user['confirmed_code'],
-            confirmation_code=user['confirmation_code'],
-            created_at=user.get('created_at', datetime.now(timezone.utc)),
-            updated_at=user.get('updated_at', datetime.now(timezone.utc)),
-            profile_id=user['profile_id'],
-        ).model_dump(by_alias=True, exclude_unset=True)
-
-        user_response['created_at'] = user_response['created_at'].isoformat()
-        user_response['updated_at'] = user_response['updated_at'].isoformat()
-
-        request = RegisterResponse(
-            success=True,
-            user=user_response,
-            message='Cadastro realizado com sucesso',
-            token=access_token,
-        ).model_dump(by_alias=True, exclude_unset=True)
-        request = json.dumps(request, ensure_ascii=True)
-
-        return PlainTextResponse(
-            content=request,
-            status_code=status.HTTP_200_OK,
-            media_type='application/json',
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.info(str(e), exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_DAYS)
+    access_token = create_access_token(
+        data={'sub': user['email']}, expires_delta=access_token_expires
+    )
+    return {'access_token': access_token, 'token_type': 'bearer'}
 
 
 @router.post('/auth/valid_token', tags=['auth'], response_model=ValidToken)
 async def valid_token(
-    authorization: Annotated[str | None, Header()] = None,
-    token_param: str = None,
+    token: str = Depends(get_token_from_header),
     db_users=Depends(get_users_collection),
 ):
     try:
-        token = None
-
-        # Try to get token from authorization header
-        if authorization:
-            if authorization.startswith('Bearer '):
-                token = authorization.split(' ')[1]
-            else:
-                # Use the header value directly if no Bearer prefix
-                token = authorization
-
-        # If no token from header, check for token parameter
-        if not token and token_param:
-            token = token_param
-
         if not token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -291,13 +122,7 @@ async def valid_token(
         request = ValidToken(success=True, message='Token válido').model_dump(
             by_alias=True, exclude_unset=True
         )
-        request = json.dumps(request, ensure_ascii=True)
-
-        return PlainTextResponse(
-            content=request,
-            status_code=status.HTTP_200_OK,
-            media_type='application/json',
-        )
+        return request
     except HTTPException:
         raise
     except Exception as e:
@@ -309,19 +134,8 @@ async def valid_token(
 
 
 @router.post('/auth/logout', tags=['auth'], response_model=ValidToken)
-async def logout(
-    authorization: Annotated[str | None, Header()] = None,
-):
+async def logout(token: str = Depends(get_token_from_header)):
     try:
-        # Verificar se o token foi fornecido
-        # Try to get token from authorization header
-        if authorization:
-            if authorization.startswith('Bearer '):
-                token = authorization.split(' ')[1]
-            else:
-                # Use the header value directly if no Bearer prefix
-                token = authorization
-
         if not token:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -445,13 +259,6 @@ async def change_email(
                 detail='Não há conta com esse email',
             )
 
-        # Verificar se o novo email já está cadastrado
-        if await check_account(new_email, db=db_users):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Este e-mail já está cadastrado',
-            )
-
         # Verificar senha
         if not verify_password(password, user['password']):
             raise HTTPException(
@@ -477,8 +284,11 @@ async def change_email(
         })
 
         # Enviar código por email
-        result = await send_confirmation_code(
-            confirmation_code, new_email, user['name']
+        result = await _send_email(
+            new_email,
+            'Confirmação de alteração de e-mail',
+            f'Olá, {user["name"]}! '
+            f'Seu código de confirmação é: {confirmation_code}',
         )
 
         if not result['success']:
@@ -489,12 +299,7 @@ async def change_email(
 
         request = {'success': True, 'message': 'Código enviado para o email'}
 
-        request = json.dumps(request, ensure_ascii=True)
-        return PlainTextResponse(
-            content=request,
-            status_code=status.HTTP_200_OK,
-            media_type='application/json',
-        )
+        return request
     except HTTPException:
         raise
     except Exception as e:
@@ -504,62 +309,44 @@ async def change_email(
         )
 
 
+async def _send_email(to_email: str, subject: str, body: str):
+    smtp_server = 'smtp.gmail.com'
+    port = 587
+    sender_email = GMAIL_EMAIL
+    password = GMAIL_PASSWORD
+
+    message = MIMEMultipart()
+    message['From'] = f'KliqueApp <{sender_email}>'
+    message['To'] = to_email
+    message['Subject'] = subject
+    message.attach(MIMEText(body, 'plain', 'utf-8'))
+
+    try:
+        with smtplib.SMTP(smtp_server, port) as server:
+            server.starttls()
+            server.login(sender_email, password)
+            server.send_message(message)
+        return {'success': True, 'message': 'email sent'}
+    except Exception as e:
+        logger.error(f'Failed to send email to {to_email}: {e}')
+        return {'success': False, 'message': str(e)}
+
+
 async def send_alert_to_old_mail(
     old_email: str, user_name: str, new_email: str
 ):
-    try:
-        smtp_server = 'smtp.gmail.com'
-        port = 587
-        sender_email = GMAIL_EMAIL
-        password = GMAIL_PASSWORD
-
-        message = MIMEMultipart()
-        message['From'] = f'KliqueApp <{sender_email}>'
-        message['To'] = old_email
-        message['Subject'] = 'E-mail alterado | Klique'
-
-        body = f"""Olá, {user_name}! Sua conta teve o endereço de e-mail
-        alterado, para entrar você deve utilizar o novo endereço {new_email}.
-        Caso você não tenha alterado o e-mail entre em contato conosco."""
-        message.attach(MIMEText(body, 'plain', 'utf-8'))
-
-        with smtplib.SMTP(smtp_server, port) as server:
-            server.starttls()
-            server.login(sender_email, password)
-            server.send_message(message)
-
-        return {'success': True, 'message': 'email sent'}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=str(e),
-        )
+    subject = 'E-mail alterado | Klique'
+    body = f"""Olá, {user_name}! Sua conta teve o endereço de e-mail
+    alterado, para entrar você deve utilizar o novo endereço {new_email}.
+    Caso você não tenha alterado o e-mail entre em contato conosco."""
+    return await _send_email(old_email, subject, body)
 
 
 async def send_alert_to_google(email: str, user_name: str):
-    try:
-        smtp_server = 'smtp.gmail.com'
-        port = 587
-        sender_email = GMAIL_EMAIL
-        password = GMAIL_PASSWORD
-        message = MIMEMultipart()
-        message['From'] = f'KliqueApp <{sender_email}>'
-        message['To'] = email
-        message['Subject'] = 'Senha alterada | Klique'
-        body = f"""Olá, {user_name}! Sua senha foi alterada com sucesso.
-        Caso você não tenha alterado a senha, entre em contato conosco."""
-        message.attach(MIMEText(body, 'plain', 'utf-8'))
-        with smtplib.SMTP(smtp_server, port) as server:
-            server.starttls()
-            server.login(sender_email, password)
-            server.send_message(message)
-        return {'success': True, 'message': 'email sent'}
-    except HTTPException:
-        raise
-    except Exception as e:
-        return {'success': False, 'message': str(e)}
+    subject = 'Senha alterada | Klique'
+    body = f"""Olá, {user_name}! Sua senha foi alterada com sucesso.
+    Caso você não tenha alterado a senha, entre em contato conosco."""
+    return await _send_email(email, subject, body)
 
 
 @router.post('/auth/confirmChangeEmail', tags=['auth'])
@@ -628,12 +415,11 @@ async def confirm_change_email(
         )
 
 
-@router.get('/auth/user', tags=['auth'], response_model=Token)
-async def get_auth_user(
-    token: Annotated[Token, Depends(get_current_active_user)],
+@router.get('/users/me/', response_model=User, tags=['users'])
+async def read_users_me(
+    current_user: Annotated[User, Depends(get_current_active_user)],
 ):
-    response = await authenticate_user(token)
-    return response
+    return current_user
 
 
 @router.post('/searchByEmail', tags=['auth'])
@@ -652,13 +438,7 @@ async def search_by_email(
                 detail='Já existe uma conta com esse email',
             )
         response = {'success': True, 'message': 'Não há conta com esse email'}
-        request = json.dumps(response, ensure_ascii=True)
-
-        return PlainTextResponse(
-            content=request,
-            status_code=status.HTTP_200_OK,
-            media_type='application/json',
-        )
+        return response
     except HTTPException:
         raise
     except Exception as e:
@@ -666,155 +446,6 @@ async def search_by_email(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
-        )
-
-
-@router.post('/checkAccount', tags=['auth'])
-async def check_account(email: str, db=Depends(get_users_collection)):
-    try:
-        user = await db.find_one({'email': email})
-        if user:
-            if not user.get('password'):  # conta incompleta
-                await db.delete_one({'email': email})
-                return False
-            return True
-        return False
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                'success': False,
-                'message': f'Erro ao verificar e-mail: {str(e)}',
-            },
-        )
-
-
-@router.post(
-    '/auth/verifyEmail', tags=['auth'], response_model=verifyEmailResponse
-)
-async def verify_email(
-    request: verifyEmailRequest, db_users=Depends(get_users_collection)
-):
-    email = request.email
-    name = request.name
-    google = request.google
-    # Verificar conta existente
-    if await check_account(email, db=db_users):
-        raise HTTPException(
-            status_code=409,
-            detail={
-                'success': False,
-                'message': 'E-mail já cadastrado',
-            },
-        )
-
-    try:
-        confirmation_code = str(random.randint(1000, 9999))
-
-        # Criar usuário
-        user = {
-            'email': email,
-            'name': name,
-            'user_type': 'user',
-            'confirmed_code': False,
-            'confirmation_code': confirmation_code,
-        }
-
-        result = await db_users.insert_one(user)
-        created_user = await db_users.find_one({'_id': result.inserted_id})
-
-        # Preparar resposta sem confirmation_code
-        user_response = UserSimplified(
-            id=created_user['_id'],
-            name=created_user['name'],
-            email=created_user['email'],
-            confirmed_code=created_user['confirmed_code'],
-        )
-
-        if google:
-            return verifyEmailResponse(
-                success=True,
-                message='Código enviado ao e-mail',
-                user=user_response,
-            )
-
-        result = await send_confirmation_code(confirmation_code, email, name)
-        if result['success']:
-            return verifyEmailResponse(
-                success=True,
-                message='Código enviado ao e-mail',
-                user=user_response,
-            )
-        return result
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail={'success': False, 'message': str(e)}
-        )
-
-
-async def send_confirmation_code(
-    confirmation_code: str, user_email: str, user_name: str
-):
-    try:
-        smtp_server = 'smtp.gmail.com'
-        port = 587
-        sender_email = GMAIL_EMAIL
-        password = GMAIL_PASSWORD
-
-        message = MIMEMultipart()
-        message['From'] = f'KliqueApp <{sender_email}>'
-        message['To'] = user_email
-        message['Subject'] = 'Código de confirmação de e-mail | Klique'
-
-        body = f"""Olá, {user_name}! Seu código de
-        confirmação é: {confirmation_code}"""
-        message.attach(MIMEText(body, 'plain', 'utf-8'))
-
-        with smtplib.SMTP(smtp_server, port) as server:
-            server.starttls()
-            server.login(sender_email, password)
-            server.send_message(message)
-
-        return {'success': True, 'message': 'email sent'}
-    except Exception as e:
-        return {'success': False, 'message': str(e)}
-
-
-@router.post(
-    '/auth/confirm_code', tags=['auth'], response_model=confirmCodeResponse
-)
-async def confirm_code(
-    request: confirmCodeRequest, db_users=Depends(get_users_collection)
-):
-    try:
-        user = await db_users.find_one({'_id': ObjectId(request.id)})
-
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail='Usuário não encontrado',
-            )
-
-        if user['confirmation_code'] != request.confirmation_code:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Código de confirmação inválido',
-            )
-
-        await db_users.update_one(
-            {'_id': ObjectId(request.id)}, {'$set': {'confirmed_code': True}}
-        )
-
-        return confirmCodeResponse(
-            success=True, message='Código confirmado com sucesso!'
-        )
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
 
 
