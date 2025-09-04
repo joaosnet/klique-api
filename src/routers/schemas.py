@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Optional
 
+from bson import ObjectId
 from fastapi import Form
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 class User(BaseModel):
@@ -15,6 +16,14 @@ class User(BaseModel):
     created_at: datetime
     updated_at: datetime
     password: Optional[str] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def convert_objectid(cls, values):
+        if isinstance(values, dict) and '_id' in values:
+            if isinstance(values['_id'], ObjectId):
+                values['_id'] = str(values['_id'])
+        return values
 
 
 class Profile(BaseModel):
@@ -30,6 +39,14 @@ class Profile(BaseModel):
     email: EmailStr
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode='before')
+    @classmethod
+    def convert_objectid(cls, values):
+        if isinstance(values, dict) and '_id' in values:
+            if isinstance(values['_id'], ObjectId):
+                values['_id'] = str(values['_id'])
+        return values
 
 
 class Token(BaseModel):
@@ -81,6 +98,14 @@ class UserResponse(BaseModel):
     updated_at: datetime
     profile_id: str
 
+    @model_validator(mode='before')
+    @classmethod
+    def convert_objectid(cls, values):
+        if isinstance(values, dict) and '_id' in values:
+            if isinstance(values['_id'], ObjectId):
+                values['_id'] = str(values['_id'])
+        return values
+
 
 class RegisterResponse(BaseModel):
     success: bool
@@ -121,6 +146,14 @@ class UserSimplified(BaseModel):
     name: str
     email: EmailStr
     confirmed_code: bool
+
+    @model_validator(mode='before')
+    @classmethod
+    def convert_objectid(cls, values):
+        if isinstance(values, dict) and '_id' in values:
+            if isinstance(values['_id'], ObjectId):
+                values['_id'] = str(values['_id'])
+        return values
 
 
 class verifyEmailRequest(BaseModel):

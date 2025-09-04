@@ -5,7 +5,7 @@ from typing import Annotated, Optional
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 from pymongo.collection import Collection
 
 from src.database import (
@@ -17,7 +17,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
 ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
+pwd_hash = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
 
 # A simple in-memory set to store invalidated tokens.
@@ -27,11 +27,11 @@ invalidated_tokens = set()
 
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_hash.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    return pwd_hash.hash(password)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -65,7 +65,7 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = await db_users.find_one({'email': username})
+    user = db_users.find_one({'email': username})
     if user is None:
         raise credentials_exception
     return user
@@ -95,7 +95,7 @@ def invalidate_token(token: str):
 async def authenticate_user(
     db_users: Collection, username: str, password: str
 ):
-    user = await db_users.find_one({'email': username})
+    user = db_users.find_one({'email': username})
     if not user:
         return False
     if not verify_password(password, user['password']):

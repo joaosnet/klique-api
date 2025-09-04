@@ -96,8 +96,6 @@ async def register(
         expires_delta=timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS),
     )
     # Instanciação robusta usando model_validate para garantir suporte ao alias
-    if '_id' in created_user:
-        created_user['_id'] = str(created_user['_id'])
     user_response = UserResponse.model_validate(created_user).model_dump(
         by_alias=True
     )
@@ -133,49 +131,43 @@ async def verify_email(
             },
         )
 
-    try:
-        confirmation_code = str(random.randint(1000, 9999))
+    confirmation_code = str(random.randint(1000, 9999))
 
-        # Criar usuário
-        user = {
-            'email': email,
-            'name': name,
-            'user_type': 'user',
-            'confirmed_code': False,
-            'confirmation_code': confirmation_code,
-        }
+    # Criar usuário
+    user = {
+        'email': email,
+        'name': name,
+        'user_type': 'user',
+        'confirmed_code': False,
+        'confirmation_code': confirmation_code,
+    }
 
-        result = await db_users.insert_one(user)
-        created_user = await db_users.find_one({'_id': result.inserted_id})
+    result = db_users.insert_one(user)
+    created_user = db_users.find_one({'_id': result.inserted_id})
 
-        # Preparar resposta sem confirmation_code
-        user_response = UserSimplified(
-            id=str(created_user['_id']),
-            name=created_user['name'],
-            email=created_user['email'],
-            confirmed_code=created_user['confirmed_code'],
+    # Preparar resposta sem confirmation_code
+    user_response = UserSimplified(
+        id=str(created_user['_id']),
+        name=created_user['name'],
+        email=created_user['email'],
+        confirmed_code=created_user['confirmed_code'],
+    )
+
+    if google:
+        return verifyEmailResponse(
+            success=True,
+            message='Código enviado ao e-mail',
+            user=user_response,
         )
 
-        if google:
-            return verifyEmailResponse(
-                success=True,
-                message='Código enviado ao e-mail',
-                user=user_response,
-            )
-
-        result = await send_confirmation_code(confirmation_code, email, name)
-        if result['success']:
-            return verifyEmailResponse(
-                success=True,
-                message='Código enviado ao e-mail',
-                user=user_response,
-            )
-        return result
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail={'success': False, 'message': str(e)}
+    result = send_confirmation_code(confirmation_code, email, name)
+    if result['success']:
+        return verifyEmailResponse(
+            success=True,
+            message='Código enviado ao e-mail',
+            user=user_response,
         )
+    return result
 
 
 @router.post(
@@ -184,35 +176,27 @@ async def verify_email(
 async def confirm_code(
     request: confirmCodeRequest, db_users=Depends(get_users_collection)
 ):
-    try:
-        user = await db_users.find_one({'_id': ObjectId(request.id)})
+    user = db_users.find_one({'_id': ObjectId(request.id)})
 
-        if not user:
-            raise HTTPException(
-                status_code=404,
-                detail='Usuário não encontrado',
-            )
-
-        if user['confirmation_code'] != request.confirmation_code:
-            raise HTTPException(
-                status_code=400,
-                detail='Código de confirmação inválido',
-            )
-
-        await db_users.update_one(
-            {'_id': ObjectId(request.id)}, {'$set': {'confirmed_code': True}}
-        )
-
-        return confirmCodeResponse(
-            success=True, message='Código confirmado com sucesso!'
-        )
-    except HTTPException:
-        raise
-
-    except Exception as e:
+    if not user:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+            status_code=404,
+            detail='Usuário não encontrado',
         )
+
+    if user['confirmation_code'] != request.confirmation_code:
+        raise HTTPException(
+            status_code=400,
+            detail='Código de confirmação inválido',
+        )
+
+    db_users.update_one(
+        {'_id': ObjectId(request.id)}, {'$set': {'confirmed_code': True}}
+    )
+
+    return confirmCodeResponse(
+        success=True, message='Código confirmado com sucesso!'
+    )
 
 
 async def _send_email(to_email: str, subject: str, body: str):
@@ -270,19 +254,10 @@ async def send_confirmation_code(
 
 @router.post('/checkAccount', tags=['auth'])
 async def check_account(email: str, db=Depends(get_users_collection)):
-    try:
-        user = await db.find_one({'email': email})
-        if user:
-            if not user.get('password'):  # conta incompleta
-                await db.delete_one({'email': email})
-                return False
-            return True
-        return False
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                'success': False,
-                'message': f'Erro ao verificar e-mail: {str(e)}',
-            },
-        )
+    user = db.find_one({'email': email})
+    if user:
+        if not user.get('password'):  # conta incompleta
+            db.delete_one({'email': email})
+            return False
+        return True
+    return False
