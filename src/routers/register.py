@@ -146,8 +146,14 @@ async def verify_email(
     created_user = db_users.find_one({'_id': result.inserted_id})
 
     # Preparar resposta sem confirmation_code
+    if not created_user or '_id' not in created_user:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Erro interno: usuário não encontrado após criação.',
+        )
+
     user_response = UserSimplified(
-        id=str(created_user['_id']),
+        _id=str(created_user['_id']),
         name=created_user['name'],
         email=created_user['email'],
         confirmed_code=created_user['confirmed_code'],
