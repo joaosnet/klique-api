@@ -20,17 +20,15 @@ async def receive_whatsapp_webhook(request: Request):
         print('[bold green]Webhook do WhatsApp recebido:[/bold green]')
         print(data)
 
+        # Verifica se é um webhook de mensagem
+        if data.get('type') != 'message':
+            print(f"Webhook ignorado (tipo: {data.get('type')})")
+            return {'status': 'ok', 'info': 'Webhook ignorado.'}
+
+        webhook_data = data.get('data', {})
+
         # Extrai o prompt da mensagem
-        # A estrutura exata do JSON pode precisar de ajuste.
-        prompt = (
-            data.get('text')
-            or (data.get('message') and data['message'].get('body'))
-            or (
-                data.get('data')
-                and data['data'].get('message')
-                and data['data']['message'].get('body')
-            )
-        )
+        prompt = webhook_data.get('message')
 
         if not prompt:
             print(
@@ -41,9 +39,7 @@ async def receive_whatsapp_webhook(request: Request):
         print(f'Prompt extraído: [cyan]{prompt}[/cyan]')
 
         # Extrai o número de telefone do remetente
-        sender_phone = data.get('from') or (
-            data.get('sender') and data['sender'].get('id')
-        )
+        sender_phone = webhook_data.get('from')
 
         if not sender_phone:
             print(
@@ -80,9 +76,13 @@ async def receive_whatsapp_webhook(request: Request):
                 detail='Falha ao enviar a imagem para o WhatsApp.',
             )
 
-        # TODO: Implementar a lógica para postar no status.
+        # Posta a imagem no status
+        await whatsapp_service.post_status_update(
+            image_bytes=image_bytes,
+            caption=f"Gerado por Klique AI: '{prompt}'",
+        )
 
-        return {'status': 'ok', 'detail': 'Imagem enviada com sucesso!'}
+        return {'status': 'ok', 'detail': 'Imagem enviada com sucesso e status postado!'}
     except Exception as e:
         print(f'[bold red]Erro ao processar webhook:[/bold red] {e}')
         raise HTTPException(

@@ -17,8 +17,8 @@ async def lifespan(app: FastAPI):
     # Inicia o cliente Gemini e o armazena no estado da aplicação
     connect_to_mongo()
     client = GeminiClient(
-        secure_1psid=SECURE_1PSID,
-        secure_1psidts=SECURE_1PSIDTS,
+        # secure_1psid=SECURE_1PSID,
+        # secure_1psidts=SECURE_1PSIDTS,
     )
     await client.init()
     app.state.gemini = client
