@@ -6,6 +6,7 @@ load_dotenv()
 
 # Gemini API Settings
 SECRET_KEY = os.getenv('SECRET_KEY')
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 SECURE_1PSID = os.getenv('Secure_1PSID')
 SECURE_1PSIDTS = os.getenv('Secure_1PSIDTS')
 GEMINI_TIMEOUT = int(os.getenv('GEMINI_TIMEOUT', '30'))

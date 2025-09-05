@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from rich import print
 
-from src.services.gemini_app import GeminiAppService
+from src.services.gemini import GeminiService, get_gemini_service
 from src.services.whatsapp import WhatsAppService
 
 router = APIRouter(
@@ -11,10 +11,14 @@ router = APIRouter(
 
 
 @router.post('/whatsapp')
-async def receive_whatsapp_webhook(request: Request):
+async def receive_whatsapp_webhook(
+    request: Request,
+    gemini_service: GeminiService = Depends(get_gemini_service),
+):
     """
     Recebe e processa os webhooks enviados pelo serviço go-whatsapp.
     """
+    whatsapp_service = None
     try:
         data = await request.json()
         print('[bold green]Webhook do WhatsApp recebido:[/bold green]')
@@ -22,7 +26,7 @@ async def receive_whatsapp_webhook(request: Request):
 
         # Verifica se é um webhook de mensagem
         if data.get('type') != 'message':
-            print(f"Webhook ignorado (tipo: {data.get('type')})")
+            print(f'Webhook ignorado (tipo: {data.get("type")})')
             return {'status': 'ok', 'info': 'Webhook ignorado.'}
 
         webhook_data = data.get('data', {})
@@ -32,7 +36,8 @@ async def receive_whatsapp_webhook(request: Request):
 
         if not prompt:
             print(
-                '[bold yellow]Não foi possível encontrar um prompt no webhook.[/bold yellow]'
+                '[bold yellow]Não foi possível encontrar'
+                ' um prompt no webhook.[/bold yellow]'
             )
             return {'status': 'ok', 'info': 'Nenhum prompt encontrado.'}
 
@@ -43,14 +48,14 @@ async def receive_whatsapp_webhook(request: Request):
 
         if not sender_phone:
             print(
-                '[bold yellow]Não foi possível encontrar o número do remetente.[/bold yellow]'
+                '[bold yellow]Não foi possível encontrar o '
+                'número do remetente.[/bold yellow]'
             )
             return {
                 'status': 'ok',
                 'info': 'Número do remetente não encontrado.',
             }
 
-        gemini_service = GeminiAppService()
         image_bytes = await gemini_service.generate_image_from_prompt(prompt)
 
         if not image_bytes:
@@ -59,7 +64,8 @@ async def receive_whatsapp_webhook(request: Request):
             )
 
         print(
-            '[bold green]Imagem gerada com sucesso! Enviando para o WhatsApp...[/bold green]'
+            '[bold green]Imagem gerada com sucesso!'
+            'Enviando para o WhatsApp...[/bold green]'
         )
 
         whatsapp_service = WhatsAppService()
@@ -68,7 +74,6 @@ async def receive_whatsapp_webhook(request: Request):
             image_bytes=image_bytes,
             caption=f"Sua imagem gerada a partir de: '{prompt}'",
         )
-        await whatsapp_service.close()
 
         if not send_result:
             raise HTTPException(
@@ -76,15 +81,26 @@ async def receive_whatsapp_webhook(request: Request):
                 detail='Falha ao enviar a imagem para o WhatsApp.',
             )
 
+        print('[bold green]Enviando status para o WhatsApp...[/bold green]')
         # Posta a imagem no status
         await whatsapp_service.post_status_update(
             image_bytes=image_bytes,
             caption=f"Gerado por Klique AI: '{prompt}'",
         )
+        print('[bold green]Status postado com sucesso![/bold green]')
 
-        return {'status': 'ok', 'detail': 'Imagem enviada com sucesso e status postado!'}
+        return {
+            'status': 'ok',
+            'detail': 'Imagem enviada com sucesso e status postado!',
+        }
     except Exception as e:
         print(f'[bold red]Erro ao processar webhook:[/bold red] {e}')
         raise HTTPException(
             status_code=500, detail='Erro interno ao processar o webhook.'
         )
+    finally:
+        if whatsapp_service:
+            await whatsapp_service.close()
+            print(
+                '[bold blue]Conexão com WhatsAppService fechada.[/bold blue]'
+            )

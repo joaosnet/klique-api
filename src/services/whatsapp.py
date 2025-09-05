@@ -1,5 +1,3 @@
-import base64
-
 import httpx
 from rich import print
 
@@ -32,30 +30,37 @@ class WhatsAppService:
         :param caption: Uma legenda para a imagem (opcional).
         """
         try:
-            # Conforme a documentação, o endpoint /send/image espera multipart/form-data.
+            # Conforme a documentação,
+            # o endpoint /send/image espera multipart/form-data.
             files = {'file': ('image.png', image_bytes, 'image/png')}
             data = {'jid': phone_number, 'caption': caption}
 
             response = await self.client.post(
-                '/send/image', data=data, files=files, auth=self.auth, timeout=30.0
+                '/send/image',
+                data=data,
+                files=files,
+                auth=self.auth,
+                timeout=30.0,
             )
 
             response.raise_for_status()
             print(
-                f'[bold green]Imagem enviada com sucesso para {phone_number}.[/bold green]'
+                '[bold green]Imagem enviada com sucesso para '
+                f'{phone_number}.[/bold green]'
             )
             return response.json()
 
         except httpx.HTTPStatusError as e:
             print(
-                f'[bold red]Erro ao enviar imagem: {e.response.status_code}[/bold red]'
+                '[bold red]Erro ao enviar imagem: '
+                f'{e.response.status_code}[/bold red]'
             )
             print(f'Resposta da API: {e.response.text}')
         except Exception as e:
             print(
                 f'[bold red]Erro inesperado ao enviar imagem: {e}[/bold red]'
             )
-        
+
         return None
 
     async def post_status_update(self, image_bytes: bytes, caption: str = ''):
@@ -70,19 +75,26 @@ class WhatsAppService:
             data = {'caption': caption}
 
             response = await self.client.post(
-                '/status/post', data=data, files=files, auth=self.auth, timeout=30.0
+                '/status/post',
+                data=data,
+                files=files,
+                auth=self.auth,
+                timeout=30.0,
             )
             response.raise_for_status()
             print('[bold green]Status postado com sucesso![/bold green]')
             return response.json()
         except httpx.HTTPStatusError as e:
             print(
-                f'[bold red]Erro ao postar status: {e.response.status_code}[/bold red]'
+                '[bold red]Erro ao postar status:'
+                f' {e.response.status_code}[/bold red]'
             )
             print(f'Resposta da API: {e.response.text}')
         except Exception as e:
-            print(f'[bold red]Erro inesperado ao postar status: {e}[/bold red]')
-        
+            print(
+                f'[bold red]Erro inesperado ao postar status: {e}[/bold red]'
+            )
+
         return None
 
     async def close(self):
