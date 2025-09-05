@@ -1,4 +1,20 @@
 services:
+  whatsapp:
+    image: ghcr.io/aldinokemal/go-whatsapp-web-multidevice
+    container_name: whatsapp
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - whatsapp:/app/storages
+    command:
+      - rest
+      - --basic-auth=admin:admin
+      - --port=3000
+      - --debug=true
+      - --os=Chrome
+      - --account-validation=false
+
   mongodb:
     image: mongo:latest
     container_name: mongodb_kliqueq
@@ -18,7 +34,7 @@ services:
       start_period: 5s
       
   fastapi-app:
-    container_name: fastapi-app
+    container_name: fastapi-klique
     build: .
     ports:
       - "8000:8000"
@@ -26,10 +42,23 @@ services:
       mongodb:
         condition: service_healthy
     environment:
+      SECRET_KEY: a8b28eaaa2aa5cd246d7318435738f5c914feb474051c72b7d54429ff51194fc
+      Secure_1PSID: g.a0000wiz4rmVvNKe4U3Nx9Fq93l31x1v6yhMFAIXaiERW2uN06en9vYmVXajid2PYqnXHy2GaQACgYKAZISARYSFQHGX2MiQ8BdN18_2CL9W9XC96XC0RoVAUF8yKoesCYNZyOAkKQQQvryaNCt0076
+      Secure_1PSIDTS: sidts-CjEB5H03P38Qa2y5rVuWq4JI054YfU6itbt7cCk36j3oEB6e0NAOrP0phDVScm7hd14nEAA
+      GEMINI_TIMEOUT: 30
+      GEMINI_AUTO_CLOSE: "true"
+      GEMINI_CLOSE_DELAY: 10
+      GEMINI_CONCURRENCY_LIMIT: 5
+      GOOGLE_APPLICATION_CREDENTIALS: "creds.json"
+      GOOGLE_DRIVE_ROOT_FOLDER_ID: "1e6T4wsPmPjuP-8qzWUkD2RAmZeGXT8IR"
+      DB_CONNECTION: mongodb
+      DB_HOST: localhost
+      DB_PORT: 27017
+      DB_DATABASE: klique
       DB_USERNAME: root
       DB_PASSWORD: password
-      DB_HOST: mongodb
-      DB_DATABASE: klique  # Mesmo nome do banco padrão
+      GMAIL_EMAIL: joaodacruznatividade@gmail.com
+      GMAIL_APP_PASSWORD: vjvo pcau vvxx jivi # Senha de app do Gmail
     develop:
       # Create a `watch` configuration to update the app
       # https://docs.docker.com/compose/file-watch/#compose-watch-versus-bind-mounts
@@ -49,3 +78,4 @@ services:
 
 volumes:
   mongodb_data:
+  whatsapp:
