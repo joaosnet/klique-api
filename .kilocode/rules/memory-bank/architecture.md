@@ -1,72 +1,68 @@
-# Arquitetura da Klique API
+# Arquitetura do Klique WhatsApp Bot
 
 ## Visão Geral
 
-A API é construída usando o framework **FastAPI** e segue uma estrutura modular para separar as responsabilidades. O ponto de entrada da aplicação é o arquivo `main.py`, que inicializa a aplicação FastAPI, configura o cliente Gemini e inclui os roteadores.
+A arquitetura do Klique WhatsApp Bot é baseada em microsserviços containerizados e orquestrados pelo Docker Compose. O sistema é composto por um gateway de WhatsApp (`go-whatsapp`), uma API de backend (`fastapi-app`) que atua como orquestradora, e o banco de dados `mongodb`.
 
-## Estrutura de Diretórios
+## Estrutura de Diretórios (API)
+
+A estrutura da `fastapi-app` será adaptada para incluir a nova lógica de webhook.
 
 ```
 klique-api/
 ├── src/
 │   ├── routers/
-│   │   ├── generate.py  # Endpoints para geração de conteúdo e imagem
-│   │   └── batch.py     # Endpoints para processamento em lote (futuro)
+│   │   ├── whatsapp.py  # Endpoint para receber webhooks do go-whatsapp
+│   │   └── ...
 │   ├── services/
-│   │   └── gemini.py    # Lógica de negócio para interagir com o Gemini
-│   ├── config.py        # Configurações da aplicação (variáveis de ambiente)
-│   └── logger.py        # Configuração do logger
-├── tests/
-│   └── test_main.py     # Testes para a API
-├── main.py              # Ponto de entrada da aplicação
-└── pyproject.toml       # Dependências e metadados do projeto
+│   │   ├── gemini.py    # Lógica para interagir com a API do Gemini
+│   │   └── whatsapp.py  # Cliente para a API REST do go-whatsapp
+│   ├── ...
+├── main.py
+└── ...
 ```
 
 ## Componentes Principais
 
-*   **`main.py`**:
-    *   Gerencia o ciclo de vida (`lifespan`) da aplicação FastAPI.
-    *   Inicializa e armazena o `GeminiClient` no estado da aplicação (`app.state.gemini`).
-    *   Inicializa o `GeminiService` (`app.state.gemini_service`).
-    *   Gerencia um dicionário de sessões de chat (`app.state.chat_sessions`).
-    *   Implementa um `asyncio.Semaphore` para limitar requisições concorrentes.
+*   **`go-whatsapp` (Gateway)**:
+    *   Serviço baseado na imagem `ghcr.io/aldinokemal/go-whatsapp-web-multidevice`.
+    *   Responsável por se conectar à rede do WhatsApp.
+    *   Expõe uma API REST na porta `3000` para envio de mensagens e atualização de status.
+    *   Envia um webhook para a `fastapi-app` a cada nova mensagem recebida.
 
-*   **`src/routers/`**:
-    *   Contém os endpoints da API, organizados por funcionalidade.
-    *   **`generate.py`**: Define os endpoints `/generate` e `/generate/image`. Eles recebem os dados da requisição, interagem com o `GeminiClient` ou `GeminiService` e retornam a resposta.
+*   **`fastapi-app` (Backend/Orquestrador)**:
+    *   Recebe os webhooks do `go-whatsapp` em um endpoint dedicado (ex: `/webhooks/whatsapp`).
+    *   Processa o prompt da mensagem recebida.
+    *   Chama o `GeminiService` para gerar a imagem.
+    *   Utiliza um cliente HTTP interno (`WhatsAppService`) para fazer chamadas à API REST do `go-whatsapp`, enviando a imagem gerada e atualizando o status.
 
-*   **`src/services/gemini.py`**:
-    *   Abstrai a lógica de comunicação com a API do Gemini.
-    *   Gerencia a criação de sessões de chat e o envio de prompts com ou sem imagens.
+*   **`mongodb` (Banco de Dados)**:
+    *   Armazena logs, informações de usuários e prompts.
 
-*   **`src/config.py`**:
-    *   Carrega as configurações a partir de variáveis de ambiente, como credenciais da API e timeouts.
+## Fluxo de Requisição (Geração de Imagem via WhatsApp)
 
-## Fluxo de Requisição (`/generate/image`)
-
-O diagrama abaixo ilustra o fluxo de uma requisição para o endpoint de geração de imagem.
+O diagrama abaixo ilustra o fluxo completo.
 
 ```mermaid
 sequenceDiagram
-    participant C as Cliente (App)
-    participant A as API (FastAPI)
-    participant S as GeminiService
-    participant G as GeminiClient (API Externa)
+    participant U as Usuário (WhatsApp)
+    participant WAPP as go-whatsapp (Gateway)
+    participant API as fastapi-app (Backend)
+    participant GEMINI as Gemini API
 
-    C->>A: POST /generate/image (prompt, imagem?, session_id?)
-    A->>A: Verifica se existe session_id
-    alt Sessão Existe
-        A->>A: Recupera ChatSession de app.state.chat_sessions
-    else Nova Sessão
-        A->>S: start_chat()
-        S->>G: Inicia nova sessão
-        G-->>S: Retorna ChatSession
-        S-->>A: Retorna ChatSession
-        A->>A: Armazena nova sessão em app.state.chat_sessions
-    end
-    A->>S: send_message(chat, prompt, imagem)
-    S->>G: Envia prompt e imagem
-    G-->>S: Retorna imagem gerada e texto
-    S-->>A: Retorna resposta
-    A->>A: Codifica imagem para base64
-    A-->>C: Retorna JSON {session_id, generated_image, response_text}
+    U->>WAPP: Envia mensagem com prompt
+    WAPP->>API: POST /webhooks/whatsapp (com dados da mensagem)
+    
+    activate API
+    API->>API: Processa o prompt
+    API->>GEMINI: Solicita geração de imagem
+    GEMINI-->>API: Retorna imagem gerada
+    deactivate API
+    
+    activate API
+    API->>WAPP: Chama API REST para enviar imagem ao usuário
+    WAPP-->>U: Entrega imagem no chat
+    
+    API->>WAPP: Chama API REST para atualizar status
+    deactivate API
+```

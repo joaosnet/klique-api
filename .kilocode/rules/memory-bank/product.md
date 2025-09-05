@@ -1,23 +1,24 @@
-# Produto: Klique API
+# Produto: Klique WhatsApp Bot
 
 ## Visão Geral
 
-A Klique API é o serviço de backend para o aplicativo Klique, uma ferramenta de edição de imagens que permite aos usuários modificar suas fotos usando prompts de texto simples. A API orquestra a comunicação entre o aplicativo cliente (frontend) e os modelos de inteligência artificial da Google (Gemini) para gerar as imagens editadas.
+O Klique WhatsApp Bot transforma a Klique API em um serviço interativo de geração de imagens diretamente no WhatsApp. Os usuários podem enviar prompts de texto em uma conversa e receber imagens geradas por IA, que são também publicadas automaticamente como status do WhatsApp.
 
 ## Problema Resolvido
 
-A API abstrai a complexidade de interagir diretamente com modelos de IA, fornecendo endpoints simples e seguros para o aplicativo cliente. Ela gerencia a autenticação, o controle de uso, o processamento de prompts e a manipulação de imagens, permitindo que o frontend se concentre na experiência do usuário.
+O serviço elimina a necessidade de um aplicativo separado, integrando a geração de imagens ao fluxo de comunicação diário dos usuários no WhatsApp. Ele oferece uma forma lúdica e instantânea de criar e compartilhar conteúdo visual.
 
 ## Como Funciona
 
-1.  **Recebimento de Requisições:** A API recebe requisições do aplicativo cliente contendo um prompt de texto, uma imagem opcional e um token de autenticação.
-2.  **Processamento:** A API valida a requisição, processa o prompt e a imagem.
-3.  **Integração com IA:** Envia os dados para a API do Gemini para gerar a imagem ou conteúdo solicitado.
-4.  **Gerenciamento de Sessão:** Mantém o contexto das conversas (chats) para permitir edições interativas e contínuas.
-5.  **Retorno:** Retorna a imagem gerada (em formato base64) ou o texto para o aplicativo cliente.
+1.  **Recebimento de Mensagens (Webhook):** A API (fastapi-app) recebe notificações (webhooks) do gateway `go-whatsapp` sempre que um usuário envia uma mensagem.
+2.  **Processamento de Prompt:** A API extrai o texto da mensagem para ser usado como prompt para a geração da imagem.
+3.  **Integração com IA:** A API envia o prompt para o serviço do Gemini, que gera a imagem correspondente.
+4.  **Envio de Resposta:** A API utiliza a interface REST do `go-whatsapp` para:
+    *   Enviar a imagem gerada diretamente para a conversa com o usuário.
+    *   Publicar a mesma imagem como um novo status na conta do WhatsApp conectada.
 
-## Objetivos de Experiência do Usuário (através da API)
+## Objetivos de Experiência do Usuário
 
-*   **Rapidez:** A API deve responder rapidamente para que o usuário veja o resultado da edição quase em tempo real.
-*   **Confiabilidade:** A API deve ser estável e lidar com erros de forma previsível (ex: limites de uso, erros do modelo de IA).
-*   **Segurança:** A comunicação entre o cliente e a API deve ser segura.
+*   **Interatividade:** A experiência deve ser conversacional e instantânea, como um bate-papo normal.
+*   **Simplicidade:** O usuário só precisa enviar um texto; o bot cuida de todo o resto.
+*   **Engajamento:** A publicação automática de status gera visibilidade e incentiva o uso contínuo.

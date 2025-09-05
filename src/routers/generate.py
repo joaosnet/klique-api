@@ -18,7 +18,7 @@ from gemini_webapi.exceptions import (
 from PIL import Image
 from pydantic import BaseModel
 
-from src.services.gemini import GeminiService
+from src.services.gemini_app import GeminiAppService
 
 router = APIRouter()
 
@@ -81,7 +81,7 @@ async def generate_image(
 ):
     """Gera uma imagem a partir de um prompt,
     opcionalmente continuando uma sessão de chat existente."""
-    gemini_service: GeminiService = request.app.state.gemini_service
+    gemini_service: GeminiAppService = request.app.state.gemini_service
     chat_sessions: Dict[str, ChatSession] = request.app.state.chat_sessions
     chat_session = None
 

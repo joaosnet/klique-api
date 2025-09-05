@@ -5,11 +5,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from gemini_webapi import GeminiClient
 
-from src.config import SECRET_KEY, SECURE_1PSID, SECURE_1PSIDTS
+from src.config import SECURE_1PSID, SECURE_1PSIDTS
 from src.database import close_mongo_connection, connect_to_mongo
 from src.logger import logger
-from src.routers import auth, batch, generate, register
-from src.services.gemini import GeminiService
+from src.routers import auth, batch, generate, register, whatsapp
+from src.services.gemini_app import GeminiAppService
 
 
 @asynccontextmanager
@@ -17,14 +17,12 @@ async def lifespan(app: FastAPI):
     # Inicia o cliente Gemini e o armazena no estado da aplicação
     connect_to_mongo()
     client = GeminiClient(
-        secret_key=SECRET_KEY,
         secure_1psid=SECURE_1PSID,
         secure_1psidts=SECURE_1PSIDTS,
-        context=7
     )
     await client.init()
     app.state.gemini = client
-    app.state.gemini_service = GeminiService()
+    app.state.gemini_service = GeminiAppService()
     app.state.chat_sessions = {}
     app.state.sem = asyncio.Semaphore(5)  # Limita a 5 requisições concorrentes
     logger.info('Cliente Gemini e serviço inicializados.')
@@ -56,6 +54,7 @@ app.include_router(generate.router)
 app.include_router(batch.router)
 app.include_router(auth.router)
 app.include_router(register.router)
+app.include_router(whatsapp.router)
 
 if __name__ == '__main__':
     import uvicorn
