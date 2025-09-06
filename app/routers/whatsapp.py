@@ -121,6 +121,103 @@ async def process_image_generation(
             logger.debug('🔌 Conexão WhatsApp fechada')
 
 
+def should_ignore_webhook(data: dict) -> tuple[bool, str]:
+    """Verifica se o webhook deve ser ignorado e retorna (ignorar, motivo)"""
+    # Lista de verificações de filtro
+    filters = [
+        # Filtro 1: message.ack
+        (
+            lambda d: 'event' in d and d['event'] == 'message.ack',
+            lambda d: (
+                logger.debug('📨 Message ACK recebido')
+                if d.get('payload', {}).get('chat_id') != 'status@broadcast'
+                else None,
+                'message.ack',
+            ),
+        ),
+        # Filtro 2: eventos ignorados
+        (
+            lambda d: d.get('event', '')
+            in {'message.revoke', 'group.join', 'group.leave', 'user.status'},
+            lambda d: (
+                logger.debug(f'⚠️ Evento ignorado: {d.get("event", "")}'),
+                d.get('event', ''),
+            ),
+        ),
+        # Filtro 3: actions ignoradas
+        (
+            lambda d: d.get('action', '')
+            in {'message_edited', 'message_deleted'},
+            lambda d: (
+                logger.debug(f'✏️ Ação ignorada: {d.get("action", "")}'),
+                d.get('action', ''),
+            ),
+        ),
+        # Filtro 4: sem conteúdo
+        (
+            lambda d: 'message' not in d and 'image' not in d,
+            lambda d: (
+                logger.debug('📭 Webhook sem conteúdo processável'),
+                'no_content',
+            ),
+        ),
+        # Filtro 5: duplicata
+        (
+            lambda d: (mid := d.get('message', {}).get('id'))
+            and is_message_processed(mid),
+            lambda d: (
+                logger.debug(
+                    '🔄 Mensagem duplicata (ID: '
+                    f'{d.get("message", {}).get("id")})'
+                ),
+                'duplicate',
+            ),
+        ),
+        # Filtro 6: sem prompt
+        (
+            lambda d: not (
+                d.get('message', {}).get('text')
+                or (
+                    d.get('image', {}).get('caption') if 'image' in d else None
+                )
+            ),
+            lambda d: (logger.debug('📝 Webhook sem prompt'), 'no_prompt'),
+        ),
+        # Filtro 7: mensagem do bot
+        (
+            lambda d: any(
+                (
+                    d.get('message', {}).get('text')
+                    or d.get('image', {}).get('caption', '')
+                ).startswith(prefix)
+                for prefix in [
+                    'Sua imagem gerada a partir de:',
+                    'Gerado por Klique AI:',
+                ]
+            ),
+            lambda d: (
+                logger.debug('🤖 Mensagem do próprio bot ignorada'),
+                'bot_message',
+            ),
+        ),
+        # Filtro 8: sem remetente
+        (
+            lambda d: not d.get('sender_id'),
+            lambda d: (
+                logger.warning('❌ Remetente não identificado'),
+                'no_sender',
+            ),
+        ),
+    ]
+
+    for condition, action in filters:
+        if condition(data):
+            _, reason = action(data)
+            return True, reason
+
+    return False, ''
+
+
 @router.post('/whatsapp')
 async def receive_whatsapp_webhook(
     request: Request,
@@ -134,70 +231,8 @@ async def receive_whatsapp_webhook(
     try:
         data = await request.json()
 
-        # Filtro 1: Ignora webhooks de confirmação
-        #  (message.ack) silenciosamente
-        if 'event' in data and data['event'] == 'message.ack':
-            # Silencioso para acks de status,
-            #  mas loga outros acks discretamente
-            if data.get('payload', {}).get('chat_id') != 'status@broadcast':
-                logger.debug('📨 Message ACK recebido')
-            return {'status': 'ok'}
-
-        # Filtro 2: Ignora eventos específicos silenciosamente
-        event_type = data.get('event', '')
-        ignored_events = [
-            'message.revoke',
-            'group.join',
-            'group.leave',
-            'user.status',
-        ]
-        if event_type in ignored_events:
-            logger.debug(f'⚠️ Evento ignorado: {event_type}')
-            return {'status': 'ok'}
-
-        # Filtro 3: Ignora actions específicas (como message_edited)
-        action = data.get('action', '')
-        ignored_actions = [
-            'message_edited',
-            'message_deleted',
-        ]
-        if action in ignored_actions:
-            logger.debug(f'✏️ Ação ignorada: {action}')
-            return {'status': 'ok'}
-
-        # Filtro 4: Verifica se tem conteúdo processável
-        if 'message' not in data and 'image' not in data:
-            logger.debug('📭 Webhook sem conteúdo processável')
-            return {'status': 'ok'}
-
-        # Verifica se a mensagem já foi processada (evita duplicatas)
-        message_id = data.get('message', {}).get('id')
-        if message_id and is_message_processed(message_id):
-            logger.debug(f'🔄 Mensagem duplicata (ID: {message_id})')
-            return {'status': 'ok'}
-
-        # Extrai o prompt
-        prompt = data.get('message', {}).get('text')
-        if not prompt and 'image' in data:
-            prompt = data.get('image', {}).get('caption')
-
-        if not prompt:
-            logger.debug('📝 Webhook sem prompt')
-            return {'status': 'ok'}
-
-        # Filtro 5: Ignora mensagens do próprio bot (evita loops)
-        bot_prefixes = [
-            'Sua imagem gerada a partir de:',
-            'Gerado por Klique AI:',
-        ]
-        if any(prompt.startswith(prefix) for prefix in bot_prefixes):
-            logger.debug('🤖 Mensagem do próprio bot ignorada')
-            return {'status': 'ok'}
-
-        # Valida remetente
-        sender_phone = data.get('sender_id')
-        if not sender_phone:
-            logger.warning('❌ Remetente não identificado')
+        ignore, reason = should_ignore_webhook(data)
+        if ignore:
             return {'status': 'ok'}
 
         # Log mínimo para webhooks válidos
