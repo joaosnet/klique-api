@@ -1,8 +1,5 @@
-from io import BytesIO
-
 from google import genai
 from google.genai import types
-from PIL import Image
 
 from ..config import GOOGLE_API_KEY
 from ..logger import logger
@@ -18,23 +15,31 @@ class GeminiService:
         self.model_name = MODEL
 
     async def generate_image_from_prompt(
-        self, prompt: str, image_bytes: bytes | None = None
+        self, prompt: str, input_image: bytes | None = None
     ) -> bytes | None:
         """
         Generates an image from a text prompt using the Gemini API,
           following the
         client.models.generate_content_stream pattern.
         """
+        if not prompt:
+            logger.warning('O prompt está vazio. Retornando None.')
+            return None
 
-        logger.info(f'Generating image for prompt: {prompt}')
+        logger.info(f'Gerando imagem para o prompt: {prompt}')
 
         parts = [types.Part.from_text(text=prompt)]
-        if image_bytes:
+        if input_image:
             try:
-                image = Image.open(BytesIO(image_bytes))
-                parts.append(types.Part.from_image(image))
+                # Direct conversion to a Part with blob data
+                image_part = types.Part(
+                    inline_data=types.Blob(
+                        mime_type='image/png', data=input_image
+                    )
+                )
+                parts.append(image_part)
             except Exception as e:
-                logger.error(f'Error loading image bytes: {e}')
+                logger.error(f'Erro ao processar a imagem de entrada: {e}')
                 return None
 
         contents = [types.Content(role='user', parts=parts)]
@@ -54,22 +59,21 @@ class GeminiService:
                     chunk.candidates
                     and chunk.candidates[0].content
                     and chunk.candidates[0].content.parts
-                    and chunk.candidates[0].content.parts[0].inline_data
-                    and chunk.candidates[0].content.parts[0].inline_data.data
                 ):
-                    logger.success('Image generated successfully')
-                    return (
-                        chunk.candidates[0].content.parts[0].inline_data.data
-                    )
+                    for part in chunk.candidates[0].content.parts:
+                        if part.inline_data and part.inline_data.data:
+                            logger.success('Imagem gerada com sucesso.')
+                            return part.inline_data.data
 
             logger.warning(
-                'No image data found in Gemini response.{}'.format(chunk)
+                'Nenhum dado de imagem encontrado na resposta do Gemini.{}'
+                .format(response_stream)
             )
             return None
 
         except Exception as e:
             logger.error(
-                f'An error occurred while generating the image with model '
+                f'Ocorreu um erro ao gerar a imagem com o modelo '
                 f'{self.model_name}: {e}'
             )
             return None

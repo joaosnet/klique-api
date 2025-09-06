@@ -7,3 +7,4 @@ se o pacote for uma dependência de desenvolvimento, usamos:
 uv add --dev <pacote>
 ```
 Esse projetos é orientado a testes, logo todas as funcionalidades novas devem ser acompanhadas de testes e testadas com o modo de Test Engineer.
+Os testes deve ser sem dados mockados ou ficticios
