@@ -107,6 +107,12 @@ async def process_image_generation(
             caption=f"Gerado por Klique AI: '{prompt}'",
         )
 
+        # Envia mensagem de sucesso ao usuário
+        await whatsapp_service.send_text_message(
+            phone_number=sender_phone,
+            message='Sua imagem foi gerada com sucesso!',
+        )
+
         logger.success('🎉 Processamento concluído com sucesso!')
 
     except Exception as e:
@@ -230,10 +236,20 @@ async def receive_whatsapp_webhook(
     """
     try:
         data = await request.json()
+        logger.bind(payload=data).info('📄 Novo webhook recebido')
 
         ignore, reason = should_ignore_webhook(data)
         if ignore:
             return {'status': 'ok'}
+
+        # Extrai o sender e envia mensagem de processamento
+        sender = data.get('sender_id')
+        if sender:
+            whatsapp_service = WhatsAppService()
+            await whatsapp_service.send_text_message(
+                phone_number=sender, message='Processando sua imagem...'
+            )
+            await whatsapp_service.close()
 
         # Log mínimo para webhooks válidos
         logger.info('📱 Webhook processável recebido')
