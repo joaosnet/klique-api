@@ -11,10 +11,15 @@ services:
       - rest
       - --basic-auth=admin:admin
       - --port=3000
-      - --debug=true
+      - --debug=false
       - --os=Chrome
       - --account-validation=false
       - --webhook=http://fastapi-klique:8000/webhooks/whatsapp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   mongodb:
     image: mongo:latest

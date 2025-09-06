@@ -41,3 +41,11 @@ def get_mongodb_url() -> str:
 
 
 MONGO_URL = get_mongodb_url()
+
+# Log Settings
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+LOG_ROTATION = os.getenv('LOG_ROTATION', '10 MB')
+LOG_RETENTION = os.getenv('LOG_RETENTION', '7 days')
+LOG_CONSOLE_ENABLED = (
+    os.getenv('LOG_CONSOLE_ENABLED', 'true').lower() == 'true'
+)
