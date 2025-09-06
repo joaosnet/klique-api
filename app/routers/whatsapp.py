@@ -56,8 +56,6 @@ async def process_image_generation(
         sender_phone = data.get('sender_id')
         media_path = data.get('image', {}).get('media_path')
 
-        logger.info(f'Processando prompt: {prompt}')
-
         whatsapp_service = WhatsAppService()
         image_bytes = None
         if media_path:
