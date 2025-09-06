@@ -30,6 +30,9 @@ class GeminiService:
         # Aprimora o prompt usando o serviço Gemini
         prompt = await self.enhance_prompt(prompt)
 
+        # Adiciona a proporção de imagem padrão do WhatsApp ao prompt
+        prompt += ' --ar 9:16 (para stories do instagram e whatsapp)'
+
         logger.info(f'Gerando imagem para o prompt aprimorado: {prompt}')
 
         parts = [types.Part.from_text(text=prompt)]

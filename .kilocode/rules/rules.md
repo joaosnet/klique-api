@@ -6,5 +6,5 @@ se o pacote for uma dependência de desenvolvimento, usamos:
 ```sh
 uv add --dev <pacote>
 ```
-Esse projetos é orientado a testes, logo Sempre pergunte se quero testes pois todas as funcionalidades novas devem ser acompanhadas de testes e testadas com o modo de Test Engineer.
+Esse projetos é orientado a testes, logo Sempre pergunte se quero testes pois as funcionalidades novas podem ser acompanhadas de testes e testadas com o modo de Test Engineer.
 Os testes deve ser sem dados mockados ou ficticios
