@@ -11,7 +11,7 @@
 ## Dependências Principais
 
 *   `fastapi[standard]`: Inclui o FastAPI e dependências recomendadas como `pydantic` para validação de dados e `uvicorn` para o servidor ASGI.
-*   `gemini-webapi`: Biblioteca cliente para interagir com a API do Google Gemini.
+*   `google-generativeai`: A biblioteca oficial do Google para interagir com a API do Gemini (`google.genai`).
 *   `pillow`: Biblioteca para manipulação e processamento de imagens.
 *   `python-dotenv`: Para carregar variáveis de ambiente a partir de um arquivo `.env`.
 

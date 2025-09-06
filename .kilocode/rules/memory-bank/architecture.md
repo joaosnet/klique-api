@@ -32,7 +32,8 @@ klique-api/
 
 *   **`fastapi-app` (Backend/Orquestrador)**:
     *   Recebe os webhooks do `go-whatsapp` em um endpoint dedicado (ex: `/webhooks/whatsapp`).
-    *   Processa o prompt da mensagem recebida.
+    *   Processa o prompt da mensagem recebida (texto e/ou imagem).
+    *   Faz o download da imagem de entrada, se houver, através do `WhatsAppService`.
     *   Chama o `GeminiService` para gerar a imagem.
     *   Utiliza um cliente HTTP interno (`WhatsAppService`) para fazer chamadas à API REST do `go-whatsapp`, enviando a imagem gerada e atualizando o status.
 
@@ -50,12 +51,12 @@ sequenceDiagram
     participant API as fastapi-app (Backend)
     participant GEMINI as Gemini API
 
-    U->>WAPP: Envia mensagem com prompt
+    U->>WAPP: Envia mensagem com prompt (texto ou imagem com legenda)
     WAPP->>API: POST /webhooks/whatsapp (com dados da mensagem)
     
     activate API
-    API->>API: Processa o prompt
-    API->>GEMINI: Solicita geração de imagem
+    API->>API: Processa o prompt (e baixa a imagem, se aplicável)
+    API->>GEMINI: Solicita geração de imagem (com ou sem imagem de entrada)
     GEMINI-->>API: Retorna imagem gerada
     deactivate API
     

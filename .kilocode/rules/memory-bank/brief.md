@@ -47,7 +47,7 @@ graph TD
 
 ## 4. Fluxo de Dados: Geração de Imagem via WhatsApp
 
-1.  O usuário envia uma mensagem de texto (prompt) para o número de WhatsApp conectado.
+1.  O usuário envia uma mensagem para o número de WhatsApp conectado. A mensagem pode ser um texto (prompt) ou uma imagem com uma legenda (prompt).
 2.  O serviço `go-whatsapp` recebe a mensagem e dispara um webhook para a `fastapi-app`.
 3.  A `fastapi-app` recebe o webhook, extrai o prompt e o ID do usuário (remetente).
 4.  A API chama o serviço do Gemini para gerar a imagem com base no prompt.

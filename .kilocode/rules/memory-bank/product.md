@@ -22,3 +22,4 @@ O serviço elimina a necessidade de um aplicativo separado, integrando a geraç�
 *   **Interatividade:** A experiência deve ser conversacional e instantânea, como um bate-papo normal.
 *   **Simplicidade:** O usuário só precisa enviar um texto; o bot cuida de todo o resto.
 *   **Engajamento:** A publicação automática de status gera visibilidade e incentiva o uso contínuo.
+*   **Feedback Claro:** Em casos onde a IA não consegue gerar uma imagem a partir de um prompt, o bot envia uma mensagem proativa com sugestões para ajudar o usuário a refinar seu pedido.
