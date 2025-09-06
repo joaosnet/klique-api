@@ -1,52 +1,51 @@
-from pymongo import MongoClient
-from pymongo.collection import Collection
-from pymongo.database import Database
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
-from .config import DB_DATABASE, MONGO_URL
+from app.config import DB_DATABASE, get_mongodb_url
 
-
-class DataBase:
-    client: MongoClient | None = None
-    db: Database | None = None
+# Cliente e banco de dados para conexões
+_client: AsyncIOMotorClient = None
+_client_traducao: AsyncIOMotorClient = None
 
 
-db = DataBase()
+def get_client() -> AsyncIOMotorClient:
+    global _client  # noqa: PLW0603
+    if _client is None:
+        _client = AsyncIOMotorClient(get_mongodb_url())
+    return _client
 
 
-def get_client() -> MongoClient:
-    if db.client is None:
-        raise Exception('Database client not initialized')
-    return db.client
+# Dependency injection para bancos de dados
+def get_db() -> AsyncIOMotorDatabase:
+    return get_client().get_database(DB_DATABASE)
 
 
-def get_db() -> Database:
-    if db.db is None:
-        raise Exception('Database not initialized')
-    return db.db
+def close_db_connection():
+    """
+    Closes the MongoDB connection.
+    """
+    global _client, _client_traducao
+    if _client:
+        _client.close()
+        _client = None
+    if _client_traducao:
+        _client_traducao.close()
+        _client_traducao = None
 
 
-def connect_to_mongo():
-    """Connects to MongoDB and initializes the client and db."""
-    db.client = MongoClient(MONGO_URL)
-    db.db = db.client[DB_DATABASE]
+def get_password_recovery_collection():
+    return get_db().get_collection('password_recovery')
 
 
-def close_mongo_connection():
-    """Closes the MongoDB connection."""
-    if db.client:
-        db.client.close()
+def get_mail_confirmation_collection():
+    return get_db().get_collection('mail_confirmation')
 
 
-def get_users_collection() -> Collection:
-    """Returns the 'users' collection."""
-    return get_db()['users']
+def get_users_collection():
+    return get_db().get_collection('user')
 
 
-def get_profiles_collection() -> Collection:
-    """Returns the 'profiles' collection."""
-    return get_db()['profiles']
+def get_profiles_collection():
+    return get_db().get_collection('profile')
 
-
-def get_mail_confirmation_collection() -> Collection:
-    """Returns the 'mail_confirmation' collection."""
-    return get_db()['mail_confirmation']
+def get_status_views_collection():
+    return get_db().get_collection('status_views')

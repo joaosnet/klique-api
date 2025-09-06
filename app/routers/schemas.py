@@ -176,3 +176,8 @@ class confirmCodeRequest(BaseModel):
 class confirmCodeResponse(BaseModel):
     success: bool
     message: str
+
+
+class StatusView(BaseModel):
+    user_number: str
+    viewed_at: datetime

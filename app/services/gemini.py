@@ -28,7 +28,7 @@ class GeminiService:
             logger.warning('O prompt está vazio. Retornando None.')
             return None
         # Aprimora o prompt usando o serviço Gemini
-        prompt = await self.enhance_prompt(prompt)
+        prompt = await self.enhance_prompt(prompt, input_image)
 
         # Adiciona a proporção de imagem padrão do WhatsApp ao prompt
         prompt += ' --ar 9:16 (para stories do instagram e whatsapp)'
@@ -85,13 +85,16 @@ class GeminiService:
             )
             return None
 
-    async def enhance_prompt(self, prompt: str) -> str:
+    async def enhance_prompt(
+        self, prompt: str, input_image: bytes | None = None
+    ) -> str:
         """
         Aprimora o prompt do usuário usando o modelo gemini-2.5-flash-lite,
         seguindo o padrão de schema JSON e instruções detalhadas.
 
         Args:
             prompt (str): O prompt original do usuário.
+            input_image (bytes, optional): A imagem de entrada.
 
         Returns:
             str: O prompt aprimorado ou o original em caso de erro.
@@ -104,14 +107,22 @@ class GeminiService:
 
         try:
             model = 'gemini-2.5-flash-lite'
-            contents = [
-                types.Content(
-                    role='user',
-                    parts=[
-                        types.Part.from_text(text=prompt),
-                    ],
-                ),
-            ]
+            parts = [types.Part.from_text(text=prompt)]
+            if input_image:
+                try:
+                    image_part = types.Part(
+                        inline_data=types.Blob(
+                            mime_type='image/png', data=input_image
+                        )
+                    )
+                    parts.append(image_part)
+                except Exception as e:
+                    logger.error(
+                        f'Erro ao processar a imagem de entrada para '
+                        f'aprimoramento: {e}'
+                    )
+
+            contents = [types.Content(role='user', parts=parts)]
             generate_content_config = types.GenerateContentConfig(
                 thinking_config=types.ThinkingConfig(
                     thinking_budget=0,
@@ -128,7 +139,7 @@ class GeminiService:
                 ),
                 system_instruction=[
                     types.Part.from_text(
-                        text="""Melhore o seguinte prompt para gerar uma imagem mais detalhada e visualmente rica:
+                        text="""Melhore o seguinte prompt de geracão de imagem seguindo o seguinte guia de estilo e boas práticas:
 - Uma edição por prompt: não empilhe instruções no mesmo prompt, o modelo se confunde.
 - Seja específico como um contratante: dê direções claras e detalhadas, como se estivesse contratando os serviços de alguém, sendo bem específico: “a pessoa à esquerda de boné…”
 - Itere sem medo: a qualidade não piora ao longo das edições, então comece simples e vá refinando.
