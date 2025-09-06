@@ -1,8 +1,13 @@
+from io import BytesIO
+
 from google import genai
 from google.genai import types
+from PIL import Image
 
 from ..config import GOOGLE_API_KEY
 from ..logger import logger
+
+MODEL = 'gemini-2.5-flash-image-preview'
 
 
 class GeminiService:
@@ -10,27 +15,34 @@ class GeminiService:
         if not api_key:
             raise ValueError('A chave da API do Gemini não foi fornecida.')
         self.client = genai.Client(api_key=api_key)
-        self.model_name = 'gemini-2.5-flash-image-preview'
+        self.model_name = MODEL
 
-    async def generate_image_from_prompt(self, prompt: str) -> bytes | None:
+    async def generate_image_from_prompt(
+        self, prompt: str, image_bytes: bytes | None = None
+    ) -> bytes | None:
         """
         Generates an image from a text prompt using the Gemini API,
           following the
         client.models.generate_content_stream pattern.
         """
+
         logger.info(f'Generating image for prompt: {prompt}')
 
-        contents = [
-            types.Content(
-                role='user', parts=[types.Part.from_text(text=prompt)]
-            )
-        ]
+        parts = [types.Part.from_text(text=prompt)]
+        if image_bytes:
+            try:
+                image = Image.open(BytesIO(image_bytes))
+                parts.append(types.Part.from_image(image))
+            except Exception as e:
+                logger.error(f'Error loading image bytes: {e}')
+                return None
+
+        contents = [types.Content(role='user', parts=parts)]
         generate_content_config = types.GenerateContentConfig(
-            response_modalities=['IMAGE', 'TEXT']
+            response_modalities=['IMAGE']
         )
 
         try:
-            # Segue o padrão do exemplo de código para uma chamada mais direta
             response_stream = self.client.models.generate_content_stream(
                 model=self.model_name,
                 contents=contents,
@@ -51,14 +63,11 @@ class GeminiService:
                     )
 
             logger.warning(
-                'No image data found in Gemini response.{}'.format(
-                    chunk
-                )
+                'No image data found in Gemini response.{}'.format(chunk)
             )
             return None
 
         except Exception as e:
-            # Adiciona um log mais detalhado para o erro
             logger.error(
                 f'An error occurred while generating the image with model '
                 f'{self.model_name}: {e}'

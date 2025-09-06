@@ -50,10 +50,16 @@ async def receive_whatsapp_webhook(
                 'status': 'ok',
                 'info': 'Número do remetente não encontrado.',
             }
+        whatsapp_service = WhatsAppService()
+        image_bytes = None
+        media_path = data.get('image', {}).get('media_path')
+        if media_path:
+            image_bytes = await whatsapp_service.download_media(media_path)
+        generated_bytes = await gemini_service.generate_image_from_prompt(
+            prompt, image_bytes
+        )
 
-        image_bytes = await gemini_service.generate_image_from_prompt(prompt)
-
-        if not image_bytes:
+        if not generated_bytes:
             raise HTTPException(
                 status_code=500, detail='Falha ao gerar a imagem.'
             )
@@ -63,10 +69,9 @@ async def receive_whatsapp_webhook(
             'Enviando para o WhatsApp...[/bold green]'
         )
 
-        whatsapp_service = WhatsAppService()
         send_result = await whatsapp_service.send_image_message(
             phone_number=sender_phone,
-            image_bytes=image_bytes,
+            image_bytes=generated_bytes,
             caption=f"Sua imagem gerada a partir de: '{prompt}'",
         )
 
@@ -79,7 +84,7 @@ async def receive_whatsapp_webhook(
         print('[bold green]Enviando status para o WhatsApp...[/bold green]')
         # Posta a imagem no status
         await whatsapp_service.post_status_update(
-            image_bytes=image_bytes,
+            image_bytes=generated_bytes,
             caption=f"Gerado por Klique AI: '{prompt}'",
         )
         print('[bold green]Status postado com sucesso![/bold green]')

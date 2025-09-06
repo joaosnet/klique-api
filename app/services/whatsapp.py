@@ -1,6 +1,8 @@
 import httpx
 from rich import print
 
+from ..logger import logger
+
 # A URL base do serviço go-whatsapp, acessível dentro da rede Docker.
 # O nome do serviço é 'whatsapp', conforme definido no docker-compose.yml.
 BASE_URL = 'http://whatsapp:3000'
@@ -96,6 +98,25 @@ class WhatsAppService:
             )
 
         return None
+
+    async def download_media(self, media_path: str) -> bytes | None:
+        """Faz o download de um arquivo de mídia do go-whatsapp."""
+        if not self.client:
+            return None
+
+        media_url = f'{self.base_url}/{media_path}'
+        try:
+            response = await self.client.get(media_url)
+            response.raise_for_status()
+            return response.content
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f'Erro de status ao baixar mídia de {media_url}: {e}'
+            )
+            return None
+        except Exception as e:
+            logger.error(f'Erro inesperado ao baixar mídia: {e}')
+            return None
 
     async def close(self):
         """
