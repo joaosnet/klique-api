@@ -1,3 +1,5 @@
+import json
+
 from google import genai
 from google.genai import types
 
@@ -82,7 +84,8 @@ class GeminiService:
 
     async def enhance_prompt(self, prompt: str) -> str:
         """
-        Aprimora o prompt do usuário usando o modelo gemini-2.5-flash-lite.
+        Aprimora o prompt do usuário usando o modelo gemini-2.5-flash-lite,
+        seguindo o padrão de schema JSON e instruções detalhadas.
 
         Args:
             prompt (str): O prompt original do usuário.
@@ -97,43 +100,65 @@ class GeminiService:
             return prompt
 
         try:
-            # Configura o modelo específico para aprimoramento de prompts
-            enhancement_model = self.client.models.get('gemini-2.5-flash-lite')
-
-            # Cria o prompt aprimorado com instruções claras
-            instrucoes_iniciais = """Melhore o seguinte prompt para gerar uma imagem mais detalhada '
-                'e visualmente rica: """  # noqa: E501
-            instrucoes = """
+            model = 'gemini-2.5-flash-lite'
+            contents = [
+                types.Content(
+                    role='user',
+                    parts=[
+                        types.Part.from_text(text=prompt),
+                    ],
+                ),
+            ]
+            generate_content_config = types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(
+                    thinking_budget=0,
+                ),
+                response_mime_type='application/json',
+                response_schema=genai.types.Schema(
+                    type=genai.types.Type.OBJECT,
+                    required=['prompt_aprimorado'],
+                    properties={
+                        'prompt_aprimorado': genai.types.Schema(
+                            type=genai.types.Type.STRING,
+                        ),
+                    },
+                ),
+                system_instruction=[
+                    types.Part.from_text(
+                        text="""Melhore o seguinte prompt para gerar uma imagem mais detalhada e visualmente rica:
 - Uma edição por prompt: não empilhe instruções no mesmo prompt, o modelo se confunde.
-
 - Seja específico como um contratante: dê direções claras e detalhadas, como se estivesse contratando os serviços de alguém, sendo bem específico: “a pessoa à esquerda de boné…”
-
 - Itere sem medo: a qualidade não piora ao longo das edições, então comece simples e vá refinando.
-
 - Fale naturalmente: “remova o logo” e “pinte o moletom de roxo” funcionam perfeitamente."""  # noqa: E501
-            enhancement_prompt = (
-                instrucoes_iniciais + instrucoes + f"prompt: '{prompt}'"
+                    ),
+                ],
             )
 
-            # Gera o conteúdo usando o modelo de aprimoramento
-            response = enhancement_model.generate_content(
-                contents=[
-                    types.Content(
-                        role='user',
-                        parts=[types.Part.from_text(text=enhancement_prompt)],
+            response_stream = self.client.models.generate_content_stream(
+                model=model,
+                contents=contents,
+                config=generate_content_config,
+            )
+
+            resposta_json = ''
+            for chunk in response_stream:
+                if hasattr(chunk, 'text') and chunk.text:
+                    resposta_json += chunk.text
+
+            try:
+                resposta = json.loads(resposta_json)
+                aprimorado = resposta.get('prompt_aprimorado')
+                if aprimorado:
+                    logger.info('Prompt aprimorado com sucesso.')
+                    return aprimorado
+                else:
+                    logger.warning(
+                        'Campo "prompt_aprimorado" não '
+                        'encontrado na resposta JSON.'
                     )
-                ]
-            )
-
-            # Extrai o texto aprimorado da resposta
-            if response.text:
-                logger.info('Prompt aprimorado com sucesso.')
-                return response.text
-            else:
-                logger.warning(
-                    'Nenhum texto encontrado na resposta'
-                    ' do modelo de aprimoramento.'
-                )
+                    return prompt
+            except Exception as e:
+                logger.error(f'Erro ao decodificar JSON da resposta: {e}')
                 return prompt
 
         except Exception as e:
