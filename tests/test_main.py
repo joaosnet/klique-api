@@ -8,7 +8,7 @@ from PIL import Image
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from main import app
+from app.main import app
 
 
 def test_image_modification_conversation():

@@ -8,13 +8,12 @@ from http import HTTPStatus
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.config import ACCESS_TOKEN_EXPIRE_DAYS, GMAIL_EMAIL, GMAIL_PASSWORD
-from src.database import get_profiles_collection, get_users_collection
-from src.dependencies import (
+from ..config import ACCESS_TOKEN_EXPIRE_DAYS, GMAIL_EMAIL, GMAIL_PASSWORD
+from ..database import get_profiles_collection, get_users_collection
+from ..dependencies import (
     create_access_token,
     get_password_hash,
 )
-
 from ..logger import logger
 from .schemas import (
     Profile,

@@ -2,7 +2,7 @@ from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
 
-from src.config import DB_DATABASE, MONGO_URL
+from .config import DB_DATABASE, MONGO_URL
 
 
 class DataBase:

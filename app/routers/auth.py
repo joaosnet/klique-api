@@ -10,16 +10,16 @@ from fastapi.security import OAuth2PasswordRequestForm
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 
-from src.config import (
+from ..config import (
     ACCESS_TOKEN_EXPIRE_DAYS,
     GMAIL_EMAIL,
     GMAIL_PASSWORD,
     GOOGLE_CLIENT_ID,
 )
-from src.database import (
+from ..database import (
     get_mail_confirmation_collection,
 )
-from src.dependencies import (
+from ..dependencies import (
     authenticate_token,
     authenticate_user,
     create_access_token,
@@ -30,7 +30,6 @@ from src.dependencies import (
     invalidate_token,
     verify_password,
 )
-
 from ..logger import logger
 from .schemas import (
     ChangePasswordRequest,

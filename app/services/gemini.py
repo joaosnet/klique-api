@@ -1,11 +1,8 @@
-import asyncio
-from functools import partial
-
 from google import genai
 from google.genai import types
 
-from src.config import GOOGLE_API_KEY
-from src.logger import logger
+from ..config import GOOGLE_API_KEY
+from ..logger import logger
 
 
 class GeminiService:
@@ -13,7 +10,7 @@ class GeminiService:
         if not api_key:
             raise ValueError('A chave da API do Gemini não foi fornecida.')
         self.client = genai.Client(api_key=api_key)
-        self.model_name = 'gemini-1.5-flash-preview'
+        self.model_name = 'gemini-2.5-flash-image-preview'
 
     async def generate_image_from_prompt(self, prompt: str) -> bytes | None:
         """
@@ -33,14 +30,12 @@ class GeminiService:
         )
 
         try:
-            loop = asyncio.get_running_loop()
-            func = partial(
-                self.client.models.generate_content_stream,
+            # Segue o padrão do exemplo de código para uma chamada mais direta
+            response_stream = self.client.models.generate_content_stream(
                 model=self.model_name,
                 contents=contents,
                 config=generate_content_config,
             )
-            response_stream = await loop.run_in_executor(None, func)
 
             for chunk in response_stream:
                 if (
@@ -55,10 +50,19 @@ class GeminiService:
                         chunk.candidates[0].content.parts[0].inline_data.data
                     )
 
-            logger.warning('No image data found in Gemini response.')
+            logger.warning(
+                'No image data found in Gemini response.{}'.format(
+                    chunk
+                )
+            )
             return None
+
         except Exception as e:
-            logger.error(f'An error occurred while generating the image: {e}')
+            # Adiciona um log mais detalhado para o erro
+            logger.error(
+                f'An error occurred while generating the image with model '
+                f'{self.model_name}: {e}'
+            )
             return None
 
 

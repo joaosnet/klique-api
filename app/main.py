@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 # from fastapi.middleware.cors import CORSMiddleware
-from src.routers import auth, register, whatsapp
+from .routers import auth, register, whatsapp
 
 app = FastAPI(title='Klique AI API', version='1.0.0')
 

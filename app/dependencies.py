@@ -8,10 +8,10 @@ from jose import JWTError, jwt
 from pwdlib import PasswordHash
 from pymongo.collection import Collection
 
-from src.database import (
+from .database import (
     get_users_collection,
 )
-from src.routers.schemas import User
+from .routers.schemas import User
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
 ALGORITHM = 'HS256'

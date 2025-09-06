@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from rich import print
 
-from src.services.gemini import GeminiService, get_gemini_service
-from src.services.whatsapp import WhatsAppService
+from ..services.gemini import GeminiService, get_gemini_service
+from ..services.whatsapp import WhatsAppService
 
 router = APIRouter(
     prefix='/webhooks',
@@ -24,27 +24,22 @@ async def receive_whatsapp_webhook(
         print('[bold green]Webhook do WhatsApp recebido:[/bold green]')
         print(data)
 
-        # Verifica se é um webhook de mensagem
-        if data.get('type') != 'message':
-            print(f'Webhook ignorado (tipo: {data.get("type")})')
-            return {'status': 'ok', 'info': 'Webhook ignorado.'}
-
-        webhook_data = data.get('data', {})
-
-        # Extrai o prompt da mensagem
-        prompt = webhook_data.get('message')
+        # Extrai o prompt da mensagem de texto ou da legenda da imagem
+        prompt = data.get('message', {}).get('text')
+        if not prompt and 'image' in data:
+            prompt = data.get('image', {}).get('caption')
 
         if not prompt:
             print(
-                '[bold yellow]Não foi possível encontrar'
-                ' um prompt no webhook.[/bold yellow]'
+                '[bold yellow]Não foi possível encontrar um '
+                'prompt no webhook (texto ou legenda).[/bold yellow]'
             )
             return {'status': 'ok', 'info': 'Nenhum prompt encontrado.'}
 
         print(f'Prompt extraído: [cyan]{prompt}[/cyan]')
 
         # Extrai o número de telefone do remetente
-        sender_phone = webhook_data.get('from')
+        sender_phone = data.get('sender_id')
 
         if not sender_phone:
             print(
