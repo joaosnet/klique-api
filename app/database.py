@@ -55,3 +55,7 @@ def get_status_views_collection():
 
 def get_cache_collection():
     return get_db().get_collection('cache')
+
+
+def get_user_sessions_collection():
+    return get_db().get_collection('user_sessions')

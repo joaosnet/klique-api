@@ -5,7 +5,7 @@ from bson import Binary
 from motor.motor_asyncio import AsyncIOMotorCollection
 from pymongo import IndexModel
 
-from .database import get_cache_collection
+from .database import get_cache_collection, get_user_sessions_collection
 from .logger import logger
 
 
@@ -332,3 +332,191 @@ async def get_message_cache() -> MessageCache:
     """Factory para MessageCache."""
     mongo_cache = await get_mongo_cache()
     return MessageCache(mongo_cache)
+
+
+# ---------------------- User Session Cache ----------------------
+
+
+class UserSessionCache:
+    """
+    Armazena sessão por usuário (último prompt, imagens e status_id).
+    Collection: user_sessions (um documento por user_number).
+    Campos:
+      user_number (unique)
+      last_prompt: str | None
+      last_generated_image: Binary | None (última imagem gerada/enviada)
+      last_base_image: Binary | None (imagem base usada para edição; opcional)
+      last_status_id: str | None
+      updated_at: datetime (para auditoria / futura TTL)
+    """
+
+    def __init__(self, collection):
+        self._collection = collection
+        self._indexes_created = False
+
+    async def _ensure_indexes(self):
+        if self._indexes_created:
+            return
+        try:
+            await self._collection.create_indexes([
+                IndexModel([('user_number', 1)], unique=True),
+                IndexModel([('updated_at', 1)]),
+            ])
+            self._indexes_created = True
+            logger.debug('🗄️ Índices de user_sessions criados/verificados')
+        except Exception as e:
+            logger.warning(f'⚠️ Erro ao criar índices de user_sessions: {e}')
+
+    async def _touch(self, user_number: str):
+        await self._collection.update_one(
+            {'user_number': user_number},
+            {'$set': {'updated_at': datetime.utcnow()}},
+            upsert=True,
+        )
+
+    async def get_session(self, user_number: str) -> dict | None:
+        try:
+            await self._ensure_indexes()
+            doc = await self._collection.find_one({'user_number': user_number})
+            if doc:
+                return {
+                    'user_number': doc.get('user_number'),
+                    'last_prompt': doc.get('last_prompt'),
+                    'last_status_id': doc.get('last_status_id'),
+                    'has_generated_image': bool(
+                        doc.get('last_generated_image')
+                    ),
+                    'has_base_image': bool(doc.get('last_base_image')),
+                }
+            return None
+        except Exception as e:
+            logger.error(f'❌ Erro ao obter sessão {user_number}: {e}')
+            return None
+
+    async def save_prompt(self, user_number: str, prompt: str):
+        try:
+            await self._ensure_indexes()
+            await self._collection.update_one(
+                {'user_number': user_number},
+                {
+                    '$set': {
+                        'last_prompt': prompt,
+                        'updated_at': datetime.utcnow(),
+                    }
+                },
+                upsert=True,
+            )
+        except Exception as e:
+            logger.error(f'❌ Erro ao salvar prompt para {user_number}: {e}')
+
+    async def get_prompt(self, user_number: str) -> str | None:
+        try:
+            doc = await self._collection.find_one(
+                {'user_number': user_number}, {'last_prompt': 1}
+            )
+            return doc.get('last_prompt') if doc else None
+        except Exception as e:
+            logger.error(f'❌ Erro ao ler prompt para {user_number}: {e}')
+            return None
+
+    async def save_generated_image(self, user_number: str, image_bytes: bytes):
+        try:
+            await self._ensure_indexes()
+            await self._collection.update_one(
+                {'user_number': user_number},
+                {
+                    '$set': {
+                        'last_generated_image': Binary(image_bytes),
+                        'updated_at': datetime.utcnow(),
+                    }
+                },
+                upsert=True,
+            )
+        except Exception as e:
+            logger.error(
+                f'❌ Erro ao salvar generated_image para {user_number}: {e}'
+            )
+
+    async def get_generated_image(self, user_number: str) -> bytes | None:
+        try:
+            doc = await self._collection.find_one(
+                {'user_number': user_number}, {'last_generated_image': 1}
+            )
+            if doc and doc.get('last_generated_image'):
+                return bytes(doc['last_generated_image'])
+            return None
+        except Exception as e:
+            logger.error(
+                f'❌ Erro ao ler generated_image para {user_number}: {e}'
+            )
+            return None
+
+    async def save_base_image(self, user_number: str, image_bytes: bytes):
+        try:
+            await self._ensure_indexes()
+            await self._collection.update_one(
+                {'user_number': user_number},
+                {
+                    '$set': {
+                        'last_base_image': Binary(image_bytes),
+                        'updated_at': datetime.utcnow(),
+                    }
+                },
+                upsert=True,
+            )
+        except Exception as e:
+            logger.error(
+                f'❌ Erro ao salvar base_image para {user_number}: {e}'
+            )
+
+    async def get_base_image(self, user_number: str) -> bytes | None:
+        try:
+            doc = await self._collection.find_one(
+                {'user_number': user_number}, {'last_base_image': 1}
+            )
+            if doc and doc.get('last_base_image'):
+                return bytes(doc['last_base_image'])
+            return None
+        except Exception as e:
+            logger.error(f'❌ Erro ao ler base_image para {user_number}: {e}')
+            return None
+
+    async def save_status_id(self, user_number: str, status_id: str):
+        try:
+            await self._ensure_indexes()
+            await self._collection.update_one(
+                {'user_number': user_number},
+                {
+                    '$set': {
+                        'last_status_id': status_id,
+                        'updated_at': datetime.utcnow(),
+                    }
+                },
+                upsert=True,
+            )
+        except Exception as e:
+            logger.error(
+                f'❌ Erro ao salvar status_id para {user_number}: {e}'
+            )
+
+    async def get_status_id(self, user_number: str) -> str | None:
+        try:
+            doc = await self._collection.find_one(
+                {'user_number': user_number}, {'last_status_id': 1}
+            )
+            return doc.get('last_status_id') if doc else None
+        except Exception as e:
+            logger.error(f'❌ Erro ao ler status_id para {user_number}: {e}')
+            return None
+
+    async def clear_session(self, user_number: str):
+        try:
+            await self._collection.delete_one({'user_number': user_number})
+        except Exception as e:
+            logger.error(f'❌ Erro ao limpar sessão {user_number}: {e}')
+
+
+async def get_user_session_cache() -> UserSessionCache:
+    """Factory para UserSessionCache."""
+    collection = get_user_sessions_collection()
+    return UserSessionCache(collection)
