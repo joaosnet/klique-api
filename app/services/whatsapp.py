@@ -73,12 +73,14 @@ class WhatsAppService:
             response.raise_for_status()
             response_data = response.json()
             print(
-                f'[bold green]Imagem enviada para {phone} com sucesso.[/bold green]'
+                f'[bold green]Imagem enviada para {phone}'
+                ' com sucesso.[/bold green]'
             )
             return response_data
         except httpx.HTTPStatusError as e:
             logger.error(
-                f'Erro HTTP ao enviar imagem p/{phone}: {e.response.status_code} - {e.response.text}'
+                f'Erro HTTP ao enviar imagem p/{phone}: '
+                f'{e.response.status_code} - {e.response.text}'
             )
         except Exception as e:
             logger.error(f'Erro inesperado ao enviar imagem p/{phone}: {e}')
@@ -228,10 +230,11 @@ class WhatsAppService:
 
         :param phone_number: O número do telefone do contato (sem o sufixo @s.whatsapp.net).
         :return: Um dicionário com 'name' e 'number' do contato, ou None se não for encontrado.
-        """
+        """  # noqa: E501
         try:
             logger.info(
-                f'Buscando informações do contato para o número: {phone_number}'
+                'Buscando informações do contato para '
+                f'o número: {phone_number}'
             )
             response = await self.client.get(
                 '/user/my/contacts', auth=self.auth, timeout=60.0
@@ -263,7 +266,8 @@ class WhatsAppService:
 
         except httpx.HTTPStatusError as e:
             logger.error(
-                f'Erro HTTP ao buscar contatos: {e.response.status_code} - {e.response.text}'
+                'Erro HTTP ao buscar contatos: '
+                f'{e.response.status_code} - {e.response.text}'
             )
             return None
         except Exception as e:
@@ -332,7 +336,7 @@ class WhatsAppService:
         :param message_id: O ID da mensagem a ser editada.
         :param new_text: O novo texto da mensagem.
         :return: True se a edição foi bem-sucedida, False caso contrário.
-        """
+        """  # noqa: E501
         try:
             data = {'text': new_text}
 

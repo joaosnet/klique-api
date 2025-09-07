@@ -64,6 +64,33 @@ async def send_or_edit_failure(
         )
 
 
+async def _save_session_data(
+    user_session_cache,
+    user_number: str,
+    prompt: str | None,
+    generated_bytes: bytes,
+    image_bytes: bytes | None,
+    status_id: str | None,
+) -> None:
+    """Salva dados da sessão de forma consistente."""
+    try:
+        if user_number:
+            if prompt:
+                await user_session_cache.save_prompt(user_number, prompt)
+            await user_session_cache.save_generated_image(
+                user_number, generated_bytes
+            )
+            # Se havia imagem base usada para edição (image_bytes), armazenar
+            if image_bytes:
+                await user_session_cache.save_base_image(
+                    user_number, image_bytes
+                )
+            if status_id:
+                await user_session_cache.save_status_id(user_number, status_id)
+    except Exception as sess_e:  # noqa: BLE001
+        logger.warning(f'⚠️ Falha ao atualizar sessão do usuário: {sess_e}')
+
+
 async def process_image_generation(
     data: dict,
     gemini_service: GeminiService,
@@ -147,28 +174,14 @@ async def process_image_generation(
             await status_image_cache.save_last_status_id(status_id)
 
         # Atualiza sessão por usuário (unifica comandos)
-        try:
-            user_number_for_session = user_number
-            if user_number_for_session:
-                if prompt:
-                    await user_session_cache.save_prompt(
-                        user_number_for_session, prompt
-                    )
-                await user_session_cache.save_generated_image(
-                    user_number_for_session, generated_bytes
-                )
-                # Se havia imagem base usada
-                # para edição (image_bytes), armazenar
-                if image_bytes:
-                    await user_session_cache.save_base_image(
-                        user_number_for_session, image_bytes
-                    )
-                if status_id:
-                    await user_session_cache.save_status_id(
-                        user_number_for_session, status_id
-                    )
-        except Exception as sess_e:  # noqa: BLE001
-            logger.warning(f'⚠️ Falha ao atualizar sessão do usuário: {sess_e}')
+        await _save_session_data(
+            user_session_cache,
+            user_number,
+            prompt,
+            generated_bytes,
+            image_bytes,
+            status_id,
+        )
 
         # Atualiza mensagem final
         if processing_message_id:
@@ -331,16 +344,56 @@ async def process_status_view(data: dict) -> None:
         logger.exception('Detalhes do erro:')
 
 
+def _is_status_delivery_ack(data: dict) -> bool:
+    """Verifica se é ACK de entrega de status (não read)."""
+    return (
+        data.get('event') == 'message.ack'
+        and data.get('payload', {}).get('chat_id') == 'status@broadcast'
+        and data.get('payload', {}).get('receipt_type') != 'read'
+    )
+
+
+def _is_duplicate_message(data: dict, message_cache: MessageCache) -> bool:
+    """Verifica se a mensagem já foi processada."""
+    message_id = data.get('message', {}).get('id')
+    return message_id and message_cache.is_message_processed(message_id)
+
+
+def _get_ignore_reason(data: dict, prompt_cached: str | None) -> str | None:
+    """Determina o motivo para ignorar o webhook."""
+    # Verifica eventos e ações específicas
+    event = data.get('event', '')
+    action = data.get('action', '')
+
+    if event == 'message.ack':
+        return 'message.ack'
+    if event in {'message.revoke', 'group.join', 'group.leave', 'user.status'}:
+        return event
+    if action in {'message_edited', 'message_deleted'}:
+        return action
+    if 'message' not in data and 'image' not in data:
+        return 'no_content'
+    if not prompt_cached:
+        return 'no_prompt'
+    if prompt_cached and any(
+        prompt_cached.startswith(prefix)
+        for prefix in [
+            'Sua imagem gerada a partir de:',
+            'Gerado por Klique AI:',
+        ]
+    ):
+        return 'bot_message'
+    if not data.get('sender_id'):
+        return 'no_sender'
+    return None
+
+
 async def should_ignore_webhook(
     data: dict, message_cache: MessageCache
 ) -> tuple[bool, str]:
     """Verifica se o webhook deve ser ignorado e retorna (ignorar, motivo)"""
 
-    if (
-        data.get('event') == 'message.ack'
-        and data.get('payload', {}).get('chat_id') == 'status@broadcast'
-        and data.get('payload', {}).get('receipt_type') != 'read'
-    ):
+    if _is_status_delivery_ack(data):
         logger.debug('📨 ACK de entrega de status (não read) - ignorando')
         return True, 'status_delivery_ack'
 
@@ -352,68 +405,10 @@ async def should_ignore_webhook(
         logger.debug(f'🔄 Mensagem duplicata (ID: {message_id})')
         return True, 'duplicate'
 
-    filters = [
-        (
-            lambda d: d.get('event') == 'message.ack',
-            lambda d: (
-                logger.debug('📨 Message ACK (não status) recebido'),
-                'message.ack',
-            ),
-        ),
-        (
-            lambda d: d.get('event', '')
-            in {'message.revoke', 'group.join', 'group.leave', 'user.status'},
-            lambda d: (
-                logger.debug(f'⚠️ Evento ignorado: {d.get("event", "")}'),
-                d.get('event', ''),
-            ),
-        ),
-        (
-            lambda d: d.get('action', '')
-            in {'message_edited', 'message_deleted'},
-            lambda d: (
-                logger.debug(f'✏️ Ação ignorada: {d.get("action", "")}'),
-                d.get('action', ''),
-            ),
-        ),
-        (
-            lambda d: 'message' not in d and 'image' not in d,
-            lambda d: (
-                logger.debug('📭 Webhook sem conteúdo processável'),
-                'no_content',
-            ),
-        ),
-        (
-            lambda d: not prompt_cached,
-            lambda d: (logger.debug('📝 Webhook sem prompt'), 'no_prompt'),
-        ),
-        (
-            lambda d: prompt_cached
-            and any(
-                prompt_cached.startswith(prefix)
-                for prefix in [
-                    'Sua imagem gerada a partir de:',
-                    'Gerado por Klique AI:',
-                ]
-            ),
-            lambda d: (
-                logger.debug('🤖 Mensagem do próprio bot ignorada'),
-                'bot_message',
-            ),
-        ),
-        (
-            lambda d: not d.get('sender_id'),
-            lambda d: (
-                logger.warning('❌ Remetente não identificado'),
-                'no_sender',
-            ),
-        ),
-    ]
-
-    for condition, action in filters:
-        if condition(data):
-            _, reason = action(data)
-            return True, reason
+    reason = _get_ignore_reason(data, prompt_cached)
+    if reason:
+        logger.debug(f'⏭️ Webhook ignorado: {reason}')
+        return True, reason
 
     return False, ''
 
@@ -423,6 +418,232 @@ async def should_ignore_webhook(
 NO_SESSION_FALLBACK = (
     'Nenhuma imagem anterior encontrada. Envie: imagem <prompt>'
 )
+
+
+async def _handle_imagem_command(
+    command_data: dict,
+    gemini_service: GeminiService,
+    whatsapp_service: WhatsAppService,
+    user_session_cache,
+):
+    """Handler para comando 'imagem'."""
+    argument = command_data.get('argument', '')
+    sender = command_data.get('sender')
+    original_payload = command_data.get('original_payload', {})
+    user_number = command_data.get('user_number')
+
+    if not argument:
+        await whatsapp_service.send_message(
+            phone_number=sender,
+            message='Uso: imagem <prompt>. Ex: imagem gato astronauta neon',
+        )
+        return
+
+    media_path = original_payload.get('image', {}).get('media_path')
+    base_image_bytes = None
+    if media_path:
+        base_image_bytes = await whatsapp_service.download_media(media_path)
+
+    prompt = argument
+    generated = await gemini_service.generate_image_from_prompt(
+        prompt, base_image_bytes
+    )
+    if not generated:
+        await whatsapp_service.send_message(
+            phone_number=sender,
+            message="Falha ao gerar imagem. Tente ajustar o prompt ou envie 'ajuda'.",
+        )
+        return
+
+    # Envia ao chat
+    await whatsapp_service.send_image_message(
+        phone_number=sender,
+        image_bytes=generated,
+        caption=f'Imagem gerada: {prompt}',
+    )
+
+    # Posta status
+    status_id = await whatsapp_service.post_status_update(
+        image_bytes=generated,
+        caption=f'Prompt: {prompt}',
+    )
+
+    # Atualiza sessão
+    await user_session_cache.save_prompt(user_number, prompt)
+    await user_session_cache.save_generated_image(user_number, generated)
+    if base_image_bytes:
+        await user_session_cache.save_base_image(user_number, base_image_bytes)
+    if status_id:
+        await user_session_cache.save_status_id(user_number, status_id)
+
+    logger.success(f'✅ Comando imagem concluído user={user_number}')
+
+
+async def _handle_legenda_command(
+    command_data: dict,
+    whatsapp_service: WhatsAppService,
+    user_session_cache,
+):
+    """Handler para comando 'legenda'."""
+    argument = command_data.get('argument', '')
+    sender = command_data.get('sender')
+    user_number = command_data.get('user_number')
+
+    if not argument:
+        await whatsapp_service.send_message(
+            phone_number=sender,
+            message='Uso: legenda <novo texto>',
+        )
+        return
+
+    existing_image = await user_session_cache.get_generated_image(user_number)
+    if not existing_image:
+        await whatsapp_service.send_message(
+            phone_number=sender, message=NO_SESSION_FALLBACK
+        )
+        return
+
+    # Deleta status antigo se houver
+    last_status_id = await user_session_cache.get_status_id(user_number)
+    if last_status_id:
+        await whatsapp_service.delete_status(last_status_id)
+
+    # Reposta status com nova legenda
+    new_status_id = await whatsapp_service.post_status_update(
+        image_bytes=existing_image, caption=argument
+    )
+    if new_status_id:
+        await user_session_cache.save_status_id(user_number, new_status_id)
+
+    await whatsapp_service.send_message(
+        phone_number=sender,
+        message=f'✅ Legenda atualizada: {argument}',
+    )
+    logger.success(f'📝 Legenda atualizada user={user_number}')
+
+
+async def _handle_refazer_command(
+    command_data: dict,
+    gemini_service: GeminiService,
+    whatsapp_service: WhatsAppService,
+    user_session_cache,
+):
+    """Handler para comando 'refazer'."""
+    sender = command_data.get('sender')
+    user_number = command_data.get('user_number')
+
+    last_prompt = await user_session_cache.get_prompt(user_number)
+    if not last_prompt:
+        await whatsapp_service.send_message(
+            phone_number=sender, message=NO_SESSION_FALLBACK
+        )
+        return
+
+    base_bytes = await user_session_cache.get_base_image(user_number)
+    if not base_bytes:
+        base_bytes = await user_session_cache.get_generated_image(user_number)
+
+    generated = await gemini_service.generate_image_from_prompt(
+        last_prompt, base_bytes
+    )
+    if not generated:
+        await whatsapp_service.send_message(
+            phone_number=sender,
+            message="Falha ao regenerar. Ajuste o prompt com 'imagem <novo prompt>'",
+        )
+        return
+
+    # Envia e atualiza status
+    await whatsapp_service.send_image_message(
+        phone_number=sender,
+        image_bytes=generated,
+        caption=f'Variação gerada: {last_prompt}',
+    )
+    last_status_id = await user_session_cache.get_status_id(user_number)
+    if last_status_id:
+        await whatsapp_service.delete_status(last_status_id)
+    status_id = await whatsapp_service.post_status_update(
+        image_bytes=generated, caption=f'Variação: {last_prompt}'
+    )
+
+    await user_session_cache.save_generated_image(user_number, generated)
+    if status_id:
+        await user_session_cache.save_status_id(user_number, status_id)
+
+    await whatsapp_service.send_message(
+        phone_number=sender, message='✅ Variação pronta.'
+    )
+    logger.success(f'🔁 Refazer concluído user={user_number}')
+
+
+async def _handle_editar_command(
+    command_data: dict,
+    gemini_service: GeminiService,
+    whatsapp_service: WhatsAppService,
+    user_session_cache,
+):
+    """Handler para comando 'editar'."""
+    argument = command_data.get('argument', '')
+    sender = command_data.get('sender')
+    user_number = command_data.get('user_number')
+
+    if not argument:
+        await whatsapp_service.send_message(
+            phone_number=sender,
+            message='Uso: editar <instruções>. Ex: editar adicionar brilho roxo',
+        )
+        return
+
+    last_prompt = await user_session_cache.get_prompt(user_number)
+    generated_image = await user_session_cache.get_generated_image(user_number)
+
+    if not generated_image:
+        await whatsapp_service.send_message(
+            phone_number=sender, message=NO_SESSION_FALLBACK
+        )
+        return
+
+    combined_prompt = (
+        f'{last_prompt}. Instruções adicionais: {argument}'
+        if last_prompt
+        else argument
+    )
+
+    edited = await gemini_service.generate_image_from_prompt(
+        combined_prompt, generated_image
+    )
+    if not edited:
+        await whatsapp_service.send_message(
+            phone_number=sender,
+            message="Falha ao editar. Refine as instruções ou tente 'refazer'.",
+        )
+        return
+
+    await whatsapp_service.send_image_message(
+        phone_number=sender,
+        image_bytes=edited,
+        caption=f'Edição: {argument}',
+    )
+
+    last_status_id = await user_session_cache.get_status_id(user_number)
+    if last_status_id:
+        await whatsapp_service.delete_status(last_status_id)
+
+    status_id = await whatsapp_service.post_status_update(
+        image_bytes=edited,
+        caption=f'Edição aplicada: {argument}',
+    )
+
+    await user_session_cache.save_generated_image(user_number, edited)
+    await user_session_cache.save_prompt(user_number, combined_prompt)
+    if status_id:
+        await user_session_cache.save_status_id(user_number, status_id)
+
+    await whatsapp_service.send_message(
+        phone_number=sender,
+        message='✅ Edição concluída.',
+    )
+    logger.success(f'✏️ Edição concluída user={user_number}')
 
 
 async def process_command_operation(
@@ -436,10 +657,8 @@ async def process_command_operation(
     Processa comandos (imagem, legenda, refazer, editar) em background.
     """
     operation = command_data.get('operation')
-    argument = command_data.get('argument', '')
     sender = command_data.get('sender')
     raw_text = command_data.get('raw_text', '')
-    original_payload = command_data.get('original_payload', {})
     user_number = command_data.get('user_number')
 
     logger.info(
@@ -450,217 +669,36 @@ async def process_command_operation(
     try:
         # HELP nunca chega aqui (tratado inline)
         if operation == 'imagem':
-            if not argument:
-                await whatsapp_service.send_message(
-                    phone_number=sender,
-                    message='Uso: imagem <prompt>.'
-                    ' Ex: imagem gato astronauta neon',
-                )
-                return
-
-            media_path = original_payload.get('image', {}).get('media_path')
-            base_image_bytes = None
-            if media_path:
-                base_image_bytes = await whatsapp_service.download_media(
-                    media_path
-                )
-
-            prompt = argument
-            generated = await gemini_service.generate_image_from_prompt(
-                prompt, base_image_bytes
+            await _handle_imagem_command(
+                command_data,
+                gemini_service,
+                whatsapp_service,
+                user_session_cache,
             )
-            if not generated:
-                await whatsapp_service.send_message(
-                    phone_number=sender,
-                    message='Falha ao gerar imagem.'
-                    " Tente ajustar o prompt ou envie 'ajuda'.",
-                )
-                return
-
-            # Envia ao chat
-            await whatsapp_service.send_image_message(
-                phone_number=sender,
-                image_bytes=generated,
-                caption=f'Imagem gerada: {prompt}',
-            )
-
-            # Posta status
-            status_id = await whatsapp_service.post_status_update(
-                image_bytes=generated,
-                caption=f'Prompt: {prompt}',
-            )
-
-            # Atualiza sessão
-            await user_session_cache.save_prompt(user_number, prompt)
-            await user_session_cache.save_generated_image(
-                user_number, generated
-            )
-            if base_image_bytes:
-                await user_session_cache.save_base_image(
-                    user_number, base_image_bytes
-                )
-            if status_id:
-                await user_session_cache.save_status_id(user_number, status_id)
-
-            logger.success(f'✅ Comando imagem concluído user={user_number}')
             return
 
         if operation == 'legenda':
-            if not argument:
-                await whatsapp_service.send_message(
-                    phone_number=sender,
-                    message='Uso: legenda <novo texto>',
-                )
-                return
-
-            existing_image = await user_session_cache.get_generated_image(
-                user_number
+            await _handle_legenda_command(
+                command_data, whatsapp_service, user_session_cache
             )
-            if not existing_image:
-                await whatsapp_service.send_message(
-                    phone_number=sender, message=NO_SESSION_FALLBACK
-                )
-                return
-
-            # Deleta status antigo se houver
-            last_status_id = await user_session_cache.get_status_id(
-                user_number
-            )
-            if last_status_id:
-                await whatsapp_service.delete_status(last_status_id)
-
-            # Reposta status com nova legenda
-            new_status_id = await whatsapp_service.post_status_update(
-                image_bytes=existing_image, caption=argument
-            )
-            if new_status_id:
-                await user_session_cache.save_status_id(
-                    user_number, new_status_id
-                )
-
-            await whatsapp_service.send_message(
-                phone_number=sender,
-                message=f'✅ Legenda atualizada: {argument}',
-            )
-            logger.success(f'📝 Legenda atualizada user={user_number}')
             return
 
         if operation == 'refazer':
-            last_prompt = await user_session_cache.get_prompt(user_number)
-            if not last_prompt:
-                await whatsapp_service.send_message(
-                    phone_number=sender, message=NO_SESSION_FALLBACK
-                )
-                return
-
-            base_bytes = await user_session_cache.get_base_image(user_number)
-            if not base_bytes:
-                base_bytes = await user_session_cache.get_generated_image(
-                    user_number
-                )
-
-            generated = await gemini_service.generate_image_from_prompt(
-                last_prompt, base_bytes
+            await _handle_refazer_command(
+                command_data,
+                gemini_service,
+                whatsapp_service,
+                user_session_cache,
             )
-            if not generated:
-                await whatsapp_service.send_message(
-                    phone_number=sender,
-                    message='Falha ao regenerar.'
-                    "Ajuste o prompt com 'imagem <novo prompt>'",
-                )
-                return
-
-            # Envia e atualiza status
-            await whatsapp_service.send_image_message(
-                phone_number=sender,
-                image_bytes=generated,
-                caption=f'Variação gerada: {last_prompt}',
-            )
-            last_status_id = await user_session_cache.get_status_id(
-                user_number
-            )
-            if last_status_id:
-                await whatsapp_service.delete_status(last_status_id)
-            status_id = await whatsapp_service.post_status_update(
-                image_bytes=generated, caption=f'Variação: {last_prompt}'
-            )
-
-            await user_session_cache.save_generated_image(
-                user_number, generated
-            )
-            if status_id:
-                await user_session_cache.save_status_id(user_number, status_id)
-
-            await whatsapp_service.send_message(
-                phone_number=sender, message='✅ Variação pronta.'
-            )
-            logger.success(f'🔁 Refazer concluído user={user_number}')
             return
 
         if operation == 'editar':
-            if not argument:
-                await whatsapp_service.send_message(
-                    phone_number=sender,
-                    message='Uso: editar <instruções>.'
-                    ' Ex: editar adicionar brilho roxo',
-                )
-                return
-
-            last_prompt = await user_session_cache.get_prompt(user_number)
-            generated_image = await user_session_cache.get_generated_image(
-                user_number
+            await _handle_editar_command(
+                command_data,
+                gemini_service,
+                whatsapp_service,
+                user_session_cache,
             )
-
-            if not generated_image:
-                await whatsapp_service.send_message(
-                    phone_number=sender, message=NO_SESSION_FALLBACK
-                )
-                return
-
-            combined_prompt = (
-                f'{last_prompt}. Instruções adicionais: {argument}'
-                if last_prompt
-                else argument
-            )
-
-            edited = await gemini_service.generate_image_from_prompt(
-                combined_prompt, generated_image
-            )
-            if not edited:
-                await whatsapp_service.send_message(
-                    phone_number=sender,
-                    message='Falha ao editar. '
-                    "Refine as instruções ou tente 'refazer'.",
-                )
-                return
-
-            await whatsapp_service.send_image_message(
-                phone_number=sender,
-                image_bytes=edited,
-                caption=f'Edição: {argument}',
-            )
-
-            last_status_id = await user_session_cache.get_status_id(
-                user_number
-            )
-            if last_status_id:
-                await whatsapp_service.delete_status(last_status_id)
-
-            status_id = await whatsapp_service.post_status_update(
-                image_bytes=edited,
-                caption=f'Edição aplicada: {argument}',
-            )
-
-            await user_session_cache.save_generated_image(user_number, edited)
-            await user_session_cache.save_prompt(user_number, combined_prompt)
-            if status_id:
-                await user_session_cache.save_status_id(user_number, status_id)
-
-            await whatsapp_service.send_message(
-                phone_number=sender,
-                message='✅ Edição concluída.',
-            )
-            logger.success(f'✏️ Edição concluída user={user_number}')
             return
 
         logger.warning(f'⚠️ Operação desconhecida: {operation}')
@@ -676,6 +714,139 @@ async def process_command_operation(
             )
         except Exception:  # noqa: BLE001
             pass
+
+
+def _handle_status_view(
+    data: dict,
+    background_tasks: BackgroundTasks,
+    deps: WebhookDependencies,
+) -> dict | None:
+    """Trata eventos de visualização de status."""
+    is_ack_read = (
+        data.get('event') == 'message.ack'
+        and data.get('payload', {}).get('chat_id') == 'status@broadcast'
+        and data.get('payload', {}).get('receipt_type') == 'read'
+    )
+
+    if is_ack_read or data.get('event') == 'status.viewed':
+        logger.info('👁️ Visualização de status detectada!')
+        background_tasks.add_task(process_status_view, data)
+        background_tasks.add_task(
+            process_status_viewed_for_image_generation,
+            data,
+            deps.gemini_service,
+            deps.whatsapp_service,
+            deps.status_image_cache,
+        )
+        return {'status': 'accepted', 'detail': 'Status view processed'}
+    return None
+
+
+async def _handle_command(
+    data: dict,
+    cmd_ctx,
+    background_tasks: BackgroundTasks,
+    deps: WebhookDependencies,
+) -> dict | None:
+    """Trata comandos recebidos."""
+    sender = data.get('sender_id')
+    if not sender:
+        return {
+            'status': 'ignored',
+            'detail': 'command_without_sender',
+        }
+
+    # AJUDA: responde imediatamente
+    if cmd_ctx.operation == CommandOperation.AJUDA:
+        await deps.whatsapp_service.send_message(
+            phone_number=sender, message=HELP_MESSAGE
+        )
+        return {
+            'status': 'accepted',
+            'detail': 'help_sent',
+            'command': cmd_ctx.operation.name.lower(),
+        }
+
+    # Mapeia operação
+    op_map = {
+        CommandOperation.IMAGEM: 'imagem',
+        CommandOperation.LEGENDA: 'legenda',
+        CommandOperation.REFAZER: 'refazer',
+        CommandOperation.EDITAR: 'editar',
+    }
+    operation_str = op_map.get(cmd_ctx.operation)
+
+    # Feedback imediato
+    await deps.whatsapp_service.send_message(
+        phone_number=sender,
+        message=f'⚙️ Processando comando {operation_str}...',
+    )
+
+    command_data = {
+        'operation': operation_str,
+        'argument': cmd_ctx.argument,
+        'sender': sender,
+        'raw_text': cmd_ctx.raw_text,
+        'original_payload': data,
+        'user_number': extract_primary_user_number(data),
+    }
+
+    background_tasks.add_task(
+        process_command_operation,
+        command_data,
+        deps.gemini_service,
+        deps.whatsapp_service,
+        deps.user_session_cache,
+        deps.status_image_cache,
+    )
+
+    return {
+        'status': 'accepted',
+        'detail': 'command_queued',
+        'command': operation_str,
+    }
+
+
+async def _handle_normal_message(
+    data: dict,
+    background_tasks: BackgroundTasks,
+    deps: WebhookDependencies,
+) -> dict:
+    """Trata mensagens normais (não comandos nem status)."""
+    ignore, reason = await should_ignore_webhook(data, deps.message_cache)
+    if ignore:
+        return {'status': 'ok', 'reason': reason}
+
+    sender = data.get('sender_id')
+    processing_message_id = None
+
+    if sender:
+        processing_message = (
+            deps.whatsapp_service.get_random_processing_message()
+        )
+        processing_message_id = await deps.whatsapp_service.send_message(
+            phone_number=sender, message=processing_message
+        )
+
+    logger.info('📱 Webhook processável recebido, agendando task...')
+
+    task_data = {
+        **data,
+        'processing_message_id': processing_message_id,
+    }
+    background_tasks.add_task(
+        process_image_generation,
+        task_data,
+        deps.gemini_service,
+        deps.whatsapp_service,
+        deps.user_session_cache,
+        deps.status_image_cache,
+    )
+
+    return {
+        'status': 'accepted',
+        'detail': 'Webhook agendado para processamento',
+    }
 
 
 @router.post('/whatsapp')
@@ -700,137 +871,23 @@ async def receive_whatsapp_webhook(
         )
 
         # -------------------------------- Status view handling ---------------
-        if (
-            data.get('event') == 'message.ack'
-            and data.get('payload', {}).get('chat_id') == 'status@broadcast'
-            and data.get('payload', {}).get('receipt_type') == 'read'
-        ):
-            logger.info('👁️ Visualização de status detectada!')
-            background_tasks.add_task(process_status_view, data)
-            background_tasks.add_task(
-                process_status_viewed_for_image_generation,
-                data,
-                deps.gemini_service,
-                deps.whatsapp_service,
-                deps.status_image_cache,
-            )
-            return {'status': 'accepted', 'detail': 'Status view processed'}
-
-        if data.get('event') == 'status.viewed':
-            logger.info('👁️ Webhook de visualização de status recebido.')
-            background_tasks.add_task(process_status_view, data)
-            background_tasks.add_task(
-                process_status_viewed_for_image_generation,
-                data,
-                deps.gemini_service,
-                deps.whatsapp_service,
-                deps.status_image_cache,
-            )
-            return {'status': 'accepted', 'detail': 'Status view processed'}
+        status_result = _handle_status_view(data, background_tasks, deps)
+        if status_result:
+            return status_result
 
         # -------------------------------- Command parsing (V1) ---------------
         message_text = data.get('message', {}).get('text')
         cmd_ctx = parse_command(message_text)
 
         if cmd_ctx:
-            sender = data.get('sender_id')
-            logger.info(
-                f'🧩 Comando detectado: {cmd_ctx.operation.name}'
-                ' raw="{cmd_ctx.raw_text}"'
+            command_result = await _handle_command(
+                data, cmd_ctx, background_tasks, deps
             )
-            if not sender:
-                return {
-                    'status': 'ignored',
-                    'detail': 'command_without_sender',
-                }
-
-            user_number_cmd = extract_primary_user_number(data)
-
-            # AJUDA: responde imediatamente
-            if cmd_ctx.operation == CommandOperation.AJUDA:
-                await deps.whatsapp_service.send_message(
-                    phone_number=sender, message=HELP_MESSAGE
-                )
-                return {
-                    'status': 'accepted',
-                    'detail': 'help_sent',
-                    'command': cmd_ctx.operation.name.lower(),
-                }
-
-            # Mapeia operação
-            op_map = {
-                CommandOperation.IMAGEM: 'imagem',
-                CommandOperation.LEGENDA: 'legenda',
-                CommandOperation.REFAZER: 'refazer',
-                CommandOperation.EDITAR: 'editar',
-            }
-            operation_str = op_map.get(cmd_ctx.operation)
-
-            # Feedback imediato
-            await deps.whatsapp_service.send_message(
-                phone_number=sender,
-                message=f'⚙️ Processando comando {operation_str}...',
-            )
-
-            command_data = {
-                'operation': operation_str,
-                'argument': cmd_ctx.argument,
-                'sender': sender,
-                'raw_text': cmd_ctx.raw_text,
-                'original_payload': data,
-                'user_number': user_number_cmd,
-            }
-
-            background_tasks.add_task(
-                process_command_operation,
-                command_data,
-                deps.gemini_service,
-                deps.whatsapp_service,
-                deps.user_session_cache,
-                deps.status_image_cache,
-            )
-
-            return {
-                'status': 'accepted',
-                'detail': 'command_queued',
-                'command': operation_str,
-            }
+            if command_result:
+                return command_result
 
         # -------------------------------- Normal message flow ----------------
-        ignore, reason = await should_ignore_webhook(data, deps.message_cache)
-        if ignore:
-            return {'status': 'ok', 'reason': reason}
-
-        sender = data.get('sender_id')
-        processing_message_id = None
-
-        if sender:
-            processing_message = (
-                deps.whatsapp_service.get_random_processing_message()
-            )
-            processing_message_id = await deps.whatsapp_service.send_message(
-                phone_number=sender, message=processing_message
-            )
-
-        logger.info('📱 Webhook processável recebido, agendando task...')
-
-        task_data = {
-            **data,
-            'processing_message_id': processing_message_id,
-        }
-        background_tasks.add_task(
-            process_image_generation,
-            task_data,
-            deps.gemini_service,
-            deps.whatsapp_service,
-            deps.user_session_cache,
-            deps.status_image_cache,
-        )
-
-        return {
-            'status': 'accepted',
-            'detail': 'Webhook agendado para processamento',
-        }
+        return await _handle_normal_message(data, background_tasks, deps)
 
     except Exception as e:
         logger.error(f'❌ Erro no webhook: {str(e)}')
