@@ -6,20 +6,37 @@ A arquitetura do Klique WhatsApp Bot é baseada em microsserviços containerizad
 
 ## Estrutura de Diretórios (API)
 
-A estrutura da `fastapi-app` será adaptada para incluir a nova lógica de webhook.
+A estrutura atual da `fastapi-app` implementada com a lógica de webhook:
 
 ```
 klique-api/
-├── src/
+├── app/
 │   ├── routers/
-│   │   ├── whatsapp.py  # Endpoint para receber webhooks do go-whatsapp
-│   │   └── ...
+│   │   ├── whatsapp.py        # Endpoint para receber webhooks do go-whatsapp
+│   │   ├── auth.py           # Autenticação e autorização
+│   │   ├── register.py       # Registro de usuários
+│   │   └── schemas.py        # Esquemas Pydantic
 │   ├── services/
-│   │   ├── gemini.py    # Lógica para interagir com a API do Gemini
-│   │   └── whatsapp.py  # Cliente para a API REST do go-whatsapp
-│   ├── ...
-├── main.py
-└── ...
+│   │   ├── gemini.py         # Lógica para interagir com a API do Gemini
+│   │   ├── whatsapp.py       # Cliente para a API REST do go-whatsapp
+│   │   └── shared.py         # Serviços compartilhados e lifespan
+│   ├── cache.py              # Sistema de cache MongoDB
+│   ├── config.py             # Configurações da aplicação
+│   ├── database.py           # Conexões MongoDB
+│   ├── dependencies.py       # Dependências para autenticação
+│   ├── logger.py             # Sistema de logging
+│   ├── main.py               # Aplicação FastAPI principal
+│   ├── utils.py              # Utilitários compartilhados
+│   └── webhook_dependencies.py # Dependências específicas para webhooks
+├── tests/
+│   ├── test_cache.py         # Testes do sistema de cache
+│   ├── test_gemini.py        # Testes da integração com Gemini
+│   └── ...
+├── logs/                     # Logs da aplicação
+├── docker-compose.yml        # Orquestração dos serviços
+├── Dockerfile               # Build da aplicação
+├── pyproject.toml           # Configuração do projeto e dependências
+└── uv.lock                  # Lock file das dependências
 ```
 
 ## Componentes Principais
