@@ -67,19 +67,22 @@ async def send_or_edit_failure(
 async def _save_session_data(
     user_session_cache,
     user_number: str,
-    prompt: str | None,
-    generated_bytes: bytes,
-    image_bytes: bytes | None,
-    status_id: str | None,
+    session_data: dict,
 ) -> None:
     """Salva dados da sessão de forma consistente."""
     try:
         if user_number:
+            prompt = session_data.get('prompt')
+            generated_bytes = session_data.get('generated_bytes')
+            image_bytes = session_data.get('image_bytes')
+            status_id = session_data.get('status_id')
+
             if prompt:
                 await user_session_cache.save_prompt(user_number, prompt)
-            await user_session_cache.save_generated_image(
-                user_number, generated_bytes
-            )
+            if generated_bytes:
+                await user_session_cache.save_generated_image(
+                    user_number, generated_bytes
+                )
             # Se havia imagem base usada para edição (image_bytes), armazenar
             if image_bytes:
                 await user_session_cache.save_base_image(
@@ -174,13 +177,16 @@ async def process_image_generation(
             await status_image_cache.save_last_status_id(status_id)
 
         # Atualiza sessão por usuário (unifica comandos)
+        session_data = {
+            'prompt': prompt,
+            'generated_bytes': generated_bytes,
+            'image_bytes': image_bytes,
+            'status_id': status_id,
+        }
         await _save_session_data(
-            user_session_cache,
-            user_number,
-            prompt,
-            generated_bytes,
-            image_bytes,
-            status_id,
+            user_session_cache=user_session_cache,
+            user_number=user_number,
+            session_data=session_data,
         )
 
         # Atualiza mensagem final
@@ -229,7 +235,9 @@ async def process_status_viewed_for_image_generation(
         viewer_name = None
         try:
             contact_info = await whatsapp_service.get_contact_info(user_number)
-            viewer_name = contact_info.get('name') if contact_info else None
+            viewer_name = (
+                contact_info.get('name') if contact_info else None
+            )
         except Exception as e:
             logger.debug(f'Erro ao buscar nome do contato {user_number}: {e}')
 
@@ -336,7 +344,8 @@ async def process_status_view(data: dict) -> None:
         except Exception as db_e:
             logger.warning(f'⚠️ Não foi possível salvar no banco: {db_e}')
             logger.info(
-                f'👁️ Status visualizado por {user_number} (não salvo no DB).'
+                f'👁️ Status visualizado por {user_number} '
+                '(não salvo no DB).'
             )
 
     except Exception as e:
@@ -361,31 +370,36 @@ def _is_duplicate_message(data: dict, message_cache: MessageCache) -> bool:
 
 def _get_ignore_reason(data: dict, prompt_cached: str | None) -> str | None:
     """Determina o motivo para ignorar o webhook."""
-    # Verifica eventos e ações específicas
     event = data.get('event', '')
     action = data.get('action', '')
 
+    reason = None
     if event == 'message.ack':
-        return 'message.ack'
-    if event in {'message.revoke', 'group.join', 'group.leave', 'user.status'}:
-        return event
-    if action in {'message_edited', 'message_deleted'}:
-        return action
-    if 'message' not in data and 'image' not in data:
-        return 'no_content'
-    if not prompt_cached:
-        return 'no_prompt'
-    if prompt_cached and any(
+        reason = 'message.ack'
+    elif event in {
+        'message.revoke',
+        'group.join',
+        'group.leave',
+        'user.status',
+    }:
+        reason = event
+    elif action in {'message_edited', 'message_deleted'}:
+        reason = action
+    elif 'message' not in data and 'image' not in data:
+        reason = 'no_content'
+    elif not prompt_cached:
+        reason = 'no_prompt'
+    elif prompt_cached and any(
         prompt_cached.startswith(prefix)
         for prefix in [
             'Sua imagem gerada a partir de:',
             'Gerado por Klique AI:',
         ]
     ):
-        return 'bot_message'
-    if not data.get('sender_id'):
-        return 'no_sender'
-    return None
+        reason = 'bot_message'
+    elif not data.get('sender_id'):
+        reason = 'no_sender'
+    return reason
 
 
 async def should_ignore_webhook(
@@ -451,7 +465,10 @@ async def _handle_imagem_command(
     if not generated:
         await whatsapp_service.send_message(
             phone_number=sender,
-            message="Falha ao gerar imagem. Tente ajustar o prompt ou envie 'ajuda'.",
+            message=(
+                'Falha ao gerar imagem. Tente ajustar o prompt '
+                "ou envie 'ajuda'."
+            ),
         )
         return
 
@@ -472,7 +489,9 @@ async def _handle_imagem_command(
     await user_session_cache.save_prompt(user_number, prompt)
     await user_session_cache.save_generated_image(user_number, generated)
     if base_image_bytes:
-        await user_session_cache.save_base_image(user_number, base_image_bytes)
+        await user_session_cache.save_base_image(
+            user_number, base_image_bytes
+        )
     if status_id:
         await user_session_cache.save_status_id(user_number, status_id)
 
@@ -549,7 +568,10 @@ async def _handle_refazer_command(
     if not generated:
         await whatsapp_service.send_message(
             phone_number=sender,
-            message="Falha ao regenerar. Ajuste o prompt com 'imagem <novo prompt>'",
+            message=(
+                'Falha ao regenerar. Ajuste o prompt com '
+                "'imagem <novo prompt>'"
+            ),
         )
         return
 
@@ -590,12 +612,16 @@ async def _handle_editar_command(
     if not argument:
         await whatsapp_service.send_message(
             phone_number=sender,
-            message='Uso: editar <instruções>. Ex: editar adicionar brilho roxo',
+            message=(
+                'Uso: editar <instruções>. Ex: editar adicionar brilho roxo'
+            ),
         )
         return
 
     last_prompt = await user_session_cache.get_prompt(user_number)
-    generated_image = await user_session_cache.get_generated_image(user_number)
+    generated_image = (
+        await user_session_cache.get_generated_image(user_number)
+    )
 
     if not generated_image:
         await whatsapp_service.send_message(
@@ -615,7 +641,9 @@ async def _handle_editar_command(
     if not edited:
         await whatsapp_service.send_message(
             phone_number=sender,
-            message="Falha ao editar. Refine as instruções ou tente 'refazer'.",
+            message=(
+                "Falha ao editar. Refine as instruções ou tente 'refazer'."
+            ),
         )
         return
 
@@ -870,12 +898,12 @@ async def receive_whatsapp_webhook(
             f'Contato: {contact_info} recebeu sua mensagem'
         )
 
-        # -------------------------------- Status view handling ---------------
+        # ------------------------------ Status view handling -----------------
         status_result = _handle_status_view(data, background_tasks, deps)
         if status_result:
             return status_result
 
-        # -------------------------------- Command parsing (V1) ---------------
+        # ------------------------------ Command parsing (V1) -----------------
         message_text = data.get('message', {}).get('text')
         cmd_ctx = parse_command(message_text)
 
@@ -886,7 +914,7 @@ async def receive_whatsapp_webhook(
             if command_result:
                 return command_result
 
-        # -------------------------------- Normal message flow ----------------
+        # ----------------------------- Normal message flow -------------------
         return await _handle_normal_message(data, background_tasks, deps)
 
     except Exception as e:
