@@ -1,56 +1,26 @@
-import time
-from collections import defaultdict
-from datetime import datetime
+from datetime import datetime  # noqa: I001
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from loguru import logger
 
-from ..cache import status_image_cache
+from ..cache import (
+    MessageCache,
+    StatusImageCache,
+)
 from ..database import get_status_views_collection
 from ..routers import schemas
-from ..services.gemini import GeminiService, get_gemini_service
-from ..services.whatsapp import WhatsAppService, get_whatsapp_service
+from ..services.gemini import GeminiService
+from ..services.whatsapp import WhatsAppService
+from ..utils import extract_user_number, extract_primary_user_number
+from ..webhook_dependencies import (
+    WebhookDependencies,
+    get_webhook_dependencies,
+)
 
 router = APIRouter(
     prefix='/webhooks',
     tags=['webhooks'],
 )
-
-# Cache para evitar processamento duplicado de mensagens
-message_cache = defaultdict(float)
-CACHE_EXPIRY_SECONDS = 300  # 5 minutos
-
-
-def cleanup_cache():
-    """Remove entradas antigas do cache para evitar crescimento infinito"""
-    current_time = time.time()
-    expired_keys = [
-        key
-        for key, timestamp in message_cache.items()
-        if current_time - timestamp > CACHE_EXPIRY_SECONDS
-    ]
-    for key in expired_keys:
-        del message_cache[key]
-
-
-def is_message_processed(message_id: str) -> bool:
-    """Verifica se a mensagem já foi processada"""
-    cleanup_cache()
-    current_time = time.time()
-
-    if message_id in message_cache:
-        return True
-
-    # Marca a mensagem como processada
-    message_cache[message_id] = current_time
-    return False
-
-
-def extract_user_number(sender_id: str | None) -> str | None:
-    """Extrai o número limpo (sem sufixos) de um sender_id."""
-    if not sender_id:
-        return None
-    return sender_id.split('@')[0].split(':')[0]
 
 
 def extract_prompt(data: dict) -> tuple[str | None, str]:
@@ -92,16 +62,16 @@ async def process_image_generation(
     data: dict,
     gemini_service: GeminiService,
     whatsapp_service: WhatsAppService,
+    status_image_cache: StatusImageCache,
 ) -> None:
     """Processa a geração de imagem em background"""
     sender_phone = data.get('sender_id')  # Para enviar a resposta
-    user_phone_from = data.get('from')  # Para buscar o contato
     processing_message_id = data.get('processing_message_id')
 
     try:
         # Extrai dados necessários
         prompt, sender_name = extract_prompt(data)
-        user_number = extract_user_number(user_phone_from)
+        user_number = extract_primary_user_number(data)
 
         contact_name = sender_name
         if contact_name == 'Alguém' and user_number:
@@ -159,16 +129,22 @@ async def process_image_generation(
         logger.info('📤 Postando no status do WhatsApp...')
 
         # Posta a imagem no status usando status@broadcast
-        await whatsapp_service.post_status_update(
+        status_id = await whatsapp_service.post_status_update(
             image_bytes=generated_bytes,
             caption=f"Editado por: {sender_name} | Prompt: '{prompt}'",
         )
+
+        # Salva a imagem e o ID do status no cache do MongoDB
+        if status_id:
+            await status_image_cache.save_status_image(generated_bytes)
+            await status_image_cache.save_last_status_id(status_id)
 
         # Atualiza mensagem final
         if processing_message_id:
             await whatsapp_service.edit_message(
                 processing_message_id,
-                f"🎉 Processo concluído! Imagem enviada e publicada no status para: '{prompt}'",
+                f'🎉 Processo concluído! Imagem enviada e publicada '
+                f"no status para: '{prompt}'",
             )
 
         logger.success('🎉 Processamento concluído com sucesso!')
@@ -190,8 +166,10 @@ async def process_status_viewed_for_image_generation(
     data: dict,
     gemini_service: GeminiService,
     whatsapp_service: WhatsAppService,
+    status_image_cache: StatusImageCache,
 ) -> None:
-    """Gera uma nova imagem baseada na imagem anterior em cache quando alguém visualiza."""
+    """Gera uma nova imagem baseada na imagem anterior em cache
+    quando alguém visualiza."""
     try:
         payload = data.get('payload', {})
         sender_id = payload.get('sender_id')
@@ -216,10 +194,14 @@ async def process_status_viewed_for_image_generation(
 
         logger.info(f'👁️ Status visualizado por {viewer_name} ({user_number})')
 
-        cached_image_bytes = status_image_cache.get_last_status_image()
+        cached_image_bytes = await status_image_cache.get_last_status_image()
 
         if cached_image_bytes:
-            prompt = f"Edite esta imagem adicionando o texto '{viewer_name}' de forma criativa e elegante. Mantenha o estilo original da imagem."
+            prompt = (
+                f"Edite esta imagem adicionando o texto '{viewer_name}' "
+                f'de forma criativa e elegante. Mantenha o estilo '
+                f'original da imagem.'
+            )
             logger.info(
                 f'🎨 Editando imagem anterior em cache para {viewer_name}...'
             )
@@ -228,9 +210,14 @@ async def process_status_viewed_for_image_generation(
                 prompt, cached_image_bytes
             )
         else:
-            prompt = f"Crie uma imagem criativa e elegante com o texto '{viewer_name}' em destaque. Use cores vibrantes e um design moderno."
+            prompt = (
+                f'Crie uma imagem criativa e elegante com o texto '
+                f"'{viewer_name}' em destaque. Use cores vibrantes "
+                f'e um design moderno.'
+            )
             logger.info(
-                f'🎨 Criando nova imagem para {viewer_name} (sem cache disponível)...'
+                f'🎨 Criando nova imagem para {viewer_name} '
+                f'(sem cache disponível)...'
             )
             new_image_bytes = await gemini_service.generate_image_from_prompt(
                 prompt, None
@@ -243,7 +230,7 @@ async def process_status_viewed_for_image_generation(
         logger.success('✅ Nova imagem gerada! Postando no status...')
 
         # Deleta o status antigo, se existir
-        last_status_id = status_image_cache.get_last_status_id()
+        last_status_id = await status_image_cache.get_last_status_id()
         if last_status_id:
             logger.info(f'🗑️ Deletando status antigo: {last_status_id}')
             await whatsapp_service.delete_status(last_status_id)
@@ -275,17 +262,19 @@ async def process_status_view(data: dict) -> None:
             timestamp_str = timestamp_str or payload.get('timestamp')
 
         logger.debug(
-            f'🔍 Processando status view - sender_id: {sender_id}, timestamp: {timestamp_str}'
+            f'🔍 Processando status view - sender_id: {sender_id}, '
+            f'timestamp: {timestamp_str}'
         )
 
         if not sender_id or not timestamp_str:
             logger.warning(
-                f'❌ Dados de visualização de status incompletos - sender_id: {sender_id}, timestamp: {timestamp_str}'
+                f'❌ Dados de visualização de status incompletos - '
+                f'sender_id: {sender_id}, timestamp: {timestamp_str}'
             )
             logger.debug(f'📋 Dados completos: {data}')
             return
 
-        user_number = sender_id.split('@')[0].split(':')[0]
+        user_number = extract_user_number(sender_id)
 
         viewed_at = datetime.fromisoformat(
             timestamp_str.replace('Z', '+00:00')
@@ -298,7 +287,7 @@ async def process_status_view(data: dict) -> None:
 
         try:
             status_views_collection = get_status_views_collection()
-            status_views_collection.insert_one(status_view.model_dump())
+            await status_views_collection.insert_one(status_view.model_dump())
             logger.info(f'👁️ Status visualizado por {user_number} salvo no DB.')
         except Exception as db_e:
             logger.warning(f'⚠️ Não foi possível salvar no banco: {db_e}')
@@ -311,7 +300,9 @@ async def process_status_view(data: dict) -> None:
         logger.exception('Detalhes do erro:')
 
 
-def should_ignore_webhook(data: dict) -> tuple[bool, str]:
+async def should_ignore_webhook(
+    data: dict, message_cache: MessageCache
+) -> tuple[bool, str]:
     """Verifica se o webhook deve ser ignorado e retorna (ignorar, motivo)"""
 
     if (
@@ -323,6 +314,12 @@ def should_ignore_webhook(data: dict) -> tuple[bool, str]:
         return True, 'status_delivery_ack'
 
     prompt_cached, _ = extract_prompt(data)
+
+    # Verifica se a mensagem já foi processada (usando cache MongoDB)
+    message_id = data.get('message', {}).get('id')
+    if message_id and await message_cache.is_message_processed(message_id):
+        logger.debug(f'🔄 Mensagem duplicata (ID: {message_id})')
+        return True, 'duplicate'
 
     filters = [
         (
@@ -353,17 +350,6 @@ def should_ignore_webhook(data: dict) -> tuple[bool, str]:
             lambda d: (
                 logger.debug('📭 Webhook sem conteúdo processável'),
                 'no_content',
-            ),
-        ),
-        (
-            lambda d: (mid := d.get('message', {}).get('id'))
-            and is_message_processed(mid),
-            lambda d: (
-                logger.debug(
-                    '🔄 Mensagem duplicata (ID: '
-                    f'{d.get("message", {}).get("id")})'
-                ),
-                'duplicate',
             ),
         ),
         (
@@ -405,8 +391,7 @@ def should_ignore_webhook(data: dict) -> tuple[bool, str]:
 async def receive_whatsapp_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
-    gemini_service: GeminiService = Depends(get_gemini_service),
-    whatsapp_service: WhatsAppService = Depends(get_whatsapp_service),
+    deps: WebhookDependencies = Depends(get_webhook_dependencies),
 ):
     """
     Recebe webhooks do go-whatsapp e responde rapidamente.
@@ -414,7 +399,14 @@ async def receive_whatsapp_webhook(
     """
     try:
         data = await request.json()
-        logger.bind(payload=data).info(data)
+        user_number = extract_primary_user_number(data)
+        contact_info = await WhatsAppService().get_contact_info(
+            phone_number=user_number
+        )
+
+        logger.bind(payload=data).info(
+            f'Contato: {contact_info} recebeu sua mensagem'
+        )
 
         if (
             data.get('event') == 'message.ack'
@@ -426,8 +418,9 @@ async def receive_whatsapp_webhook(
             background_tasks.add_task(
                 process_status_viewed_for_image_generation,
                 data,
-                gemini_service,
-                whatsapp_service,
+                deps.gemini_service,
+                deps.whatsapp_service,
+                deps.status_image_cache,
             )
             return {'status': 'accepted', 'detail': 'Status view processed'}
 
@@ -437,25 +430,24 @@ async def receive_whatsapp_webhook(
             background_tasks.add_task(
                 process_status_viewed_for_image_generation,
                 data,
-                gemini_service,
-                whatsapp_service,
+                deps.gemini_service,
+                deps.whatsapp_service,
+                deps.status_image_cache,
             )
             return {'status': 'accepted', 'detail': 'Status view processed'}
 
-        ignore, reason = should_ignore_webhook(data)
+        ignore, reason = await should_ignore_webhook(data, deps.message_cache)
         if ignore:
             return {'status': 'ok', 'reason': reason}
 
         sender = data.get('sender_id')
-        from_phone = data.get(
-            'from'
-        )
-        sender_name = data.get('sender_name', 'Alguém')
         processing_message_id = None
 
         if sender:
-            processing_message = whatsapp_service.get_random_processing_message()
-            processing_message_id = await whatsapp_service.send_message(
+            processing_message = (
+                deps.whatsapp_service.get_random_processing_message()
+            )
+            processing_message_id = await deps.whatsapp_service.send_message(
                 phone_number=sender, message=processing_message
             )
 
@@ -464,13 +456,13 @@ async def receive_whatsapp_webhook(
         task_data = {
             **data,
             'processing_message_id': processing_message_id,
-            'from': from_phone,
         }
         background_tasks.add_task(
             process_image_generation,
             task_data,
-            gemini_service,
-            whatsapp_service,
+            deps.gemini_service,
+            deps.whatsapp_service,
+            deps.status_image_cache,
         )
 
         return {

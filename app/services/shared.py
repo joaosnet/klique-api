@@ -26,7 +26,8 @@ class AppServices:
     @classmethod
     async def close_services(cls) -> None:
         """
-        Fecha as conexões abertas pelos serviços, como o cliente HTTP e o banco de dados.
+        Fecha as conexões abertas pelos serviços,
+        como o cliente HTTP e o banco de dados.
         """
         if cls._whatsapp_service:
             await cls._whatsapp_service.close()

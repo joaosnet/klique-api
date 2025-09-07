@@ -10,7 +10,8 @@ _client_traducao: AsyncIOMotorClient = None
 def get_client() -> AsyncIOMotorClient:
     global _client  # noqa: PLW0603
     if _client is None:
-        _client = AsyncIOMotorClient(get_mongodb_url())
+        mongo_url = get_mongodb_url()
+        _client = AsyncIOMotorClient(mongo_url)
     return _client
 
 
@@ -23,7 +24,7 @@ def close_db_connection():
     """
     Closes the MongoDB connection.
     """
-    global _client, _client_traducao
+    global _client, _client_traducao  # noqa: PLW0603
     if _client:
         _client.close()
         _client = None
@@ -47,5 +48,10 @@ def get_users_collection():
 def get_profiles_collection():
     return get_db().get_collection('profile')
 
+
 def get_status_views_collection():
     return get_db().get_collection('status_views')
+
+
+def get_cache_collection():
+    return get_db().get_collection('cache')

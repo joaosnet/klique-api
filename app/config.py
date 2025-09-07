@@ -26,7 +26,7 @@ GMAIL_PASSWORD = os.getenv('GMAIL_APP_PASSWORD')
 
 # MongoDB Settings
 DB_CONNECTION = os.getenv('DB_CONNECTION', 'mongodb')
-DB_HOST = os.getenv('DB_HOST', 'localhost')
+DB_HOST = os.getenv('DB_HOST', 'mongodb')
 DB_PORT = int(os.getenv('DB_PORT', '27017'))
 DB_DATABASE = os.getenv('DB_DATABASE', 'klique')
 DB_USERNAME = os.getenv('DB_USERNAME')

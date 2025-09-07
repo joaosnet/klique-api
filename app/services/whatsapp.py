@@ -3,7 +3,6 @@ import random
 import httpx
 from rich import print
 
-from ..cache import status_image_cache
 from ..logger import logger
 
 # A URL base do serviço go-whatsapp, acessível dentro da rede Docker.
@@ -53,7 +52,6 @@ class WhatsAppService:
         image_bytes: bytes,
         caption: str,
         filename: str,
-        save_status: bool = False,
     ):
         """Helper interno para envio de imagens (mensagem ou status)."""
         try:
@@ -74,12 +72,6 @@ class WhatsAppService:
             )
             response.raise_for_status()
             response_data = response.json()
-            if save_status:
-                status_image_cache.save_status_image(image_bytes)
-                # Salva o ID da mensagem de status para poder deletá-la depois
-                if message_id := response_data.get('data', {}).get('key', {}).get('id'):
-                    status_image_cache.save_last_status_id(message_id)
-
             print(
                 f'[bold green]Imagem enviada para {phone} com sucesso.[/bold green]'
             )
@@ -166,23 +158,25 @@ class WhatsAppService:
 
         return None
 
-    async def post_status_update(self, image_bytes: bytes, caption: str = ''):
+    async def post_status_update(
+        self, image_bytes: bytes, caption: str = ''
+    ) -> str | None:
         """
-        Posta uma imagem como uma atualização de
-        status usando o endpoint send/image
-        com o destinatário especial status@broadcast.
+        Posta uma imagem como uma atualização de status.
 
         :param image_bytes: A imagem em formato de bytes.
         :param caption: Uma legenda para o status (opcional).
+        :return: O ID do status postado ou None em caso de erro.
         """
-        # Refatorado para usar método interno (salva cache)
-        return await self._send_image(
+        response_data = await self._send_image(
             phone='status@broadcast',
             image_bytes=image_bytes,
             caption=caption,
             filename='status.png',
-            save_status=True,
         )
+        if response_data:
+            return response_data.get('data', {}).get('key', {}).get('id')
+        return None
 
     async def delete_status(self, status_id: str) -> bool:
         """
@@ -369,6 +363,7 @@ class WhatsAppService:
         """
         if self.client and not self.client.is_closed:
             await self.client.aclose()
+
 
 def get_whatsapp_service() -> WhatsAppService:
     return WhatsAppService()

@@ -47,8 +47,19 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
-    env_file:
-      - .env
+    environment:
+      SECRET_KEY: a8b28eaaa2aa5cd246d7318435738f5c914feb474051c72b7d54429ff51194fc
+      GOOGLE_API_KEY: AIzaSyBgtTWw5XS1X6JdE-sddspxqCeM4nWl7iw
+      GOOGLE_APPLICATION_CREDENTIALS: "creds.json"
+      GOOGLE_DRIVE_ROOT_FOLDER_ID: "1e6T4wsPmPjuP-8qzWUkD2RAmZeGXT8IR"
+      DB_CONNECTION: mongodb
+      DB_HOST: mongodb_kliqueq
+      DB_PORT: 27017
+      DB_DATABASE: klique
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      GMAIL_EMAIL: joaodacruznatividade@gmail.com
+      GMAIL_APP_PASSWORD: vjvo pcau vvxx jivi # Senha de app do Gmail
     volumes:
       - ./app:/app/app
       - ./logs:/app/logs
