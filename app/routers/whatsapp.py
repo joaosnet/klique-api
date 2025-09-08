@@ -137,11 +137,8 @@ async def process_status_viewed_for_image_generation(
 
         logger.success('✅ Nova imagem gerada! Postando no status...')
 
-        # Deleta o status antigo, se existir
-        last_status_id = last_status.get('status_id') if last_status else None
-        if last_status_id:
-            logger.info(f'🗑️ Deletando status antigo: {last_status_id}')
-            await whatsapp_service.delete_status(last_status_id)
+        # Deleta o status mais recente (sempre busca o último)
+        await _delete_latest_status(whatsapp_service)
 
         # Posta a nova imagem como status
         await whatsapp_service.post_status_update(
@@ -214,6 +211,23 @@ async def process_status_view(
 NO_SESSION_FALLBACK = (
     'Nenhuma imagem anterior encontrada. Envie: imagem <prompt>'
 )
+
+
+async def _delete_latest_status(whatsapp_service: WhatsAppService) -> None:
+    """
+    Deleta sempre o status mais recente buscando diretamente da API.
+    Evita problemas com status IDs em cache que podem ter expirado.
+    """
+    try:
+        # Busca o ID do status mais recente diretamente da API
+        latest_status_id = await whatsapp_service.get_latest_status_id()
+        if latest_status_id:
+            logger.info(f'🗑️ Deletando status mais recente: {latest_status_id}')
+            await whatsapp_service.delete_status(latest_status_id)
+        else:
+            logger.info('📋 Nenhum status próprio encontrado para deletar')
+    except Exception as e:
+        logger.warning(f'⚠️ Erro ao deletar status mais recente: {e}')
 
 
 def _extract_media_paths(payload: dict) -> list[str]:
@@ -426,10 +440,8 @@ async def _handle_legenda_command(
         )
         return
 
-    # Deleta status antigo se houver
-    last_status_id = session.get('last_status_id') if session else None
-    if last_status_id:
-        await whatsapp_service.delete_status(last_status_id)
+    # Deleta o status mais recente
+    await _delete_latest_status(whatsapp_service)
 
     # Reposta status com nova legenda
     new_status_id = await whatsapp_service.post_status_update(
@@ -498,9 +510,8 @@ async def _handle_refazer_command(
         image_bytes=generated_bytes,
         caption=f'Variação gerada: {last_prompt}',
     )
-    last_status_id = session.get('last_status_id') if session else None
-    if last_status_id:
-        await whatsapp_service.delete_status(last_status_id)
+    # Deleta o status mais recente
+    await _delete_latest_status(whatsapp_service)
 
     # Gera legenda criativa para variação usando Gemini Web API
     status_caption = None
@@ -628,11 +639,8 @@ async def _update_status_and_session_for_edit(
     image_generation_service: Any = None,
 ) -> None:
     """Atualiza status e sessão após edição."""
-    # Remove status antigo
-    if data.session:
-        last_status_id = data.session.get('last_status_id')
-        if last_status_id:
-            await whatsapp_service.delete_status(last_status_id)
+    # Remove o status mais recente
+    await _delete_latest_status(whatsapp_service)
 
     # Gera legenda criativa para edição usando Gemini Web API
     status_caption = None
@@ -943,7 +951,7 @@ async def receive_whatsapp_webhook(
         contact_info = await deps.whatsapp_service.get_contact_info(
             phone_number=user_number
         )
-        logger.bind(payload=data).info(f'🔔 Webhook recebido: {data}')
+        # logger.bind(payload=data).info(f'🔔 Webhook recebido: {data}')
         logger.bind(payload=data).info(
             f'Contato: {contact_info} recebeu sua mensagem'
         )

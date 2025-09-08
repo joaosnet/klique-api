@@ -245,8 +245,8 @@ class WhatsAppService:
         :return: True se foi deletado com sucesso, False caso contrário.
         """
         try:
-            response = await self.client.delete(
-                f'/status/{status_id}', auth=self.auth, timeout=30.0
+            response = await self.client.post(
+                f'/message/{status_id}/delete', auth=self.auth, timeout=30.0
             )
             response.raise_for_status()
             logger.info(f'Status {status_id} deletado com sucesso.')
