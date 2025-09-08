@@ -67,3 +67,11 @@ def get_status_images_collection():
 
 def get_processed_messages_collection():
     return get_db().get_collection('processed_messages')
+
+
+def get_status_generation_rate_limit_collection():
+    return get_db().get_collection('status_generation_rate_limit')
+
+
+def get_status_recent_viewers_collection():
+    return get_db().get_collection('status_recent_viewers')

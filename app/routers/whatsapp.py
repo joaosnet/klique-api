@@ -1,23 +1,18 @@
-from datetime import datetime  # noqa: I001
-from typing import Any
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from loguru import logger
-from motor.motor_asyncio import AsyncIOMotorCollection
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 
+from ..command import HELP_MESSAGE, CommandOperation, parse_command
 from ..routers import schemas
 from ..services.whatsapp import WhatsAppService
-from ..utils import extract_user_number, extract_primary_user_number
+from ..utils import extract_primary_user_number, extract_user_number
 from ..webhook_dependencies import (
     WebhookDependencies,
     get_webhook_dependencies,
-)
-from ..command import (
-    parse_command,
-    CommandOperation,
-    HELP_MESSAGE,
 )
 
 
@@ -32,32 +27,114 @@ class SessionUpdateData:
     status_id: str = None
 
 
-@dataclass
-class EditProcessData:
-    """Dados para processamento de edições."""
+router = APIRouter(prefix='/webhooks', tags=['webhooks'])
 
-    generation_result: list[bytes]
-    argument: str
-    sender: str
-    user_number: str
-    session: dict | None
-
-
-@dataclass
-class EditStatusUpdateData:
-    """Dados para atualização de status e sessão após edição."""
-
-    edited_bytes: bytes
-    combined_prompt: str
-    argument: str
-    user_number: str
-    session: dict | None
-
-
-router = APIRouter(
-    prefix='/webhooks',
-    tags=['webhooks'],
+NO_SESSION_FALLBACK = (
+    'Nenhuma imagem anterior encontrada. Envie: imagem <prompt>'
 )
+
+
+async def _check_rate_limit(db: AsyncIOMotorDatabase) -> bool:
+    """Verifica rate limit para geração de status (1 por minuto)."""
+    try:
+        collection = db.get_collection('status_generation_rate_limit')
+        now = datetime.utcnow()
+        one_minute_ago = now - timedelta(minutes=1)
+
+        last_generation = await collection.find_one(
+            {}, sort=[('created_at', -1)]
+        )
+
+        if (
+            not last_generation
+            or last_generation['created_at'] < one_minute_ago
+        ):
+            await collection.insert_one({
+                'created_at': now,
+                'type': 'status_view_generation',
+            })
+            await collection.delete_many({
+                'created_at': {'$lt': now - timedelta(minutes=5)}
+            })
+            logger.info('✅ Rate limit OK - Geração permitida')
+            return True
+
+        time_remaining = (
+            60 - (now - last_generation['created_at']).total_seconds()
+        )
+        logger.info(
+            f'⏳ Rate limit ativo - Próxima geração em {time_remaining:.0f}s'
+        )
+        return False
+    except Exception as e:
+        logger.error(f'❌ Erro ao verificar rate limit: {e}')
+        return True
+
+
+async def _manage_recent_viewers(
+    db: AsyncIOMotorDatabase, viewer_name: str, user_number: str
+) -> list[str]:
+    """Gerencia lista de visualizadores recentes (últimos 2 minutos)."""
+    try:
+        collection = db.get_collection('status_recent_viewers')
+        two_minutes_ago = datetime.utcnow() - timedelta(minutes=2)
+
+        # Adiciona viewer atual
+        await collection.insert_one({
+            'viewer_name': viewer_name,
+            'user_number': user_number,
+            'viewed_at': datetime.utcnow(),
+        })
+
+        # Busca viewers recentes
+        recent_viewers = await collection.find({
+            'viewed_at': {'$gte': two_minutes_ago}
+        }).to_list(length=None)
+
+        viewer_names = [viewer['viewer_name'] for viewer in recent_viewers]
+
+        # Limpa registros antigos
+        await collection.delete_many({'viewed_at': {'$lt': two_minutes_ago}})
+
+        return viewer_names
+    except Exception as e:
+        logger.error(f'❌ Erro ao gerenciar viewers recentes: {e}')
+        return [viewer_name]
+
+
+def _format_viewers_text(viewers: list[str], max_names: int = 3) -> str:
+    """Formata texto de visualizadores com limite."""
+    if len(viewers) <= max_names:
+        return ', '.join(viewers)
+    return (
+        f'{", ".join(viewers[:max_names])} e mais {len(viewers) - max_names}'
+    )
+
+
+async def _generate_status_caption(
+    image_generation_service: Any,
+    prompt: str,
+    user_name: str = None,
+    chat=None,
+) -> str:
+    """Gera legenda criativa ou retorna fallback."""
+    try:
+        if hasattr(image_generation_service, 'generate_status_caption'):
+            caption = await image_generation_service.generate_status_caption(
+                chat=chat, image_prompt=prompt, user_name=user_name
+            )
+            if caption:
+                logger.info(f'Legenda criativa gerada: "{caption}"')
+                return caption
+    except Exception as e:
+        logger.warning(f'Erro ao gerar legenda criativa: {e}')
+
+    logger.debug('Usando legenda padrão como fallback')
+    return (
+        f'Prompt: {prompt}'
+        if not prompt.startswith(('Visualizado por', 'Edição', 'Variação'))
+        else prompt
+    )
 
 
 async def process_status_viewed_for_image_generation(
@@ -66,12 +143,9 @@ async def process_status_viewed_for_image_generation(
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ) -> None:
-    """Gera uma nova imagem baseada na imagem anterior em cache
-    quando alguém visualiza."""
+    """Gera nova imagem quando alguém visualiza status."""
     try:
-        payload = data.get('payload', {})
-        sender_id = payload.get('sender_id')
-
+        sender_id = data.get('payload', {}).get('sender_id')
         if not sender_id:
             logger.warning(
                 '❌ Sender ID não encontrado na visualização de status'
@@ -80,75 +154,101 @@ async def process_status_viewed_for_image_generation(
 
         user_number = extract_user_number(sender_id)
 
+        # Obtém nome do visualizador
         viewer_name = None
         try:
             contact_info = await whatsapp_service.get_contact_info(user_number)
             viewer_name = contact_info.get('name') if contact_info else None
-        except Exception as e:
-            logger.debug(f'Erro ao buscar nome do contato {user_number}: {e}')
+        except Exception:
+            pass
 
         if not viewer_name:
             viewer_name = f'*{user_number[-4:]}'
 
         logger.info(f'👁️ Status visualizado por {viewer_name} ({user_number})')
 
-        status_images_collection = db.get_collection('status_images')
-        last_status = await status_images_collection.find_one(
-            {}, sort=[('created_at', -1)]
-        )
-        cached_image_bytes = (
-            bytes(last_status['image_bytes']) if last_status else None
-        )
-
-        if cached_image_bytes:
-            prompt = (
-                f"Edite esta imagem adicionando o texto '{viewer_name}' "
-                f'de forma criativa e elegante. Mantenha o estilo '
-                f'original da imagem.'
-            )
-            logger.info(
-                f'🎨 Editando imagem anterior em cache para {viewer_name}...'
-            )
-
-            # Como este fluxo não é iniciado por um usuário específico,
-            # ele não pode usar uma sessão de usuário.
-            # Vamos criar um chat temporário para esta operação.
-            temp_chat = await image_generation_service.get_or_create_chat(
-                f'status_viewer_{user_number}'
-            )
-            generation_result = (
-                await image_generation_service.generate_content_from_chat(
-                    prompt, temp_chat, [cached_image_bytes]
-                )
-            )
-            new_image_bytes = (
-                generation_result[0] if generation_result else None
-            )
-        else:
-            logger.info(
-                '❕ Nenhuma imagem em cache para gerar variação de status. '
-                'Processo interrompido.'
-            )
+        # Verifica rate limiting
+        if not await _check_rate_limit(db):
+            logger.info(f'⏸️ Geração pausada por rate limiting - {viewer_name}')
             return
 
-        if not new_image_bytes:
+        # Gerencia visualizadores recentes
+        recent_viewers = await _manage_recent_viewers(
+            db, viewer_name, user_number
+        )
+
+        # Busca imagem em cache
+        status_images = db.get_collection('status_images')
+        last_status = await status_images.find_one(
+            {}, sort=[('created_at', -1)]
+        )
+
+        if not last_status:
+            logger.info('❕ Nenhuma imagem em cache. Processo interrompido.')
+            return
+
+        cached_image_bytes = bytes(last_status['image_bytes'])
+
+        # Cria prompt baseado no número de visualizadores
+        if len(recent_viewers) == 1:
+            prompt = (
+                f'Edite esta imagem adicionando o texto '
+                f"'{recent_viewers[0]}' de forma criativa e elegante."
+                ' Mantenha o estilo original.'
+            )
+            viewer_prompt = f'Visualizado por {recent_viewers[0]}'
+        else:
+            viewers_text = _format_viewers_text(recent_viewers)
+            prompt = (
+                f"Edite esta imagem adicionando os textos '{viewers_text}'"
+                ' de forma criativa e elegante. Mantenha o estilo original.'
+            )
+            viewer_prompt = f'Visualizado por: {viewers_text}'
+
+        logger.info(
+            f'🎨 Editando imagem para {len(recent_viewers)} '
+            'visualizador(es)...'
+        )
+
+        # Gera nova imagem
+        temp_chat = await image_generation_service.get_or_create_chat(
+            'status_viewer_batch'
+        )
+        generation_result = (
+            await image_generation_service.generate_content_from_chat(
+                prompt, temp_chat, [cached_image_bytes]
+            )
+        )
+
+        if not generation_result:
             logger.warning('⚠️ Gemini não conseguiu gerar nova imagem')
             return
 
+        new_image_bytes = generation_result[0]
         logger.success('✅ Nova imagem gerada! Postando no status...')
 
-        # Deleta o status mais recente (sempre busca o último)
-        await _delete_latest_status(whatsapp_service)
+        # Gera legenda e posta status
+        status_caption = await _generate_status_caption(
+            image_generation_service, viewer_prompt, None, temp_chat
+        )
 
-        # Posta a nova imagem como status
+        if not status_caption.startswith('Visualizado por'):
+            status_caption = (
+                f'Visualizado por: {_format_viewers_text(recent_viewers)} 👁️'
+            )
+
+        await _delete_latest_status(whatsapp_service)
         await whatsapp_service.post_status_update(
-            image_bytes=new_image_bytes,
-            caption=f'Visualizado por: {viewer_name} 👁️',
+            new_image_bytes, status_caption
         )
 
         logger.success(
-            f'🎉 Novo status gerado para visualização de {viewer_name}!'
+            f'🎉 Novo status gerado para {len(recent_viewers)}'
+            ' visualizador(es)!'
         )
+
+        # Limpa viewers após gerar
+        await db.get_collection('status_recent_viewers').delete_many({})
 
     except Exception as e:
         logger.error(f'❌ Erro ao processar visualização de status: {e}')
@@ -158,86 +258,68 @@ async def process_status_viewed_for_image_generation(
 async def process_status_view(
     data: dict, status_views_collection: AsyncIOMotorCollection
 ) -> None:
-    """Processa e salva a visualização de status no banco de dados."""
+    """Processa e salva visualização de status no banco."""
     try:
-        sender_id = data.get('sender_id')
-        timestamp_str = data.get('timestamp')
-
-        if not sender_id or not timestamp_str:
-            payload = data.get('payload', {})
-            sender_id = sender_id or payload.get('sender_id')
-            timestamp_str = timestamp_str or payload.get('timestamp')
-
-        logger.debug(
-            f'🔍 Processando status view - sender_id: {sender_id}, '
-            f'timestamp: {timestamp_str}'
+        # Extrai dados do payload
+        sender_id = data.get('sender_id') or data.get('payload', {}).get(
+            'sender_id'
+        )
+        timestamp_str = data.get('timestamp') or data.get('payload', {}).get(
+            'timestamp'
         )
 
         if not sender_id or not timestamp_str:
             logger.warning(
-                f'❌ Dados de visualização de status incompletos - '
-                f'sender_id: {sender_id}, timestamp: {timestamp_str}'
+                f'❌ Dados incompletos - sender_id: {sender_id},'
+                f' timestamp: {timestamp_str}'
             )
-            logger.debug(f'📋 Dados completos: {data}')
             return
 
         user_number = extract_user_number(sender_id)
-
         viewed_at = datetime.fromisoformat(
             timestamp_str.replace('Z', '+00:00')
         )
 
         status_view = schemas.StatusView(
-            user_number=user_number,
-            viewed_at=viewed_at,
+            user_number=user_number, viewed_at=viewed_at
         )
 
         try:
             await status_views_collection.insert_one(status_view.model_dump())
             logger.info(f'👁️ Status visualizado por {user_number} salvo no DB.')
-        except Exception as db_e:
-            logger.warning(f'⚠️ Não foi possível salvar no banco: {db_e}')
+        except Exception:
             logger.info(
                 f'👁️ Status visualizado por {user_number} (não salvo no DB).'
             )
 
     except Exception as e:
-        logger.error(f'❌ Erro ao processar visualização de status: {e}')
-        logger.exception('Detalhes do erro:')
-
-
-# ----------------------------- Command Operations ----------------------------
-
-NO_SESSION_FALLBACK = (
-    'Nenhuma imagem anterior encontrada. Envie: imagem <prompt>'
-)
+        logger.error(f'❌ Erro ao processar visualização: {e}')
 
 
 async def _delete_latest_status(whatsapp_service: WhatsAppService) -> None:
-    """
-    Deleta sempre o status mais recente buscando diretamente da API.
-    Evita problemas com status IDs em cache que podem ter expirado.
-    """
+    """Deleta o status mais recente."""
     try:
-        # Busca o ID do status mais recente diretamente da API
         latest_status_id = await whatsapp_service.get_latest_status_id()
         if latest_status_id:
-            logger.info(f'🗑️ Deletando status mais recente: {latest_status_id}')
+            logger.info(f'🗑️ Deletando status: {latest_status_id}')
             await whatsapp_service.delete_status(latest_status_id)
         else:
-            logger.info('📋 Nenhum status próprio encontrado para deletar')
+            logger.info('📋 Nenhum status encontrado para deletar')
     except Exception as e:
-        logger.warning(f'⚠️ Erro ao deletar status mais recente: {e}')
+        logger.warning(f'⚠️ Erro ao deletar status: {e}')
 
 
 def _extract_media_paths(payload: dict) -> list[str]:
     """Extrai caminhos de mídia do payload."""
     media_paths = []
 
+    # Verifica campo 'image'
     if 'image' in payload:
         media_path = payload.get('image', {}).get('media_path')
         if media_path:
             media_paths.append(media_path)
+
+    # Verifica campo 'media'
     elif 'media' in payload and isinstance(payload['media'], list):
         for media_item in payload['media']:
             if media_item.get('type') == 'image' and media_item.get(
@@ -252,39 +334,40 @@ async def _download_media_files(
     whatsapp_service: WhatsAppService, media_paths: list[str]
 ) -> list[bytes]:
     """Faz download dos arquivos de mídia."""
-    base_images_bytes = []
     if not media_paths:
-        return base_images_bytes
+        return []
 
-    logger.info(f'Baixando {len(media_paths)} imagens de entrada...')
+    logger.info(f'Baixando {len(media_paths)} imagens...')
+    images = []
+
     for path in media_paths:
         try:
             image_bytes = await whatsapp_service.download_media(path)
             if image_bytes:
-                base_images_bytes.append(image_bytes)
+                images.append(image_bytes)
         except Exception as e:
             logger.warning(f'Falha ao baixar mídia de {path}: {e}')
 
-    return base_images_bytes
+    return images
 
 
 async def _update_user_session(
-    db: AsyncIOMotorDatabase,
-    data: SessionUpdateData,
+    db: AsyncIOMotorDatabase, data: SessionUpdateData
 ) -> None:
-    """Atualiza a sessão do usuário no banco."""
-    user_sessions = db.get_collection('user_sessions')
+    """Atualiza sessão do usuário no banco."""
+    collection = db.get_collection('user_sessions')
     update_data = {
         'last_prompt': data.prompt,
         'last_generated_image': data.generated_bytes,
         'updated_at': datetime.utcnow(),
     }
+
     if data.base_images_bytes:
         update_data['last_base_image'] = data.base_images_bytes[0]
     if data.status_id:
         update_data['last_status_id'] = data.status_id
 
-    await user_sessions.update_one(
+    await collection.update_one(
         {'user_number': data.user_number},
         {'$set': update_data},
         upsert=True,
@@ -293,16 +376,16 @@ async def _update_user_session(
 
 async def _update_status_cache(
     db: AsyncIOMotorDatabase,
-    generated_bytes: bytes,
+    image_bytes: bytes,
     prompt: str,
     status_id: str = None,
 ) -> None:
-    """Atualiza o cache de status para variações automáticas."""
-    status_images_collection = db.get_collection('status_images')
-    await status_images_collection.replace_one(
-        {},  # Filter vazio para substituir sempre o documento mais recente
+    """Atualiza cache de status para variações automáticas."""
+    collection = db.get_collection('status_images')
+    await collection.replace_one(
+        {},
         {
-            'image_bytes': generated_bytes,
+            'image_bytes': image_bytes,
             'prompt': prompt,
             'status_id': status_id,
             'created_at': datetime.utcnow(),
@@ -320,92 +403,64 @@ async def _handle_imagem_command(
     """Handler para comando 'imagem'."""
     argument = command_data.get('argument', '')
     sender = command_data.get('sender')
-    original_payload = command_data.get('original_payload', {})
     user_number = command_data.get('user_number')
+    original_payload = command_data.get('original_payload', {})
 
     if not argument:
         await whatsapp_service.send_message(
-            phone_number=sender,
-            message='Uso: imagem <prompt>. Ex: imagem gato astronauta neon',
+            sender, 'Uso: imagem <prompt>. Ex: imagem gato astronauta neon'
         )
         return
 
-    # Extrai e baixa imagens de entrada
+    # Processa mídia de entrada
     media_paths = _extract_media_paths(original_payload)
     base_images_bytes = await _download_media_files(
         whatsapp_service, media_paths
     )
 
-    prompt = argument
+    # Gera imagem
     chat = await image_generation_service.get_or_create_chat(user_number)
     generation_result = (
         await image_generation_service.generate_content_from_chat(
-            prompt, chat, base_images_bytes
+            argument, chat, base_images_bytes
         )
     )
+
     if not generation_result:
         await whatsapp_service.send_message(
-            phone_number=sender,
-            message=(
-                'Falha ao gerar imagem. Tente ajustar o prompt '
-                "ou envie 'ajuda'."
-            ),
+            sender,
+            "Falha ao gerar imagem. Tente ajustar o prompt ou envie 'ajuda'.",
         )
         return
 
-    # O comando imagem sempre espera uma única imagem
     generated_bytes = generation_result[0]
 
     # Envia ao chat
     await whatsapp_service.send_image_message(
-        phone_number=sender,
-        image_bytes=generated_bytes,
-        caption=f'Imagem gerada: {prompt}',
+        sender, generated_bytes, f'Imagem gerada: {argument}'
     )
 
-    # Gera legenda criativa usando Gemini Web API
-    status_caption = None
-    try:
-        # Verifica se o serviço é o GeminiWebApiService
-        if hasattr(image_generation_service, 'generate_status_caption'):
-            # Obtém informações do contato para personalização
-            contact_info = await whatsapp_service.get_contact_info(user_number)
-            user_name = contact_info.get('name') if contact_info else None
+    # Gera legenda e posta status
+    contact_info = await whatsapp_service.get_contact_info(user_number)
+    user_name = contact_info.get('name') if contact_info else None
 
-            status_caption = (
-                await image_generation_service.generate_status_caption(
-                    chat=chat, image_prompt=prompt, user_name=user_name
-                )
-            )
-            logger.info(f'Legenda criativa gerada: "{status_caption}"')
-
-        if not status_caption:
-            # Fallback para legenda padrão
-            status_caption = f'Prompt: {prompt}'
-            logger.debug('Usando legenda padrão como fallback')
-
-    except Exception as e:
-        logger.warning(f'Erro ao gerar legenda criativa: {e}')
-        status_caption = f'Prompt: {prompt}'
-
-    # Posta status com legenda criativa
+    status_caption = await _generate_status_caption(
+        image_generation_service, argument, user_name, chat
+    )
     status_id = await whatsapp_service.post_status_update(
-        image_bytes=generated_bytes,
-        caption=status_caption,
+        generated_bytes, status_caption
     )
 
-    # Atualiza sessão
+    # Atualiza dados
     session_data = SessionUpdateData(
         user_number=user_number,
-        prompt=prompt,
+        prompt=argument,
         generated_bytes=generated_bytes,
         base_images_bytes=base_images_bytes,
         status_id=status_id,
     )
     await _update_user_session(db, session_data)
-
-    # Salva a imagem gerada no StatusImageCache para variações automáticas
-    await _update_status_cache(db, generated_bytes, prompt, status_id)
+    await _update_status_cache(db, generated_bytes, argument, status_id)
 
     logger.success(f'✅ Comando imagem concluído user={user_number}')
 
@@ -422,40 +477,34 @@ async def _handle_legenda_command(
 
     if not argument:
         await whatsapp_service.send_message(
-            phone_number=sender,
-            message='Uso: legenda <novo texto>',
+            sender, 'Uso: legenda <novo texto>'
         )
         return
 
-    user_sessions = db.get_collection('user_sessions')
-    session = await user_sessions.find_one({'user_number': user_number})
-    existing_image = (
-        bytes(session['last_generated_image'])
-        if session and 'last_generated_image' in session
-        else None
-    )
-    if not existing_image:
-        await whatsapp_service.send_message(
-            phone_number=sender, message=NO_SESSION_FALLBACK
-        )
+    # Busca imagem da sessão
+    collection = db.get_collection('user_sessions')
+    session = await collection.find_one({'user_number': user_number})
+
+    if not session or 'last_generated_image' not in session:
+        await whatsapp_service.send_message(sender, NO_SESSION_FALLBACK)
         return
 
-    # Deleta o status mais recente
+    existing_image = bytes(session['last_generated_image'])
+
+    # Atualiza status com nova legenda
     await _delete_latest_status(whatsapp_service)
-
-    # Reposta status com nova legenda
     new_status_id = await whatsapp_service.post_status_update(
-        image_bytes=existing_image, caption=argument
+        existing_image, argument
     )
+
     if new_status_id:
-        await user_sessions.update_one(
+        await collection.update_one(
             {'user_number': user_number},
             {'$set': {'last_status_id': new_status_id}},
         )
 
     await whatsapp_service.send_message(
-        phone_number=sender,
-        message=f'✅ Legenda atualizada: {argument}',
+        sender, f'✅ Legenda atualizada: {argument}'
     )
     logger.success(f'📝 Legenda atualizada user={user_number}')
 
@@ -470,81 +519,59 @@ async def _handle_refazer_command(
     sender = command_data.get('sender')
     user_number = command_data.get('user_number')
 
-    user_sessions = db.get_collection('user_sessions')
-    session = await user_sessions.find_one({'user_number': user_number})
+    # Busca sessão
+    collection = db.get_collection('user_sessions')
+    session = await collection.find_one({'user_number': user_number})
+
     if not session or 'last_prompt' not in session:
-        await whatsapp_service.send_message(
-            phone_number=sender, message=NO_SESSION_FALLBACK
-        )
+        await whatsapp_service.send_message(sender, NO_SESSION_FALLBACK)
         return
+
     last_prompt = session['last_prompt']
 
-    # Recupera imagem base dos bytes armazenados diretamente
+    # Recupera imagem base
     base_bytes = None
     if 'last_base_image' in session:
         base_bytes = bytes(session['last_base_image'])
     elif 'last_generated_image' in session:
         base_bytes = bytes(session['last_generated_image'])
 
+    # Regenera imagem
     chat = await image_generation_service.get_or_create_chat(user_number)
     generation_result = (
         await image_generation_service.generate_content_from_chat(
             last_prompt, chat, [base_bytes] if base_bytes else None
         )
     )
+
     if not generation_result:
         await whatsapp_service.send_message(
-            phone_number=sender,
-            message=(
-                'Falha ao regenerar. Ajuste o prompt com '
-                "'imagem <novo prompt>'"
-            ),
+            sender,
+            "Falha ao regenerar. Ajuste o prompt com 'imagem <novo prompt>'",
         )
         return
 
     generated_bytes = generation_result[0]
 
-    # Envia e atualiza status
+    # Envia e atualiza
     await whatsapp_service.send_image_message(
-        phone_number=sender,
-        image_bytes=generated_bytes,
-        caption=f'Variação gerada: {last_prompt}',
+        sender, generated_bytes, f'Variação gerada: {last_prompt}'
     )
-    # Deleta o status mais recente
     await _delete_latest_status(whatsapp_service)
 
-    # Gera legenda criativa para variação usando Gemini Web API
-    status_caption = None
-    try:
-        # Verifica se o serviço é o GeminiWebApiService
-        if hasattr(image_generation_service, 'generate_status_caption'):
-            # Obtém informações do contato para personalização
-            contact_info = await whatsapp_service.get_contact_info(user_number)
-            user_name = contact_info.get('name') if contact_info else None
+    # Gera legenda para variação
+    contact_info = await whatsapp_service.get_contact_info(user_number)
+    user_name = contact_info.get('name') if contact_info else None
 
-            status_caption = (
-                await image_generation_service.generate_status_caption(
-                    chat=chat, image_prompt=last_prompt, user_name=user_name
-                )
-            )
-            logger.info(
-                f'Legenda criativa para variação gerada: "{status_caption}"'
-            )
-
-        if not status_caption:
-            # Fallback para legenda padrão
-            status_caption = f'Variação: {last_prompt}'
-            logger.debug('Usando legenda padrão como fallback para variação')
-
-    except Exception as e:
-        logger.warning(f'Erro ao gerar legenda criativa para variação: {e}')
-        status_caption = f'Variação: {last_prompt}'
-
+    status_caption = await _generate_status_caption(
+        image_generation_service, f'Variação: {last_prompt}', user_name, chat
+    )
     status_id = await whatsapp_service.post_status_update(
-        image_bytes=generated_bytes, caption=status_caption
+        generated_bytes, status_caption
     )
 
-    await user_sessions.update_one(
+    # Atualiza dados
+    await collection.update_one(
         {'user_number': user_number},
         {
             '$set': {
@@ -553,155 +580,10 @@ async def _handle_refazer_command(
             }
         },
     )
+    await _update_status_cache(db, generated_bytes, last_prompt, status_id)
 
-    # Atualiza o StatusImageCache para variações automáticas
-    status_images_collection = db.get_collection('status_images')
-    await status_images_collection.replace_one(
-        {},  # Filter vazio para substituir sempre o documento mais recente
-        {
-            'image_bytes': generated_bytes,
-            'prompt': last_prompt,
-            'status_id': status_id,
-            'created_at': datetime.utcnow(),
-        },
-        upsert=True,
-    )
-
-    await whatsapp_service.send_message(
-        phone_number=sender, message='✅ Variação pronta.'
-    )
+    await whatsapp_service.send_message(sender, '✅ Variação pronta.')
     logger.success(f'🔁 Refazer concluído user={user_number}')
-
-
-async def _get_images_for_editing(
-    session: dict | None,
-    whatsapp_service: WhatsAppService,
-    original_payload: dict,
-) -> list[bytes]:
-    """Obtém imagens para edição da sessão ou payload atual."""
-    images_for_editing = []
-
-    # Adiciona última imagem gerada da sessão
-    if session and 'last_generated_image' in session:
-        try:
-            image_bytes = bytes(session['last_generated_image'])
-            images_for_editing.append(image_bytes)
-        except Exception as e:
-            logger.warning('Falha ao ler imagem da sessão: %s', e)
-
-    # Adiciona novas imagens do payload
-    media_paths = _extract_media_paths(original_payload)
-    new_images = await _download_media_files(whatsapp_service, media_paths)
-    images_for_editing.extend(new_images)
-
-    return images_for_editing
-
-
-async def _process_edited_images(
-    data: EditProcessData,
-    whatsapp_service: WhatsAppService,
-    db: AsyncIOMotorDatabase,
-    image_generation_service: Any = None,
-) -> None:
-    """Processa e envia imagens editadas."""
-    for i, edited_bytes in enumerate(data.generation_result):
-        caption = (
-            f'Edição: {data.argument}'
-            if len(data.generation_result) == 1
-            else f'Edição: {data.argument} ({i + 1}'
-            f'/{len(data.generation_result)})'
-        )
-        await whatsapp_service.send_image_message(
-            phone_number=data.sender,
-            image_bytes=edited_bytes,
-            caption=caption,
-        )
-
-        # Apenas a primeira imagem atualiza o status principal e a sessão
-        if i == 0:
-            combined_prompt = f'Edite esta imagem: {data.argument}'
-            update_data = EditStatusUpdateData(
-                edited_bytes=edited_bytes,
-                combined_prompt=combined_prompt,
-                argument=data.argument,
-                user_number=data.user_number,
-                session=data.session,
-            )
-            await _update_status_and_session_for_edit(
-                update_data, whatsapp_service, db, image_generation_service
-            )
-
-
-async def _update_status_and_session_for_edit(
-    data: EditStatusUpdateData,
-    whatsapp_service: WhatsAppService,
-    db: AsyncIOMotorDatabase,
-    image_generation_service: Any = None,
-) -> None:
-    """Atualiza status e sessão após edição."""
-    # Remove o status mais recente
-    await _delete_latest_status(whatsapp_service)
-
-    # Gera legenda criativa para edição usando Gemini Web API
-    status_caption = None
-    try:
-        # Verifica se o serviço é o GeminiWebApiService
-        if image_generation_service and hasattr(
-            image_generation_service, 'generate_status_caption'
-        ):
-            # Obtém informações do contato para personalização
-            contact_info = await whatsapp_service.get_contact_info(
-                data.user_number
-            )
-            user_name = contact_info.get('name') if contact_info else None
-
-            # Cria um chat temporário para gerar a legenda da edição
-            temp_chat = await image_generation_service.get_or_create_chat(
-                f'edit_caption_{data.user_number}'
-            )
-            status_caption = (
-                await image_generation_service.generate_status_caption(
-                    chat=temp_chat,
-                    image_prompt=f'Edição: {data.argument}',
-                    user_name=user_name,
-                )
-            )
-            logger.info(
-                f'Legenda criativa para edição gerada: "{status_caption}"'
-            )
-
-        if not status_caption:
-            # Fallback para legenda padrão
-            status_caption = f'Edição aplicada: {data.argument}'
-            logger.debug('Usando legenda padrão como fallback para edição')
-
-    except Exception as e:
-        logger.warning(f'Erro ao gerar legenda criativa para edição: {e}')
-        status_caption = f'Edição aplicada: {data.argument}'
-
-    # Cria novo status
-    status_id = await whatsapp_service.post_status_update(
-        image_bytes=data.edited_bytes,
-        caption=status_caption,
-    )
-
-    # Atualiza sessão do usuário
-    user_sessions = db.get_collection('user_sessions')
-    await user_sessions.update_one(
-        {'user_number': data.user_number},
-        {
-            '$set': {
-                'last_generated_image': data.edited_bytes,
-                'last_prompt': data.combined_prompt,
-                'last_status_id': status_id,
-            }
-        },
-    )
-
-    # Atualiza cache de status
-    await _update_status_cache(
-        db, data.edited_bytes, data.combined_prompt, status_id
-    )
 
 
 async def _handle_editar_command(
@@ -713,33 +595,40 @@ async def _handle_editar_command(
     """Handler para comando 'editar'."""
     argument = command_data.get('argument', '')
     sender = command_data.get('sender')
-    original_payload = command_data.get('original_payload', {})
     user_number = command_data.get('user_number')
+    original_payload = command_data.get('original_payload', {})
 
     if not argument:
         await whatsapp_service.send_message(
-            phone_number=sender,
-            message=(
-                'Uso: editar <instruções>. Ex: editar adicionar brilho roxo'
-            ),
+            sender,
+            'Uso: editar <instruções>. Ex: editar adicionar brilho roxo',
         )
         return
 
-    user_sessions = db.get_collection('user_sessions')
-    session = await user_sessions.find_one({'user_number': user_number})
+    # Coleta imagens para edição
+    collection = db.get_collection('user_sessions')
+    session = await collection.find_one({'user_number': user_number})
 
-    images_for_editing = await _get_images_for_editing(
-        session, whatsapp_service, original_payload
-    )
+    images_for_editing = []
+
+    # Adiciona imagem da sessão
+    if session and 'last_generated_image' in session:
+        images_for_editing.append(bytes(session['last_generated_image']))
+
+    # Adiciona novas imagens do payload
+    media_paths = _extract_media_paths(original_payload)
+    new_images = await _download_media_files(whatsapp_service, media_paths)
+    images_for_editing.extend(new_images)
 
     if not images_for_editing:
         await whatsapp_service.send_message(
-            phone_number=sender,
-            message='Nenhuma imagem encontrada para editar.'
-            ' Envie uma imagem ou use o comando `imagem` primeiro.',
+            sender,
+            'Nenhuma imagem encontrada para editar. '
+            'Envie uma imagem ou use o comando `imagem` primeiro.',
         )
         return
 
+    # Gera edição
     combined_prompt = f'Edite esta imagem: {argument}'
     chat = await image_generation_service.get_or_create_chat(user_number)
     generation_result = (
@@ -750,28 +639,59 @@ async def _handle_editar_command(
 
     if not generation_result:
         await whatsapp_service.send_message(
-            phone_number=sender,
-            message=(
-                "Falha ao editar. Refine as instruções ou tente 'refazer'."
-            ),
+            sender, "Falha ao editar. Refine as instruções ou tente 'refazer'."
         )
         return
 
-    edit_data = EditProcessData(
-        generation_result=generation_result,
-        argument=argument,
-        sender=sender,
-        user_number=user_number,
-        session=session,
-    )
-    await _process_edited_images(
-        edit_data, whatsapp_service, db, image_generation_service
-    )
+    # Processa resultados
+    for i, edited_bytes in enumerate(generation_result):
+        caption = (
+            f'Edição: {argument}'
+            if len(generation_result) == 1
+            else f'Edição: {argument} ({i + 1}/{len(generation_result)})'
+        )
+        await whatsapp_service.send_image_message(
+            sender, edited_bytes, caption
+        )
 
-    await whatsapp_service.send_message(
-        phone_number=sender,
-        message='✅ Edição concluída.',
-    )
+        # Apenas a primeira imagem atualiza status e sessão
+        if i == 0:
+            await _delete_latest_status(whatsapp_service)
+
+            # Gera legenda para edição
+            contact_info = await whatsapp_service.get_contact_info(user_number)
+            user_name = contact_info.get('name') if contact_info else None
+
+            temp_chat = await image_generation_service.get_or_create_chat(
+                f'edit_caption_{user_number}'
+            )
+            status_caption = await _generate_status_caption(
+                image_generation_service,
+                f'Edição: {argument}',
+                user_name,
+                temp_chat,
+            )
+
+            status_id = await whatsapp_service.post_status_update(
+                edited_bytes, status_caption
+            )
+
+            # Atualiza dados
+            await collection.update_one(
+                {'user_number': user_number},
+                {
+                    '$set': {
+                        'last_generated_image': edited_bytes,
+                        'last_prompt': combined_prompt,
+                        'last_status_id': status_id,
+                    }
+                },
+            )
+            await _update_status_cache(
+                db, edited_bytes, combined_prompt, status_id
+            )
+
+    await whatsapp_service.send_message(sender, '✅ Edição concluída.')
     logger.success(f'✏️ Edição concluída user={user_number}')
 
 
@@ -781,72 +701,50 @@ async def process_command_operation(
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ):
-    """
-    Processa comandos (imagem, legenda, refazer, editar) em background.
-    """
+    """Processa comandos em background."""
     operation = command_data.get('operation')
     sender = command_data.get('sender')
-    raw_text = command_data.get('raw_text', '')
     user_number = command_data.get('user_number')
 
-    logger.info(
-        f'⚙️ Iniciando processamento de comando {operation} '
-        f"user={user_number} raw='{raw_text}'"
-    )
+    logger.info(f'⚙️ Processando comando {operation} user={user_number}')
 
     try:
-        # HELP nunca chega aqui (tratado inline)
-        if operation == 'imagem':
-            await _handle_imagem_command(
-                command_data,
-                image_generation_service,
-                whatsapp_service,
-                db,
-            )
-            return
+        handlers = {
+            'imagem': _handle_imagem_command,
+            'legenda': _handle_legenda_command,
+            'refazer': _handle_refazer_command,
+            'editar': _handle_editar_command,
+        }
 
-        if operation == 'legenda':
-            await _handle_legenda_command(command_data, whatsapp_service, db)
-            return
-
-        if operation == 'refazer':
-            await _handle_refazer_command(
-                command_data,
-                image_generation_service,
-                whatsapp_service,
-                db,
-            )
-            return
-
-        if operation == 'editar':
-            await _handle_editar_command(
-                command_data,
-                image_generation_service,
-                whatsapp_service,
-                db,
-            )
-            return
-
-        logger.warning(f'⚠️ Operação desconhecida: {operation}')
+        handler = handlers.get(operation)
+        if handler:
+            if operation == 'legenda':
+                await handler(command_data, whatsapp_service, db)
+            else:
+                await handler(
+                    command_data,
+                    image_generation_service,
+                    whatsapp_service,
+                    db,
+                )
+        else:
+            logger.warning(f'⚠️ Operação desconhecida: {operation}')
 
     except Exception as e:
         logger.error(
             f'❌ Erro ao processar comando {operation} user={user_number}: {e}'
         )
-        logger.exception('Detalhes do erro no processamento do comando:')
+        logger.exception('Detalhes do erro:')
         try:
             await whatsapp_service.send_message(
-                phone_number=sender,
-                message='Erro interno no processamento do comando.',
+                sender, 'Erro interno no processamento do comando.'
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
 
 def _handle_status_view(
-    data: dict,
-    background_tasks: BackgroundTasks,
-    deps: WebhookDependencies,
+    data: dict, background_tasks: BackgroundTasks, deps: WebhookDependencies
 ) -> dict | None:
     """Trata eventos de visualização de status."""
     is_ack_read = (
@@ -880,35 +778,29 @@ async def _handle_command(
     """Trata comandos recebidos."""
     sender = data.get('sender_id')
     if not sender:
-        return {
-            'status': 'ignored',
-            'detail': 'command_without_sender',
-        }
+        return {'status': 'ignored', 'detail': 'command_without_sender'}
 
     # AJUDA: responde imediatamente
     if cmd_ctx.operation == CommandOperation.AJUDA:
-        await deps.whatsapp_service.send_message(
-            phone_number=sender, message=HELP_MESSAGE
-        )
+        await deps.whatsapp_service.send_message(sender, HELP_MESSAGE)
         return {
             'status': 'accepted',
             'detail': 'help_sent',
-            'command': cmd_ctx.operation.name.lower(),
+            'command': 'ajuda',
         }
 
     # Mapeia operação
-    op_map = {
+    operation_map = {
         CommandOperation.IMAGEM: 'imagem',
         CommandOperation.LEGENDA: 'legenda',
         CommandOperation.REFAZER: 'refazer',
         CommandOperation.EDITAR: 'editar',
     }
-    operation_str = op_map.get(cmd_ctx.operation)
+    operation_str = operation_map.get(cmd_ctx.operation)
 
     # Feedback imediato
     await deps.whatsapp_service.send_message(
-        phone_number=sender,
-        message=f'⚙️ Processando comando {operation_str}...',
+        sender, f'⚙️ Processando comando {operation_str}...'
     )
 
     command_data = {
@@ -941,27 +833,24 @@ async def receive_whatsapp_webhook(
     background_tasks: BackgroundTasks,
     deps: WebhookDependencies = Depends(get_webhook_dependencies),
 ):
-    """
-    Recebe webhooks do go-whatsapp e responde rapidamente.
-    Processamento pesado é feito em background.
-    """
+    """Recebe webhooks do go-whatsapp e processa comandos/eventos."""
     try:
         data = await request.json()
         user_number = extract_primary_user_number(data)
         contact_info = await deps.whatsapp_service.get_contact_info(
-            phone_number=user_number
+            user_number
         )
-        # logger.bind(payload=data).info(f'🔔 Webhook recebido: {data}')
+
         logger.bind(payload=data).info(
             f'Contato: {contact_info} recebeu sua mensagem'
         )
 
-        # --------------------- Fluxo 1: Status view handling -----------------
+        # Fluxo 1: Visualização de status
         status_result = _handle_status_view(data, background_tasks, deps)
         if status_result:
             return status_result
 
-        # --------------------- Fluxo 2: Command parsing (V1) -----------------
+        # Fluxo 2: Comandos
         message_body = data.get('message', {})
         image_body = data.get('image', {})
         message_text = (
@@ -969,9 +858,8 @@ async def receive_whatsapp_webhook(
             or message_body.get('caption')
             or image_body.get('caption')
         )
-        logger.debug(f"Texto extraído para parsing: '{message_text}'")
-        cmd_ctx = parse_command(message_text)
 
+        cmd_ctx = parse_command(message_text)
         if cmd_ctx:
             command_result = await _handle_command(
                 data, cmd_ctx, background_tasks, deps
@@ -979,17 +867,15 @@ async def receive_whatsapp_webhook(
             if command_result:
                 return command_result
 
-        # ----------------------------- Normal message flow (REMOVED) ---------
-        # O fluxo de mensagens normais foi removido.
-        # Apenas comandos explícitos são processados.
+        # Nenhum comando ou evento detectado
         logger.debug(
             'Nenhum comando ou evento de status detectado. Ignorando.'
         )
         return {'status': 'ok', 'reason': 'no_command_or_event'}
 
     except Exception as e:
-        logger.error(f'❌ Erro no webhook: {str(e)}')
-        logger.exception('Detalhes do erro no webhook:')
+        logger.error(f'❌ Erro no webhook: {e}')
+        logger.exception('Detalhes do erro:')
         return {'status': 'error', 'detail': str(e)}
     finally:
         logger.debug('🔌 Webhook principal finalizado')
