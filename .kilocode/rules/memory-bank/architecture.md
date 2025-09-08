@@ -17,7 +17,8 @@ klique-api/
 │   │   ├── register.py       # Registro de usuários
 │   │   └── schemas.py        # Esquemas Pydantic
 │   ├── services/
-│   │   ├── gemini.py         # Lógica para interagir com a API do Gemini
+│   │   ├── gemini.py         # Serviço oficial Google GenAI (principal)
+│   │   ├── gemini_webapi_service.py # Serviço alternativo Gemini Web API
 │   │   ├── whatsapp.py       # Cliente para a API REST do go-whatsapp
 │   │   └── shared.py         # Serviços compartilhados e lifespan
 │   ├── cache.py              # Sistema de cache MongoDB unificado
@@ -30,9 +31,11 @@ klique-api/
 │   ├── utils.py              # Utilitários compartilhados
 │   └── webhook_dependencies.py # Dependências específicas para webhooks
 ├── tests/
-│   ├── test_cache.py         # Testes do sistema de cache
-│   ├── test_gemini.py        # Testes da integração com Gemini
+│   ├── test_gemini.py        # Testes da integração com Gemini oficial
+│   ├── test_gemini-webapi-service.py # Testes do serviço web API
 │   └── ...
+├── docs/
+│   └── gemini-webapi-docker-setup.md # Configuração da Web API no Docker
 ├── logs/                     # Logs da aplicação
 ├── docker-compose.yml        # Orquestração dos serviços
 ├── Dockerfile               # Build da aplicação
@@ -51,10 +54,12 @@ klique-api/
 *   **`fastapi-app` (Backend/Orquestrador)**:
     *   Recebe os webhooks do `go-whatsapp` no endpoint `/webhooks/whatsapp`.
     *   **Sistema de Comandos**: Implementa comandos específicos (`imagem`, `legenda`, `refazer`, `editar`, `ajuda`) sem processamento automático de mensagens livres.
-    *   **Processamento de Prompt**: Processa prompts de texto e imagens através do `GeminiService`.
+    *   **Processamento Híbrido**: Utiliza dois serviços de geração de imagens:
+        *   `GeminiService` (oficial) - Serviço principal usando `google-genai`
+        *   `GeminiWebApiService` (web API) - Serviço alternativo usando `gemini-webapi`
     *   **Download de Mídia**: Faz download de imagens enviadas pelos usuários via `WhatsAppService`.
     *   **Geração Automática em Status**: Gera novas imagens automaticamente quando alguém visualiza um status.
-    *   **Cache de Sessão**: Mantém cache por usuário (último prompt, imagens geradas, IDs de status) no MongoDB.
+    *   **Cache de Sessão MongoDB**: Mantém cache por usuário (último prompt, imagens geradas, IDs de status) exclusivamente no MongoDB.
     *   **Cliente WhatsApp**: Utiliza `WhatsAppService` para enviar mensagens, imagens e gerenciar status.
 
 *   **`mongodb` (Banco de Dados)**:

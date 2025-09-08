@@ -66,8 +66,12 @@ graph TD
 
 *   ✅ Endpoint de webhook implementado e funcional na `fastapi-app`.
 *   ✅ Cliente completo para a API REST do `go-whatsapp` implementado.
-*   ✅ Integração com Gemini (`gemini-2.5-flash-image-preview`) implementada.
-*   ✅ Sistema de comandos estruturado funcionando.
-*   ✅ Cache de sessão por usuário implementado.
+*   ✅ Integração dupla com Gemini implementada:
+    *   ✅ Serviço oficial Google GenAI (`gemini-2.5-flash-image-preview`) - principal
+    *   ✅ Serviço web API Gemini (`gemini-webapi`) - alternativo com sessão persistente
+*   ✅ Sistema de comandos estruturado funcionando (`imagem`, `legenda`, `refazer`, `editar`, `ajuda`).
+*   ✅ Cache de sessão por usuário MongoDB unificado implementado.
 *   ✅ Geração automática de status por visualização funcionando.
-*   ✅ Sistema testado e em produção.
+*   ✅ Sistema testado com ambos os serviços e em produção estável.
+*   ✅ Enhancement automático de prompts usando `gemini-2.5-flash-lite`.
+*   ✅ Suporte completo a image-to-image (edição de imagens).

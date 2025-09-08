@@ -46,7 +46,7 @@
 
 ## Configuração de Ambiente
 
-As configurações da aplicação, como as credenciais da API do Gemini e timeouts, são gerenciadas através de variáveis de ambiente, conforme definido em [`app/config.py`](app/config.py:1-51).
+As configurações da aplicação, como as credenciais da API do Gemini e timeouts, são gerenciadas através de variáveis de ambiente, conforme definido em [`app/config.py`](app/config.py:1).
 
 ## Configurações de Desenvolvimento
 
@@ -54,3 +54,33 @@ As configurações da aplicação, como as credenciais da API do Gemini e timeou
 *   **Formatação**: `ruff` configurado com linha máxima de 79 caracteres e aspas simples.
 *   **Testes**: `pytest` configurado com modo assíncrono automático e cobertura de código.
 *   **Logging**: Sistema de logging personalizado usando `loguru` com Rich para formatação.
+
+## Serviços de Geração de Imagem
+
+### Serviço Principal - Google GenAI Oficial
+*   **Biblioteca**: `google-genai` v1.33.0+
+*   **Modelo de geração**: `gemini-2.5-flash-image-preview`
+*   **Modelo de enhancement**: `gemini-2.5-flash-lite`
+*   **Implementação**: [`app/services/gemini.py`](app/services/gemini.py:1)
+*   **Autenticação**: Via `GOOGLE_API_KEY`
+
+### Serviço Alternativo - Gemini Web API
+*   **Biblioteca**: `gemini-webapi` v1.15.0+
+*   **Implementação**: [`app/services/gemini_webapi_service.py`](app/services/gemini_webapi_service.py:1)
+*   **Autenticação**: Via cookies `SECURE_1PSID` e `SECURE_1PSIDTS`
+*   **Funcionalidades**: Sessão persistente, geração com contexto
+*   **Configuração**: Documentada em [`docs/gemini-webapi-docker-setup.md`](docs/gemini-webapi-docker-setup.md:1)
+
+## Ambiente de Execução
+
+### Docker Compose
+*   **Serviços**: `whatsapp`, `mongodb`, `fastapi-app`
+*   **Volumes**: Persistência de dados WhatsApp, MongoDB e cookies Gemini
+*   **Rede**: Comunicação interna entre serviços
+*   **Configuração**: [`docker-compose.yml`](docker-compose.yml:1)
+
+### Variáveis de Ambiente Essenciais
+*   `GOOGLE_API_KEY`: Chave da API oficial do Google
+*   `SECURE_1PSID`, `SECURE_1PSIDTS`: Cookies para Gemini Web API
+*   `DB_*`: Configurações do MongoDB
+*   Configurações completas no docker-compose.yml
