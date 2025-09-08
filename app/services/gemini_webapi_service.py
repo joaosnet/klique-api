@@ -1,14 +1,12 @@
+import os
 import tempfile
-import uuid
-from pathlib import Path
 from typing import Any, Dict
 
+import httpx
 from gemini_webapi import GeminiClient
 
 from ..config import SECURE_1PSID, SECURE_1PSIDTS
 from ..logger import logger
-
-DIRETORIO_TEMP = Path('temp')
 
 
 class GeminiWebApiService:
@@ -32,13 +30,11 @@ class GeminiWebApiService:
         if not secure_1psid:
             raise ValueError('A credencial SECURE_1PSID é obrigatória.')
 
-        # Se browser-cookie3 estiver instalado, pode usar apenas GeminiClient()
         self.client = GeminiClient(
             secure_1psid, secure_1psidts or '', proxy=None
         )
         self.is_initialized = False
-        self._current_chat = None
-        self._chat_metadata = None
+        self._user_chats: Dict[str, Any] = {}
 
     async def _initialize_client(self):
         """Inicializa o cliente se ainda não estiver inicializado."""
@@ -57,201 +53,291 @@ class GeminiWebApiService:
                 logger.error(msg)
                 raise
 
-    async def start_chat(self, metadata: Dict[str, Any] | None = None):
+    async def get_or_create_chat(self, user_number: str):
         """
-        Inicia uma nova sessão de chat ou continua uma existente.
+        Obtém uma sessão de chat existente para um usuário ou cria uma nova.
+
+        Conforme a documentação oficial, o client.start_chat() pode receber
+        metadata de sessões anteriores para continuar conversas.
 
         Args:
-            metadata (Dict[str, Any], optional): Metadados de uma sessão
-                anterior para continuar a conversa.
+            user_number (str): O número do usuário para identificar a sessão.
 
         Returns:
-            ChatSession: A sessão de chat iniciada.
+            ChatSession: A sessão de chat para o usuário.
         """
         await self._initialize_client()
-        logger.info(
-            'Iniciando uma nova sessão de chat da web API...'
-            if not metadata
-            else 'Continuando uma sessão de chat da web API...'
-        )
-        return self.client.start_chat(metadata=metadata)
 
-    @classmethod
+        if user_number in self._user_chats:
+            logger.info(
+                f'Sessão de chat reutilizada para o usuário {user_number}.'
+            )
+            # Reutiliza sessão anterior com metadata
+            return self.client.start_chat(
+                metadata=self._user_chats[user_number]
+            )
+
+        logger.info(
+            f'Criando nova sessão de chat para o usuário {user_number}.'
+        )
+        chat = self.client.start_chat()
+        # Armazena metadados da sessão para reutilização futura
+        if hasattr(chat, 'metadata'):
+            self._user_chats[user_number] = chat.metadata
+        return chat
+
+    @staticmethod
+    def _prepare_prompt(prompt: str) -> str:
+        """
+        Prepara o prompt adicionando instrução de geração se necessário.
+
+        Conforme a documentação, o Gemini por padrão envia imagens da web
+        a menos que seja especificamente solicitado para 'gerar' imagens.
+        """
+        prompt_lower = prompt.strip().lower()
+        generate_keywords = [
+            'gere',
+            'crie',
+            'faça',
+            'desenhe',
+            'generate',
+            'create',
+            'make',
+            'draw',
+        ]
+
+        if not any(prompt_lower.startswith(kw) for kw in generate_keywords):
+            return f'Generate an image of {prompt}'
+        return prompt
+
+    @staticmethod
+    def _prepare_temp_files(input_images: list[bytes]) -> list[str]:
+        """Cria arquivos temporários para as imagens de entrada."""
+        temp_file_paths = []
+        for i, image_bytes in enumerate(input_images):
+            with tempfile.NamedTemporaryFile(
+                delete=False, suffix=f'_{i}.png'
+            ) as temp_file:
+                temp_file.write(image_bytes)
+                temp_file_paths.append(temp_file.name)
+        return temp_file_paths
+
+    @staticmethod
+    def _cleanup_temp_files(temp_file_paths: list[str]) -> None:
+        """Remove arquivos temporários."""
+        for path in temp_file_paths:
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+    @staticmethod
+    async def _extract_image_bytes(image) -> bytes | None:
+        """Extrai bytes de uma imagem da resposta."""
+        try:
+            # Cria arquivo temporário para salvar a imagem
+            with tempfile.NamedTemporaryFile(
+                suffix='.png', delete=False
+            ) as temp_file:
+                temp_path = temp_file.name
+
+            try:
+                # Usa o método correto da API conforme documentação
+                await image.save(
+                    path=os.path.dirname(temp_path),
+                    filename=os.path.basename(temp_path),
+                )
+
+                # Lê os bytes do arquivo salvo
+                with open(temp_path, 'rb') as f:
+                    image_bytes = f.read()
+
+                logger.debug(f'Imagem salva com {len(image_bytes)} bytes')
+                return image_bytes
+
+            finally:
+                # Remove o arquivo temporário
+                try:
+                    os.unlink(temp_path)
+                except OSError:
+                    pass
+
+        except Exception as e:
+            logger.error(f'Erro ao extrair bytes da imagem: {e}')
+            # Fallback: usar URL da imagem
+            if hasattr(image, 'url'):
+                try:
+                    async with httpx.AsyncClient() as client:
+                        response_img = await client.get(image.url)
+                        return response_img.content
+                except Exception as url_error:
+                    logger.error(f'Erro ao baixar imagem via URL: {url_error}')
+            return None
+
     async def _generate_with_session(
         self,
         prompt: str,
         chat,
-        input_image: bytes | None = None,
-    ) -> bytes | None:
+        input_images: list[bytes] | None = None,
+    ) -> list[bytes] | None:
         """
         Gera conteúdo usando uma sessão de chat existente.
 
         Args:
-            prompt: O prompt para geração
-            chat: Sessão de chat já inicializada
-            input_image: Bytes da imagem de entrada (opcional)
+            prompt: O prompt para geração.
+            chat: Sessão de chat já inicializada.
+            input_images: Lista de bytes das imagens de entrada (opcional).
 
         Returns:
-            bytes | None: Bytes da imagem gerada ou None se não houver imagem
+            list[bytes] | None: Lista de bytes das imagens geradas, ou None.
         """
         try:
-            # Verifica se o prompt já instrui a gerar uma imagem
-            prompt_lower = prompt.strip().lower()
-            generate_keywords = [
-                'gere',
-                'crie',
-                'faça',
-                'desenhe',
-                'generate',
-                'create',
-                'make',
-                'draw',
-            ]
-
-            if not any(
-                prompt_lower.startswith(keyword)
-                for keyword in generate_keywords
-            ):
-                # Adiciona a instrução no início do prompt
-                prompt = f'Gere uma imagem de {prompt}'
-
+            prompt = self._prepare_prompt(prompt)
             logger.info(f'Enviando prompt para a web API: "{prompt}"')
 
-            files = None
-            temp_file_path = None
+            temp_file_paths = []
+            files = []
 
-            # Se há uma imagem de entrada, salva temporariamente
-            if input_image:
-                with tempfile.NamedTemporaryFile(
-                    delete=False, suffix='.png'
-                ) as temp_file:
-                    temp_file.write(input_image)
-                    temp_file_path = temp_file.name
-                    files = [temp_file_path]
+            if input_images:
+                temp_file_paths = self._prepare_temp_files(input_images)
+                files = temp_file_paths
+                logger.info(f'Carregadas {len(files)} imagens de entrada.')
 
             try:
                 response = await chat.send_message(prompt, files=files)
                 logger.success('Conteúdo gerado com sucesso pela web API.')
 
-                # Verifica se há imagens na resposta
-                if response.images:
-                    # Pega a primeira imagem gerada
-                    image = response.images[0]
+                if not response.images:
+                    logger.warning('Nenhuma imagem retornada na resposta')
+                    return None
 
-                    # Garante que o diretório temp existe
-                    DIRETORIO_TEMP.mkdir(parents=True, exist_ok=True)
-
-                    # Gera um nome único para a imagem
-
-                    unique_filename = f'{uuid.uuid4()}.png'
-                    image_path = DIRETORIO_TEMP / unique_filename
-
-                    # Salva a imagem no DIRETORIO_TEMP
-                    await image.save(
-                        path=str(DIRETORIO_TEMP),
-                        filename=unique_filename,
+                generated_images = []
+                for i, image in enumerate(response.images):
+                    logger.debug(
+                        f'Processando imagem {i + 1}/{len(response.images)}'
                     )
+                    image_bytes = await self._extract_image_bytes(image)
+                    if image_bytes:
+                        logger.info(
+                            f'🖼️ Imagem {i + 1} extraída com sucesso '
+                            f'({len(image_bytes)} bytes)'
+                        )
+                        generated_images.append(image_bytes)
+                    else:
+                        logger.warning(
+                            f'Falha ao extrair bytes da imagem {i + 1}'
+                        )
 
-                    # Lê os bytes da imagem salva
-                    with open(image_path, 'rb') as f:
-                        image_bytes = f.read()
-
-                    # Não remove o arquivo, pois foi salvo no DIRETORIO_TEMP
-                    logger.info(f'Imagem salva em: {image_path}')
-
-                    return image_bytes
-
-                return None
+                if generated_images:
+                    logger.success(
+                        f'Total de {len(generated_images)} '
+                        'imagens processadas com sucesso'
+                    )
+                return generated_images or None
 
             finally:
-                # Remove arquivo temporário de entrada se foi criado
-                if temp_file_path:
-                    Path(temp_file_path).unlink(missing_ok=True)
+                self._cleanup_temp_files(temp_file_paths)
 
         except Exception as e:
-            logger.error(
-                f'Erro ao gerar conteúdo com a web API do Gemini: {e}'
-            )
+            logger.error(f'Erro ao gerar conteúdo com a web API: {e}')
             return None
 
-    async def generate_content(
+    async def generate_content_from_chat(
         self,
         prompt: str,
-        input_image: bytes | None = None,
-        use_persistent_session: bool = True,
-    ) -> bytes | None:
+        chat: Any,
+        input_images: list[bytes] | None = None,
+    ) -> list[bytes] | None:
         """
-        Gera uma imagem a partir de um prompt, gerenciando a sessão de chat.
+        Gera conteúdo usando uma sessão de chat específica do usuário.
 
         Args:
-            prompt: Prompt para geração de imagem
-            input_image: Bytes da imagem de entrada para edição (opcional)
-            use_persistent_session: Se deve usar sessão persistente
-              para manter contexto
+            prompt (str): O prompt para a geração.
+            chat (Any): A sessão de chat do usuário.
+            input_images (list[bytes], optional): As imagens de entrada.
 
         Returns:
-            bytes | None: Bytes da imagem gerada ou None em caso de erro
+            list[bytes] | None: Lista de bytes das imagens geradas, ou None.
         """
-        if use_persistent_session and self._current_chat is not None:
-            chat = self._current_chat
-        else:
-            chat = await self.start_chat(
-                metadata=self._chat_metadata
-                if use_persistent_session
-                else None
-            )
-            if use_persistent_session:
-                self._current_chat = chat
-
         result = await self._generate_with_session(
-            prompt, chat, input_image=input_image
+            prompt, chat, input_images=input_images
         )
 
-        # Salva os metadados da sessão para continuidade
-        if use_persistent_session and hasattr(chat, 'metadata'):
-            self._chat_metadata = chat.metadata
+        # Atualiza os metadados da sessão se possível
+        user_number = self._extract_user_number_from_chat(chat)
+        if user_number and hasattr(chat, 'metadata'):
+            self._user_chats[user_number] = chat.metadata
 
         return result
 
-    def reset_session(self):
-        """
-        Reseta a sessão atual, forçando uma nova conversa na próxima chamada.
-        """
-        self._current_chat = None
-        self._chat_metadata = None
-        logger.info('Sessão de chat resetada.')
+    @staticmethod
+    def _extract_user_number_from_chat(chat) -> str | None:
+        """Extrai o user_number do chat ou metadata."""
+        user_number = getattr(chat, 'user_number', None)
+        if user_number:
+            return user_number
 
-    def get_session_metadata(self) -> Dict[str, Any] | None:
+        if not hasattr(chat, 'metadata'):
+            return None
+
+        metadata = chat.metadata
+        if isinstance(metadata, dict):
+            return metadata.get('user_number')
+        elif isinstance(metadata, list) and metadata:
+            first_item = metadata[0]
+            if isinstance(first_item, dict):
+                return first_item.get('user_number')
+            elif hasattr(first_item, 'user_number'):
+                return getattr(first_item, 'user_number')
+        return None
+
+    def reset_user_session(self, user_number: str):
         """
-        Retorna os metadados da sessão atual.
+        Reseta a sessão de chat para um usuário específico.
+
+        Args:
+            user_number (str): O número do usuário a ter a sessão resetada.
+        """
+        if user_number in self._user_chats:
+            del self._user_chats[user_number]
+            logger.info(f'Sessão de chat para {user_number} foi resetada.')
+        else:
+            logger.info(
+                f'Nenhuma sessão de chat encontrada para {user_number}'
+            )
+
+    def get_user_session_metadata(
+        self, user_number: str
+    ) -> Dict[str, Any] | None:
+        """
+        Retorna os metadados da sessão para um usuário específico.
+
+        Args:
+            user_number (str): O número do usuário.
 
         Returns:
-            Dict[str, Any] | None: Metadados da sessão
-            ou None se não houver sessão ativa
+            Dict[str, Any] | None: Metadados da sessão ou None.
         """
-        return self._chat_metadata
+        return self._user_chats.get(user_number)
+
+    async def close(self):
+        """
+        Fecha a sessão do cliente Gemini.
+
+        Conforme a documentação, é importante fechar o cliente adequadamente
+        para liberar recursos.
+        """
+        if self.is_initialized and self.client:
+            try:
+                await self.client.close()
+                self.is_initialized = False
+                self._user_chats.clear()  # Limpa cache de sessões
+                logger.info('Cliente GeminiWebApi fechado com sucesso.')
+            except Exception as e:
+                logger.error(f'Erro ao fechar cliente GeminiWebApi: {e}')
+                self.is_initialized = False
 
 
 async def get_gemini_webapi_service() -> GeminiWebApiService:
     """Factory function para obter uma instância de GeminiWebApiService."""
     return GeminiWebApiService()
-
-
-if __name__ == '__main__':
-    import asyncio
-
-    async def main():
-        service = GeminiWebApiService()
-        prompt = (
-            'Uma pintura digital vibrante de um gato astronauta flutuando'
-            ' no espaço, com estrelas brilhantes ao fundo.'
-        )
-        image_bytes = await service.generate_content(prompt)
-        if image_bytes:
-            with open('generated_image.png', 'wb') as f:
-                f.write(image_bytes)
-            print("Imagem gerada e salva como 'generated_image.png'")
-        else:
-            print('Falha ao gerar a imagem.')
-
-    asyncio.run(main())

@@ -1,5 +1,6 @@
 from datetime import datetime  # noqa: I001
 from typing import Any
+from dataclasses import dataclass
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from loguru import logger
@@ -18,6 +19,40 @@ from ..command import (
     CommandOperation,
     HELP_MESSAGE,
 )
+
+
+@dataclass
+class SessionUpdateData:
+    """Dados para atualização de sessão do usuário."""
+
+    user_number: str
+    prompt: str
+    generated_bytes: bytes
+    base_images_bytes: list[bytes] = None
+    status_id: str = None
+
+
+@dataclass
+class EditProcessData:
+    """Dados para processamento de edições."""
+
+    generation_result: list[bytes]
+    argument: str
+    sender: str
+    user_number: str
+    session: dict | None
+
+
+@dataclass
+class EditStatusUpdateData:
+    """Dados para atualização de status e sessão após edição."""
+
+    edited_bytes: bytes
+    combined_prompt: str
+    argument: str
+    user_number: str
+    session: dict | None
+
 
 router = APIRouter(
     prefix='/webhooks',
@@ -75,8 +110,19 @@ async def process_status_viewed_for_image_generation(
                 f'🎨 Editando imagem anterior em cache para {viewer_name}...'
             )
 
-            new_image_bytes = await image_generation_service.generate_content(
-                prompt, cached_image_bytes
+            # Como este fluxo não é iniciado por um usuário específico,
+            # ele não pode usar uma sessão de usuário.
+            # Vamos criar um chat temporário para esta operação.
+            temp_chat = await image_generation_service.get_or_create_chat(
+                f'status_viewer_{user_number}'
+            )
+            generation_result = (
+                await image_generation_service.generate_content_from_chat(
+                    prompt, temp_chat, [cached_image_bytes]
+                )
+            )
+            new_image_bytes = (
+                generation_result[0] if generation_result else None
             )
         else:
             logger.info(
@@ -170,6 +216,87 @@ NO_SESSION_FALLBACK = (
 )
 
 
+def _extract_media_paths(payload: dict) -> list[str]:
+    """Extrai caminhos de mídia do payload."""
+    media_paths = []
+
+    if 'image' in payload:
+        media_path = payload.get('image', {}).get('media_path')
+        if media_path:
+            media_paths.append(media_path)
+    elif 'media' in payload and isinstance(payload['media'], list):
+        for media_item in payload['media']:
+            if media_item.get('type') == 'image' and media_item.get(
+                'media_path'
+            ):
+                media_paths.append(media_item['media_path'])
+
+    return media_paths
+
+
+async def _download_media_files(
+    whatsapp_service: WhatsAppService, media_paths: list[str]
+) -> list[bytes]:
+    """Faz download dos arquivos de mídia."""
+    base_images_bytes = []
+    if not media_paths:
+        return base_images_bytes
+
+    logger.info(f'Baixando {len(media_paths)} imagens de entrada...')
+    for path in media_paths:
+        try:
+            image_bytes = await whatsapp_service.download_media(path)
+            if image_bytes:
+                base_images_bytes.append(image_bytes)
+        except Exception as e:
+            logger.warning(f'Falha ao baixar mídia de {path}: {e}')
+
+    return base_images_bytes
+
+
+async def _update_user_session(
+    db: AsyncIOMotorDatabase,
+    data: SessionUpdateData,
+) -> None:
+    """Atualiza a sessão do usuário no banco."""
+    user_sessions = db.get_collection('user_sessions')
+    update_data = {
+        'last_prompt': data.prompt,
+        'last_generated_image': data.generated_bytes,
+        'updated_at': datetime.utcnow(),
+    }
+    if data.base_images_bytes:
+        update_data['last_base_image'] = data.base_images_bytes[0]
+    if data.status_id:
+        update_data['last_status_id'] = data.status_id
+
+    await user_sessions.update_one(
+        {'user_number': data.user_number},
+        {'$set': update_data},
+        upsert=True,
+    )
+
+
+async def _update_status_cache(
+    db: AsyncIOMotorDatabase,
+    generated_bytes: bytes,
+    prompt: str,
+    status_id: str = None,
+) -> None:
+    """Atualiza o cache de status para variações automáticas."""
+    status_images_collection = db.get_collection('status_images')
+    await status_images_collection.replace_one(
+        {},  # Filter vazio para substituir sempre o documento mais recente
+        {
+            'image_bytes': generated_bytes,
+            'prompt': prompt,
+            'status_id': status_id,
+            'created_at': datetime.utcnow(),
+        },
+        upsert=True,
+    )
+
+
 async def _handle_imagem_command(
     command_data: dict,
     image_generation_service: Any,
@@ -189,16 +316,20 @@ async def _handle_imagem_command(
         )
         return
 
-    media_path = original_payload.get('image', {}).get('media_path')
-    base_image_bytes = None
-    if media_path:
-        base_image_bytes = await whatsapp_service.download_media(media_path)
+    # Extrai e baixa imagens de entrada
+    media_paths = _extract_media_paths(original_payload)
+    base_images_bytes = await _download_media_files(
+        whatsapp_service, media_paths
+    )
 
     prompt = argument
-    generated = await image_generation_service.generate_content(
-        prompt, base_image_bytes
+    chat = await image_generation_service.get_or_create_chat(user_number)
+    generation_result = (
+        await image_generation_service.generate_content_from_chat(
+            prompt, chat, base_images_bytes
+        )
     )
-    if not generated:
+    if not generation_result:
         await whatsapp_service.send_message(
             phone_number=sender,
             message=(
@@ -208,36 +339,34 @@ async def _handle_imagem_command(
         )
         return
 
+    # O comando imagem sempre espera uma única imagem
+    generated_bytes = generation_result[0]
+
     # Envia ao chat
     await whatsapp_service.send_image_message(
         phone_number=sender,
-        image_bytes=generated,
+        image_bytes=generated_bytes,
         caption=f'Imagem gerada: {prompt}',
     )
 
     # Posta status
     status_id = await whatsapp_service.post_status_update(
-        image_bytes=generated,
+        image_bytes=generated_bytes,
         caption=f'Prompt: {prompt}',
     )
 
     # Atualiza sessão
-    user_sessions = db.get_collection('user_sessions')
-    update_data = {
-        'last_prompt': prompt,
-        'last_generated_image': generated,
-        'updated_at': datetime.utcnow(),
-    }
-    if base_image_bytes:
-        update_data['last_base_image'] = base_image_bytes
-    if status_id:
-        update_data['last_status_id'] = status_id
-
-    await user_sessions.update_one(
-        {'user_number': user_number},
-        {'$set': update_data},
-        upsert=True,
+    session_data = SessionUpdateData(
+        user_number=user_number,
+        prompt=prompt,
+        generated_bytes=generated_bytes,
+        base_images_bytes=base_images_bytes,
+        status_id=status_id,
     )
+    await _update_user_session(db, session_data)
+
+    # Salva a imagem gerada no StatusImageCache para variações automáticas
+    await _update_status_cache(db, generated_bytes, prompt, status_id)
 
     logger.success(f'✅ Comando imagem concluído user={user_number}')
 
@@ -313,16 +442,20 @@ async def _handle_refazer_command(
         return
     last_prompt = session['last_prompt']
 
-    base_bytes = (
-        bytes(session['last_base_image'])
-        if 'last_base_image' in session
-        else bytes(session.get('last_generated_image'))
-    )
+    # Recupera imagem base dos bytes armazenados diretamente
+    base_bytes = None
+    if 'last_base_image' in session:
+        base_bytes = bytes(session['last_base_image'])
+    elif 'last_generated_image' in session:
+        base_bytes = bytes(session['last_generated_image'])
 
-    generated = await image_generation_service.generate_content(
-        last_prompt, base_bytes
+    chat = await image_generation_service.get_or_create_chat(user_number)
+    generation_result = (
+        await image_generation_service.generate_content_from_chat(
+            last_prompt, chat, [base_bytes] if base_bytes else None
+        )
     )
-    if not generated:
+    if not generation_result:
         await whatsapp_service.send_message(
             phone_number=sender,
             message=(
@@ -332,33 +465,143 @@ async def _handle_refazer_command(
         )
         return
 
+    generated_bytes = generation_result[0]
+
     # Envia e atualiza status
     await whatsapp_service.send_image_message(
         phone_number=sender,
-        image_bytes=generated,
+        image_bytes=generated_bytes,
         caption=f'Variação gerada: {last_prompt}',
     )
-    last_status_id = session.get('last_status_id')
+    last_status_id = session.get('last_status_id') if session else None
     if last_status_id:
         await whatsapp_service.delete_status(last_status_id)
     status_id = await whatsapp_service.post_status_update(
-        image_bytes=generated, caption=f'Variação: {last_prompt}'
+        image_bytes=generated_bytes, caption=f'Variação: {last_prompt}'
     )
 
     await user_sessions.update_one(
         {'user_number': user_number},
         {
             '$set': {
-                'last_generated_image': generated,
+                'last_generated_image': generated_bytes,
                 'last_status_id': status_id,
             }
         },
+    )
+
+    # Atualiza o StatusImageCache para variações automáticas
+    status_images_collection = db.get_collection('status_images')
+    await status_images_collection.replace_one(
+        {},  # Filter vazio para substituir sempre o documento mais recente
+        {
+            'image_bytes': generated_bytes,
+            'prompt': last_prompt,
+            'status_id': status_id,
+            'created_at': datetime.utcnow(),
+        },
+        upsert=True,
     )
 
     await whatsapp_service.send_message(
         phone_number=sender, message='✅ Variação pronta.'
     )
     logger.success(f'🔁 Refazer concluído user={user_number}')
+
+
+async def _get_images_for_editing(
+    session: dict | None,
+    whatsapp_service: WhatsAppService,
+    original_payload: dict,
+) -> list[bytes]:
+    """Obtém imagens para edição da sessão ou payload atual."""
+    images_for_editing = []
+
+    # Adiciona última imagem gerada da sessão
+    if session and 'last_generated_image' in session:
+        try:
+            image_bytes = bytes(session['last_generated_image'])
+            images_for_editing.append(image_bytes)
+        except Exception as e:
+            logger.warning('Falha ao ler imagem da sessão: %s', e)
+
+    # Adiciona novas imagens do payload
+    media_paths = _extract_media_paths(original_payload)
+    new_images = await _download_media_files(whatsapp_service, media_paths)
+    images_for_editing.extend(new_images)
+
+    return images_for_editing
+
+
+async def _process_edited_images(
+    data: EditProcessData,
+    whatsapp_service: WhatsAppService,
+    db: AsyncIOMotorDatabase,
+) -> None:
+    """Processa e envia imagens editadas."""
+    for i, edited_bytes in enumerate(data.generation_result):
+        caption = (
+            f'Edição: {data.argument}'
+            if len(data.generation_result) == 1
+            else f'Edição: {data.argument} ({i + 1}'
+            f'/{len(data.generation_result)})'
+        )
+        await whatsapp_service.send_image_message(
+            phone_number=data.sender,
+            image_bytes=edited_bytes,
+            caption=caption,
+        )
+
+        # Apenas a primeira imagem atualiza o status principal e a sessão
+        if i == 0:
+            combined_prompt = f'Edite esta imagem: {data.argument}'
+            update_data = EditStatusUpdateData(
+                edited_bytes=edited_bytes,
+                combined_prompt=combined_prompt,
+                argument=data.argument,
+                user_number=data.user_number,
+                session=data.session,
+            )
+            await _update_status_and_session_for_edit(
+                update_data, whatsapp_service, db
+            )
+
+
+async def _update_status_and_session_for_edit(
+    data: EditStatusUpdateData,
+    whatsapp_service: WhatsAppService,
+    db: AsyncIOMotorDatabase,
+) -> None:
+    """Atualiza status e sessão após edição."""
+    # Remove status antigo
+    if data.session:
+        last_status_id = data.session.get('last_status_id')
+        if last_status_id:
+            await whatsapp_service.delete_status(last_status_id)
+
+    # Cria novo status
+    status_id = await whatsapp_service.post_status_update(
+        image_bytes=data.edited_bytes,
+        caption=f'Edição aplicada: {data.argument}',
+    )
+
+    # Atualiza sessão do usuário
+    user_sessions = db.get_collection('user_sessions')
+    await user_sessions.update_one(
+        {'user_number': data.user_number},
+        {
+            '$set': {
+                'last_generated_image': data.edited_bytes,
+                'last_prompt': data.combined_prompt,
+                'last_status_id': status_id,
+            }
+        },
+    )
+
+    # Atualiza cache de status
+    await _update_status_cache(
+        db, data.edited_bytes, data.combined_prompt, status_id
+    )
 
 
 async def _handle_editar_command(
@@ -370,6 +613,7 @@ async def _handle_editar_command(
     """Handler para comando 'editar'."""
     argument = command_data.get('argument', '')
     sender = command_data.get('sender')
+    original_payload = command_data.get('original_payload', {})
     user_number = command_data.get('user_number')
 
     if not argument:
@@ -383,24 +627,28 @@ async def _handle_editar_command(
 
     user_sessions = db.get_collection('user_sessions')
     session = await user_sessions.find_one({'user_number': user_number})
-    if not session or 'last_generated_image' not in session:
+
+    images_for_editing = await _get_images_for_editing(
+        session, whatsapp_service, original_payload
+    )
+
+    if not images_for_editing:
         await whatsapp_service.send_message(
-            phone_number=sender, message=NO_SESSION_FALLBACK
+            phone_number=sender,
+            message='Nenhuma imagem encontrada para editar.'
+            ' Envie uma imagem ou use o comando `imagem` primeiro.',
         )
         return
-    last_prompt = session.get('last_prompt')
-    generated_image = bytes(session['last_generated_image'])
 
-    combined_prompt = (
-        f'{last_prompt}. Instruções adicionais: {argument}'
-        if last_prompt
-        else argument
+    combined_prompt = f'Edite esta imagem: {argument}'
+    chat = await image_generation_service.get_or_create_chat(user_number)
+    generation_result = (
+        await image_generation_service.generate_content_from_chat(
+            combined_prompt, chat, images_for_editing
+        )
     )
 
-    edited = await image_generation_service.generate_content(
-        combined_prompt, generated_image
-    )
-    if not edited:
+    if not generation_result:
         await whatsapp_service.send_message(
             phone_number=sender,
             message=(
@@ -409,31 +657,14 @@ async def _handle_editar_command(
         )
         return
 
-    await whatsapp_service.send_image_message(
-        phone_number=sender,
-        image_bytes=edited,
-        caption=f'Edição: {argument}',
+    edit_data = EditProcessData(
+        generation_result=generation_result,
+        argument=argument,
+        sender=sender,
+        user_number=user_number,
+        session=session,
     )
-
-    last_status_id = session.get('last_status_id')
-    if last_status_id:
-        await whatsapp_service.delete_status(last_status_id)
-
-    status_id = await whatsapp_service.post_status_update(
-        image_bytes=edited,
-        caption=f'Edição aplicada: {argument}',
-    )
-
-    await user_sessions.update_one(
-        {'user_number': user_number},
-        {
-            '$set': {
-                'last_generated_image': edited,
-                'last_prompt': combined_prompt,
-                'last_status_id': status_id,
-            }
-        },
-    )
+    await _process_edited_images(edit_data, whatsapp_service, db)
 
     await whatsapp_service.send_message(
         phone_number=sender,
@@ -500,6 +731,7 @@ async def process_command_operation(
         logger.error(
             f'❌ Erro ao processar comando {operation} user={user_number}: {e}'
         )
+        logger.exception('Detalhes do erro no processamento do comando:')
         try:
             await whatsapp_service.send_message(
                 phone_number=sender,
@@ -617,7 +849,7 @@ async def receive_whatsapp_webhook(
         contact_info = await deps.whatsapp_service.get_contact_info(
             phone_number=user_number
         )
-
+        logger.bind(payload=data).info(f'🔔 Webhook recebido: {data}')
         logger.bind(payload=data).info(
             f'Contato: {contact_info} recebeu sua mensagem'
         )
@@ -628,7 +860,14 @@ async def receive_whatsapp_webhook(
             return status_result
 
         # --------------------- Fluxo 2: Command parsing (V1) -----------------
-        message_text = data.get('message', {}).get('text')
+        message_body = data.get('message', {})
+        image_body = data.get('image', {})
+        message_text = (
+            message_body.get('text')
+            or message_body.get('caption')
+            or image_body.get('caption')
+        )
+        logger.debug(f"Texto extraído para parsing: '{message_text}'")
         cmd_ctx = parse_command(message_text)
 
         if cmd_ctx:

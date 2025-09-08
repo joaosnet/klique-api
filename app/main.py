@@ -1,13 +1,41 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .database import close_db_connection, get_client
 from .routers import auth, register, whatsapp
-from .services.shared import lifespan
+from .services.gemini_webapi_service import GeminiWebApiService
+from .services.whatsapp import WhatsAppService
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Gerenciador de ciclo de vida do FastAPI para inicializar e
+    encerrar os serviços da aplicação.
+    """
+    # Inicializa o cliente do banco de dados no startup
+    app.state.db_client = get_client()
+
+    # Inicializa o serviço do WhatsApp
+    whatsapp_service = WhatsAppService()
+    app.state.whatsapp_service = whatsapp_service
+
+    # Inicializa o serviço Gemini WebAPI
+    gemini_web_api_service = GeminiWebApiService()
+    await gemini_web_api_service._initialize_client()  # noqa: SLF001
+    app.state.gemini_web_api_service = gemini_web_api_service
+
+    yield
+
+    # Encerra os serviços ao finalizar a aplicação
+    await whatsapp_service.close()
+    await gemini_web_api_service.close()
+    close_db_connection()
+
 
 app = FastAPI(title='Klique AI API', version='1.0.0', lifespan=lifespan)
-
-# app.add_event_handler('startup', connect_to_mongo)
-# app.add_event_handler('shutdown', close_mongo_connection)
 
 
 origins = [

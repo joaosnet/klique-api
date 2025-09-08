@@ -1,7 +1,9 @@
+import io
+import os
 import random
+from pathlib import Path
 
 import httpx
-from rich import print
 
 from ..logger import logger
 
@@ -49,13 +51,30 @@ class WhatsAppService:
         self,
         *,
         phone: str,
-        image_bytes: bytes,
+        image_bytes: bytes | io.BytesIO,
         caption: str,
         filename: str,
-    ):
-        """Helper interno para envio de imagens (mensagem ou status)."""
+    ) -> str | None:
+        """
+        Helper interno para envio de imagens.
+
+        Salva a imagem em um arquivo temporário antes de enviar e retorna
+        o ID da mensagem.
+        """
+        temp_dir = Path('statics/senditems')
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        file_path = temp_dir / filename
+
         try:
-            files = {'image': (filename, image_bytes, 'image/png')}
+            content_to_write = (
+                image_bytes.read()
+                if isinstance(image_bytes, io.BytesIO)
+                else image_bytes
+            )
+            with open(file_path, 'wb') as f:
+                f.write(content_to_write)
+
+            # Preparar os dados do formulário
             data = {
                 'phone': phone,
                 'caption': caption,
@@ -63,20 +82,36 @@ class WhatsAppService:
                 'compress': 'false',
                 'is_forwarded': 'false',
             }
-            response = await self.client.post(
-                '/send/image',
-                data=data,
-                files=files,
-                auth=self.auth,
-                timeout=30.0,
-            )
+
+            # Abre o arquivo em modo binário para envio
+            # como multipart/form-data
+            with open(file_path, 'rb') as image_file:
+                files = {'image': (filename, image_file, 'image/png')}
+
+                response = await self.client.post(
+                    '/send/image',
+                    data=data,
+                    files=files,
+                    auth=self.auth,
+                    timeout=30.0,
+                )
             response.raise_for_status()
             response_data = response.json()
-            print(
-                f'[bold green]Imagem enviada para {phone}'
-                ' com sucesso.[/bold green]'
+
+            # A resposta da API mudou e agora retorna o ID diretamente
+            message_id = response_data.get('message_id')
+            if message_id:
+                logger.info(
+                    f'Imagem enviada para {phone} com ID: {message_id}'
+                )
+                return message_id
+
+            logger.warning(
+                'Não foi possível obter o ID da mensagem enviada. '
+                f'Resposta: {response_data}'
             )
-            return response_data
+            return None
+
         except httpx.HTTPStatusError as e:
             logger.error(
                 f'Erro HTTP ao enviar imagem p/{phone}: '
@@ -84,19 +119,22 @@ class WhatsAppService:
             )
         except Exception as e:
             logger.error(f'Erro inesperado ao enviar imagem p/{phone}: {e}')
+        finally:
+            if os.path.exists(file_path):
+                os.remove(file_path)
         return None
 
     async def send_image_message(
         self, phone_number: str, image_bytes: bytes, caption: str = ''
-    ):
+    ) -> str | None:
         """
         Envia uma imagem para um número de telefone específico.
 
         :param phone_number: O número do destinatário (JID).
         :param image_bytes: A imagem em formato de bytes.
         :param caption: Uma legenda para a imagem (opcional).
+        :return: O ID da mensagem da imagem ou None em caso de erro.
         """
-        # Refatorado para usar método interno
         return await self._send_image(
             phone=phone_number,
             image_bytes=image_bytes,
@@ -170,15 +208,12 @@ class WhatsAppService:
         :param caption: Uma legenda para o status (opcional).
         :return: O ID do status postado ou None em caso de erro.
         """
-        response_data = await self._send_image(
+        return await self._send_image(
             phone='status@broadcast',
             image_bytes=image_bytes,
             caption=caption,
             filename='status.png',
         )
-        if response_data:
-            return response_data.get('data', {}).get('key', {}).get('id')
-        return None
 
     async def delete_status(self, status_id: str) -> bool:
         """
@@ -228,9 +263,10 @@ class WhatsAppService:
         Este método consulta a lista completa de contatos e filtra pelo número
         fornecido.
 
-        :param phone_number: O número do telefone do contato (sem o sufixo @s.whatsapp.net).
-        :return: Um dicionário com 'name' e 'number' do contato, ou None se não for encontrado.
-        """  # noqa: E501
+        :param phone_number: O número do telefone do contato.
+        :return: Um dicionário com 'name' e 'number' do contato,
+                 ou None se não for encontrado.
+        """
         try:
             logger.info(
                 'Buscando informações do contato para '
@@ -260,7 +296,7 @@ class WhatsAppService:
                             return {'name': name, 'number': phone_number}
 
             logger.warning(
-                f'Contato com número {phone_number} não encontrado na lista.'
+                f'Contato com número {phone_number} não encontrado.'
             )
             return None
 
@@ -291,9 +327,7 @@ class WhatsAppService:
             )
             response.raise_for_status()
             data = response.json()
-            return data.get(
-                'avatar_url'
-            )  # Assumindo que a resposta contém 'avatar_url'
+            return data.get('avatar_url')
         except httpx.HTTPStatusError as e:
             logger.error(
                 f'Erro ao buscar avatar do contato {phone}: '
@@ -331,12 +365,13 @@ class WhatsAppService:
 
     async def edit_message(self, message_id: str, new_text: str) -> bool:
         """
-        Edita uma mensagem existente usando o endpoint /message/:message_id/update.
+        Edita uma mensagem existente usando o endpoint
+          /message/:message_id/update.
 
         :param message_id: O ID da mensagem a ser editada.
         :param new_text: O novo texto da mensagem.
         :return: True se a edição foi bem-sucedida, False caso contrário.
-        """  # noqa: E501
+        """
         try:
             data = {'text': new_text}
 

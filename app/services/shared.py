@@ -1,7 +1,4 @@
-from contextlib import asynccontextmanager
 from typing import Any
-
-from app.database import close_db_connection, get_client
 
 from ..config import GEMINI_SERVICE_PROVIDER
 from .gemini import GeminiService
@@ -40,32 +37,3 @@ class AppServices:
         if cls._whatsapp_service is None:
             cls._whatsapp_service = WhatsAppService()
         return cls._whatsapp_service
-
-    @classmethod
-    async def close_services(cls) -> None:
-        """
-        Fecha as conexões abertas pelos serviços,
-        como o cliente HTTP e o banco de dados.
-        """
-        if cls._whatsapp_service:
-            await cls._whatsapp_service.close()
-            cls._whatsapp_service = None
-
-        # Limpa o serviço de geração de imagem também
-        if cls._image_generation_service:
-            cls._image_generation_service = None
-        close_db_connection()
-
-
-@asynccontextmanager
-async def lifespan(_):
-    """
-    Gerenciador de ciclo de vida do FastAPI para inicializar e
-    encerrar os serviços da aplicação.
-    """
-    # Inicializa o cliente do banco de dados no startup
-    get_client()
-    # Serviços são inicializados sob demanda (lazy)
-    yield
-    # Encerra os serviços ao finalizar a aplicação
-    await AppServices.close_services()
