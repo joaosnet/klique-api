@@ -6,7 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from ..routers import schemas
-from ..services.gemini import GeminiService
+from ..services.protocols import ImageGenerationServiceProtocol
 from ..services.whatsapp import WhatsAppService
 from ..utils import extract_user_number, extract_primary_user_number
 from ..webhook_dependencies import (
@@ -27,7 +27,7 @@ router = APIRouter(
 
 async def process_status_viewed_for_image_generation(
     data: dict,
-    gemini_service: GeminiService,
+    image_generation_service: ImageGenerationServiceProtocol,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ) -> None:
@@ -75,7 +75,7 @@ async def process_status_viewed_for_image_generation(
                 f'🎨 Editando imagem anterior em cache para {viewer_name}...'
             )
 
-            new_image_bytes = await gemini_service.generate_image_from_prompt(
+            new_image_bytes = await image_generation_service.generate_content(
                 prompt, cached_image_bytes
             )
         else:
@@ -172,7 +172,7 @@ NO_SESSION_FALLBACK = (
 
 async def _handle_imagem_command(
     command_data: dict,
-    gemini_service: GeminiService,
+    image_generation_service: ImageGenerationServiceProtocol,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ):
@@ -195,7 +195,7 @@ async def _handle_imagem_command(
         base_image_bytes = await whatsapp_service.download_media(media_path)
 
     prompt = argument
-    generated = await gemini_service.generate_image_from_prompt(
+    generated = await image_generation_service.generate_content(
         prompt, base_image_bytes
     )
     if not generated:
@@ -296,7 +296,7 @@ async def _handle_legenda_command(
 
 async def _handle_refazer_command(
     command_data: dict,
-    gemini_service: GeminiService,
+    image_generation_service: ImageGenerationServiceProtocol,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ):
@@ -319,7 +319,7 @@ async def _handle_refazer_command(
         else bytes(session.get('last_generated_image'))
     )
 
-    generated = await gemini_service.generate_image_from_prompt(
+    generated = await image_generation_service.generate_content(
         last_prompt, base_bytes
     )
     if not generated:
@@ -363,7 +363,7 @@ async def _handle_refazer_command(
 
 async def _handle_editar_command(
     command_data: dict,
-    gemini_service: GeminiService,
+    image_generation_service: ImageGenerationServiceProtocol,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ):
@@ -397,7 +397,7 @@ async def _handle_editar_command(
         else argument
     )
 
-    edited = await gemini_service.generate_image_from_prompt(
+    edited = await image_generation_service.generate_content(
         combined_prompt, generated_image
     )
     if not edited:
@@ -444,7 +444,7 @@ async def _handle_editar_command(
 
 async def process_command_operation(
     command_data: dict,
-    gemini_service: GeminiService,
+    image_generation_service: ImageGenerationServiceProtocol,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ):
@@ -466,7 +466,7 @@ async def process_command_operation(
         if operation == 'imagem':
             await _handle_imagem_command(
                 command_data,
-                gemini_service,
+                image_generation_service,
                 whatsapp_service,
                 db,
             )
@@ -479,7 +479,7 @@ async def process_command_operation(
         if operation == 'refazer':
             await _handle_refazer_command(
                 command_data,
-                gemini_service,
+                image_generation_service,
                 whatsapp_service,
                 db,
             )
@@ -488,7 +488,7 @@ async def process_command_operation(
         if operation == 'editar':
             await _handle_editar_command(
                 command_data,
-                gemini_service,
+                image_generation_service,
                 whatsapp_service,
                 db,
             )
@@ -529,7 +529,7 @@ def _handle_status_view(
         background_tasks.add_task(
             process_status_viewed_for_image_generation,
             data,
-            deps.gemini_service,
+            deps.image_generation_service,
             deps.whatsapp_service,
             deps.db,
         )
@@ -589,7 +589,7 @@ async def _handle_command(
     background_tasks.add_task(
         process_command_operation,
         command_data,
-        deps.gemini_service,
+        deps.image_generation_service,
         deps.whatsapp_service,
         deps.db,
     )

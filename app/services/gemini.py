@@ -16,7 +16,7 @@ class GeminiService:
         self.client = genai.Client(api_key=api_key)
         self.model_name = MODEL
 
-    async def generate_image_from_prompt(
+    async def generate_content(
         self, prompt: str, input_image: bytes | None = None
     ) -> bytes | None:
         """

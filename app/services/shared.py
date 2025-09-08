@@ -2,6 +2,10 @@ from contextlib import asynccontextmanager
 
 from app.database import close_db_connection, get_client
 
+from ..config import GEMINI_SERVICE_PROVIDER
+from .gemini import GeminiService
+from .gemini_webapi_service import GeminiWebApiService
+from .protocols import ImageGenerationServiceProtocol
 from .whatsapp import WhatsAppService
 
 
@@ -12,6 +16,20 @@ class AppServices:
     """
 
     _whatsapp_service: WhatsAppService | None = None
+    _image_generation_service: ImageGenerationServiceProtocol | None = None
+
+    @classmethod
+    def get_image_generation_service(cls) -> ImageGenerationServiceProtocol:
+        """
+        Retorna a instância do serviço de geração de imagem selecionado.
+        Cria a instância se ela ainda não existir, com base na configuração.
+        """
+        if cls._image_generation_service is None:
+            if GEMINI_SERVICE_PROVIDER.upper() == 'GEMINI_WEBAPI':
+                cls._image_generation_service = GeminiWebApiService()
+            else:
+                cls._image_generation_service = GeminiService()
+        return cls._image_generation_service
 
     @classmethod
     def get_whatsapp_service(cls) -> WhatsAppService:
@@ -32,6 +50,10 @@ class AppServices:
         if cls._whatsapp_service:
             await cls._whatsapp_service.close()
             cls._whatsapp_service = None
+
+        # Limpa o serviço de geração de imagem também
+        if cls._image_generation_service:
+            cls._image_generation_service = None
         close_db_connection()
 
 
