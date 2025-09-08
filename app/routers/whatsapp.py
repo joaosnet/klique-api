@@ -620,12 +620,12 @@ async def receive_whatsapp_webhook(
             f'Contato: {contact_info} recebeu sua mensagem'
         )
 
-        # ------------------------------ Status view handling -----------------
+        # --------------------- Fluxo 1: Status view handling -----------------
         status_result = _handle_status_view(data, background_tasks, deps)
         if status_result:
             return status_result
 
-        # ------------------------------ Command parsing (V1) -----------------
+        # --------------------- Fluxo 2: Command parsing (V1) -----------------
         message_text = data.get('message', {}).get('text')
         cmd_ctx = parse_command(message_text)
 
