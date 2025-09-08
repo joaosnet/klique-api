@@ -2,7 +2,6 @@ import io  # noqa: I001
 import os
 import random
 from pathlib import Path
-from fastapi import status
 import httpx
 
 from ..logger import logger
@@ -39,11 +38,11 @@ class WhatsAppService:
 
     _contacts_cache: dict[str, str] | None = None
 
-    def __init__(self):
+    def __init__(self, base_url: str = BASE_URL) -> None:
         """
         Inicializa o cliente HTTP assíncrono.
         """
-        self.client = httpx.AsyncClient(base_url=BASE_URL)
+        self.client = httpx.AsyncClient(base_url=base_url)
         # As credenciais são 'admin:admin', conforme o docker-compose.yml
         self.auth = ('admin', 'admin')
 
@@ -245,26 +244,20 @@ class WhatsAppService:
         :return: True se foi deletado com sucesso, False caso contrário.
         """
         try:
+            body = {'phone': 'status@broadcast@s.whatsapp.net'}
             response = await self.client.post(
-                f'/message/{status_id}/delete', auth=self.auth, timeout=30.0
+                f'/message/{status_id}/delete',
+                json=body,
+                auth=self.auth,
+                timeout=30.0,
             )
             response.raise_for_status()
             logger.info(f'Status {status_id} deletado com sucesso.')
             return True
         except httpx.HTTPStatusError as e:
-            # Status 404 significa que o status não existe mais
-            # (expirou ou foi deletado)
-            # Isso é normal e não deve ser tratado como erro
-            if e.response.status_code == status.HTTP_404_NOT_FOUND:
-                logger.info(
-                    f'Status {status_id} não encontrado'
-                    ' (provavelmente expirou). '
-                    'Considerando como deletado.'
-                )
-                return True
-
             logger.error(
                 f'Erro ao deletar status {status_id}: '
+                f'Request: {e.request.method} {e.request.url} - '
                 f'{e.response.status_code} - {e.response.text}'
             )
         except Exception as e:
@@ -323,9 +316,9 @@ class WhatsAppService:
                     if clean_number == phone_number:
                         name = contact.get('name')
                         if name:
-                            logger.success(
-                                f'Contato encontrado: {name} ({phone_number})'
-                            )
+                            # logger.success(
+                            #    f'Contato encontrado: {name} ({phone_number})'
+                            # )
                             return {'name': name, 'number': phone_number}
 
             logger.warning(
@@ -503,5 +496,5 @@ class WhatsAppService:
             await self.client.aclose()
 
 
-def get_whatsapp_service() -> WhatsAppService:
-    return WhatsAppService()
+def get_whatsapp_service(base_url: str = BASE_URL) -> WhatsAppService:
+    return WhatsAppService(base_url=base_url)

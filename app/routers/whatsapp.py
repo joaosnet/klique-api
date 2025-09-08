@@ -296,17 +296,33 @@ async def process_status_view(
         logger.error(f'❌ Erro ao processar visualização: {e}')
 
 
-async def _delete_latest_status(whatsapp_service: WhatsAppService) -> None:
-    """Deleta o status mais recente."""
+async def _delete_latest_status(whatsapp_service: WhatsAppService) -> bool:
+    """Deleta o status mais recente.
+
+    :return: True se deletou com sucesso ou não havia status, False se houve erro crítico.
+    """  # noqa: E501
     try:
         latest_status_id = await whatsapp_service.get_latest_status_id()
         if latest_status_id:
             logger.info(f'🗑️ Deletando status: {latest_status_id}')
-            await whatsapp_service.delete_status(latest_status_id)
+            deletion_success = await whatsapp_service.delete_status(
+                latest_status_id
+            )
+            if deletion_success:
+                logger.success(
+                    f'✅ Status {latest_status_id} deletado com sucesso'
+                )
+                return True
+            else:
+                logger.warning(f'⚠️ Falha ao deletar status {latest_status_id}')
+                return False
         else:
             logger.info('📋 Nenhum status encontrado para deletar')
+            return True
     except Exception as e:
-        logger.warning(f'⚠️ Erro ao deletar status: {e}')
+        logger.warning(f'⚠️ Erro inesperado ao deletar status: {e}')
+        # Não interrompe o fluxo principal por erro de deleção
+        return False
 
 
 def _extract_media_paths(payload: dict) -> list[str]:
@@ -586,7 +602,7 @@ async def _handle_refazer_command(
     logger.success(f'🔁 Refazer concluído user={user_number}')
 
 
-async def _handle_editar_command(
+async def _handle_editar_command(  # noqa: PLR0914
     command_data: dict,
     image_generation_service: Any,
     whatsapp_service: WhatsAppService,
