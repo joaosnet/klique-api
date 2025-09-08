@@ -2,11 +2,9 @@ from datetime import datetime  # noqa: I001
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from loguru import logger
+from motor.motor_asyncio import AsyncIOMotorCollection
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from ..cache import (
-    StatusImageCache,
-)
-from ..database import get_status_views_collection
 from ..routers import schemas
 from ..services.gemini import GeminiService
 from ..services.whatsapp import WhatsAppService
@@ -27,41 +25,11 @@ router = APIRouter(
 )
 
 
-async def _save_session_data(
-    user_session_cache,
-    user_number: str,
-    session_data: dict,
-) -> None:
-    """Salva dados da sessão de forma consistente."""
-    try:
-        if user_number:
-            prompt = session_data.get('prompt')
-            generated_bytes = session_data.get('generated_bytes')
-            image_bytes = session_data.get('image_bytes')
-            status_id = session_data.get('status_id')
-
-            if prompt:
-                await user_session_cache.save_prompt(user_number, prompt)
-            if generated_bytes:
-                await user_session_cache.save_generated_image(
-                    user_number, generated_bytes
-                )
-            # Se havia imagem base usada para edição (image_bytes), armazenar
-            if image_bytes:
-                await user_session_cache.save_base_image(
-                    user_number, image_bytes
-                )
-            if status_id:
-                await user_session_cache.save_status_id(user_number, status_id)
-    except Exception as sess_e:  # noqa: BLE001
-        logger.warning(f'⚠️ Falha ao atualizar sessão do usuário: {sess_e}')
-
-
 async def process_status_viewed_for_image_generation(
     data: dict,
     gemini_service: GeminiService,
     whatsapp_service: WhatsAppService,
-    status_image_cache: StatusImageCache,
+    db: AsyncIOMotorDatabase,
 ) -> None:
     """Gera uma nova imagem baseada na imagem anterior em cache
     quando alguém visualiza."""
@@ -89,7 +57,13 @@ async def process_status_viewed_for_image_generation(
 
         logger.info(f'👁️ Status visualizado por {viewer_name} ({user_number})')
 
-        cached_image_bytes = await status_image_cache.get_last_status_image()
+        status_images_collection = db.get_collection('status_images')
+        last_status = await status_images_collection.find_one(
+            {}, sort=[('created_at', -1)]
+        )
+        cached_image_bytes = (
+            bytes(last_status['image_bytes']) if last_status else None
+        )
 
         if cached_image_bytes:
             prompt = (
@@ -105,18 +79,11 @@ async def process_status_viewed_for_image_generation(
                 prompt, cached_image_bytes
             )
         else:
-            prompt = (
-                f'Crie uma imagem criativa e elegante com o texto '
-                f"'{viewer_name}' em destaque. Use cores vibrantes "
-                f'e um design moderno.'
-            )
             logger.info(
-                f'🎨 Criando nova imagem para {viewer_name} '
-                f'(sem cache disponível)...'
+                '❕ Nenhuma imagem em cache para gerar variação de status. '
+                'Processo interrompido.'
             )
-            new_image_bytes = await gemini_service.generate_image_from_prompt(
-                prompt, None
-            )
+            return
 
         if not new_image_bytes:
             logger.warning('⚠️ Gemini não conseguiu gerar nova imagem')
@@ -125,7 +92,7 @@ async def process_status_viewed_for_image_generation(
         logger.success('✅ Nova imagem gerada! Postando no status...')
 
         # Deleta o status antigo, se existir
-        last_status_id = await status_image_cache.get_last_status_id()
+        last_status_id = last_status.get('status_id') if last_status else None
         if last_status_id:
             logger.info(f'🗑️ Deletando status antigo: {last_status_id}')
             await whatsapp_service.delete_status(last_status_id)
@@ -145,7 +112,9 @@ async def process_status_viewed_for_image_generation(
         logger.exception('Detalhes do erro:')
 
 
-async def process_status_view(data: dict) -> None:
+async def process_status_view(
+    data: dict, status_views_collection: AsyncIOMotorCollection
+) -> None:
     """Processa e salva a visualização de status no banco de dados."""
     try:
         sender_id = data.get('sender_id')
@@ -181,7 +150,6 @@ async def process_status_view(data: dict) -> None:
         )
 
         try:
-            status_views_collection = get_status_views_collection()
             await status_views_collection.insert_one(status_view.model_dump())
             logger.info(f'👁️ Status visualizado por {user_number} salvo no DB.')
         except Exception as db_e:
@@ -206,7 +174,7 @@ async def _handle_imagem_command(
     command_data: dict,
     gemini_service: GeminiService,
     whatsapp_service: WhatsAppService,
-    user_session_cache,
+    db: AsyncIOMotorDatabase,
 ):
     """Handler para comando 'imagem'."""
     argument = command_data.get('argument', '')
@@ -254,12 +222,22 @@ async def _handle_imagem_command(
     )
 
     # Atualiza sessão
-    await user_session_cache.save_prompt(user_number, prompt)
-    await user_session_cache.save_generated_image(user_number, generated)
+    user_sessions = db.get_collection('user_sessions')
+    update_data = {
+        'last_prompt': prompt,
+        'last_generated_image': generated,
+        'updated_at': datetime.utcnow(),
+    }
     if base_image_bytes:
-        await user_session_cache.save_base_image(user_number, base_image_bytes)
+        update_data['last_base_image'] = base_image_bytes
     if status_id:
-        await user_session_cache.save_status_id(user_number, status_id)
+        update_data['last_status_id'] = status_id
+
+    await user_sessions.update_one(
+        {'user_number': user_number},
+        {'$set': update_data},
+        upsert=True,
+    )
 
     logger.success(f'✅ Comando imagem concluído user={user_number}')
 
@@ -267,7 +245,7 @@ async def _handle_imagem_command(
 async def _handle_legenda_command(
     command_data: dict,
     whatsapp_service: WhatsAppService,
-    user_session_cache,
+    db: AsyncIOMotorDatabase,
 ):
     """Handler para comando 'legenda'."""
     argument = command_data.get('argument', '')
@@ -281,7 +259,13 @@ async def _handle_legenda_command(
         )
         return
 
-    existing_image = await user_session_cache.get_generated_image(user_number)
+    user_sessions = db.get_collection('user_sessions')
+    session = await user_sessions.find_one({'user_number': user_number})
+    existing_image = (
+        bytes(session['last_generated_image'])
+        if session and 'last_generated_image' in session
+        else None
+    )
     if not existing_image:
         await whatsapp_service.send_message(
             phone_number=sender, message=NO_SESSION_FALLBACK
@@ -289,7 +273,7 @@ async def _handle_legenda_command(
         return
 
     # Deleta status antigo se houver
-    last_status_id = await user_session_cache.get_status_id(user_number)
+    last_status_id = session.get('last_status_id') if session else None
     if last_status_id:
         await whatsapp_service.delete_status(last_status_id)
 
@@ -298,7 +282,10 @@ async def _handle_legenda_command(
         image_bytes=existing_image, caption=argument
     )
     if new_status_id:
-        await user_session_cache.save_status_id(user_number, new_status_id)
+        await user_sessions.update_one(
+            {'user_number': user_number},
+            {'$set': {'last_status_id': new_status_id}},
+        )
 
     await whatsapp_service.send_message(
         phone_number=sender,
@@ -311,22 +298,26 @@ async def _handle_refazer_command(
     command_data: dict,
     gemini_service: GeminiService,
     whatsapp_service: WhatsAppService,
-    user_session_cache,
+    db: AsyncIOMotorDatabase,
 ):
     """Handler para comando 'refazer'."""
     sender = command_data.get('sender')
     user_number = command_data.get('user_number')
 
-    last_prompt = await user_session_cache.get_prompt(user_number)
-    if not last_prompt:
+    user_sessions = db.get_collection('user_sessions')
+    session = await user_sessions.find_one({'user_number': user_number})
+    if not session or 'last_prompt' not in session:
         await whatsapp_service.send_message(
             phone_number=sender, message=NO_SESSION_FALLBACK
         )
         return
+    last_prompt = session['last_prompt']
 
-    base_bytes = await user_session_cache.get_base_image(user_number)
-    if not base_bytes:
-        base_bytes = await user_session_cache.get_generated_image(user_number)
+    base_bytes = (
+        bytes(session['last_base_image'])
+        if 'last_base_image' in session
+        else bytes(session.get('last_generated_image'))
+    )
 
     generated = await gemini_service.generate_image_from_prompt(
         last_prompt, base_bytes
@@ -347,16 +338,22 @@ async def _handle_refazer_command(
         image_bytes=generated,
         caption=f'Variação gerada: {last_prompt}',
     )
-    last_status_id = await user_session_cache.get_status_id(user_number)
+    last_status_id = session.get('last_status_id')
     if last_status_id:
         await whatsapp_service.delete_status(last_status_id)
     status_id = await whatsapp_service.post_status_update(
         image_bytes=generated, caption=f'Variação: {last_prompt}'
     )
 
-    await user_session_cache.save_generated_image(user_number, generated)
-    if status_id:
-        await user_session_cache.save_status_id(user_number, status_id)
+    await user_sessions.update_one(
+        {'user_number': user_number},
+        {
+            '$set': {
+                'last_generated_image': generated,
+                'last_status_id': status_id,
+            }
+        },
+    )
 
     await whatsapp_service.send_message(
         phone_number=sender, message='✅ Variação pronta.'
@@ -368,7 +365,7 @@ async def _handle_editar_command(
     command_data: dict,
     gemini_service: GeminiService,
     whatsapp_service: WhatsAppService,
-    user_session_cache,
+    db: AsyncIOMotorDatabase,
 ):
     """Handler para comando 'editar'."""
     argument = command_data.get('argument', '')
@@ -384,14 +381,15 @@ async def _handle_editar_command(
         )
         return
 
-    last_prompt = await user_session_cache.get_prompt(user_number)
-    generated_image = await user_session_cache.get_generated_image(user_number)
-
-    if not generated_image:
+    user_sessions = db.get_collection('user_sessions')
+    session = await user_sessions.find_one({'user_number': user_number})
+    if not session or 'last_generated_image' not in session:
         await whatsapp_service.send_message(
             phone_number=sender, message=NO_SESSION_FALLBACK
         )
         return
+    last_prompt = session.get('last_prompt')
+    generated_image = bytes(session['last_generated_image'])
 
     combined_prompt = (
         f'{last_prompt}. Instruções adicionais: {argument}'
@@ -417,7 +415,7 @@ async def _handle_editar_command(
         caption=f'Edição: {argument}',
     )
 
-    last_status_id = await user_session_cache.get_status_id(user_number)
+    last_status_id = session.get('last_status_id')
     if last_status_id:
         await whatsapp_service.delete_status(last_status_id)
 
@@ -426,10 +424,16 @@ async def _handle_editar_command(
         caption=f'Edição aplicada: {argument}',
     )
 
-    await user_session_cache.save_generated_image(user_number, edited)
-    await user_session_cache.save_prompt(user_number, combined_prompt)
-    if status_id:
-        await user_session_cache.save_status_id(user_number, status_id)
+    await user_sessions.update_one(
+        {'user_number': user_number},
+        {
+            '$set': {
+                'last_generated_image': edited,
+                'last_prompt': combined_prompt,
+                'last_status_id': status_id,
+            }
+        },
+    )
 
     await whatsapp_service.send_message(
         phone_number=sender,
@@ -442,8 +446,7 @@ async def process_command_operation(
     command_data: dict,
     gemini_service: GeminiService,
     whatsapp_service: WhatsAppService,
-    user_session_cache,
-    status_image_cache: StatusImageCache,
+    db: AsyncIOMotorDatabase,
 ):
     """
     Processa comandos (imagem, legenda, refazer, editar) em background.
@@ -465,14 +468,12 @@ async def process_command_operation(
                 command_data,
                 gemini_service,
                 whatsapp_service,
-                user_session_cache,
+                db,
             )
             return
 
         if operation == 'legenda':
-            await _handle_legenda_command(
-                command_data, whatsapp_service, user_session_cache
-            )
+            await _handle_legenda_command(command_data, whatsapp_service, db)
             return
 
         if operation == 'refazer':
@@ -480,7 +481,7 @@ async def process_command_operation(
                 command_data,
                 gemini_service,
                 whatsapp_service,
-                user_session_cache,
+                db,
             )
             return
 
@@ -489,7 +490,7 @@ async def process_command_operation(
                 command_data,
                 gemini_service,
                 whatsapp_service,
-                user_session_cache,
+                db,
             )
             return
 
@@ -522,13 +523,15 @@ def _handle_status_view(
 
     if is_ack_read or data.get('event') == 'status.viewed':
         logger.info('👁️ Visualização de status detectada!')
-        background_tasks.add_task(process_status_view, data)
+        background_tasks.add_task(
+            process_status_view, data, deps.db.get_collection('status_views')
+        )
         background_tasks.add_task(
             process_status_viewed_for_image_generation,
             data,
             deps.gemini_service,
             deps.whatsapp_service,
-            deps.status_image_cache,
+            deps.db,
         )
         return {'status': 'accepted', 'detail': 'Status view processed'}
     return None
@@ -588,8 +591,7 @@ async def _handle_command(
         command_data,
         deps.gemini_service,
         deps.whatsapp_service,
-        deps.user_session_cache,
-        deps.status_image_cache,
+        deps.db,
     )
 
     return {
@@ -612,7 +614,7 @@ async def receive_whatsapp_webhook(
     try:
         data = await request.json()
         user_number = extract_primary_user_number(data)
-        contact_info = await WhatsAppService().get_contact_info(
+        contact_info = await deps.whatsapp_service.get_contact_info(
             phone_number=user_number
         )
 

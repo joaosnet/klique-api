@@ -59,3 +59,11 @@ def get_cache_collection():
 
 def get_user_sessions_collection():
     return get_db().get_collection('user_sessions')
+
+
+def get_status_images_collection():
+    return get_db().get_collection('status_images')
+
+
+def get_processed_messages_collection():
+    return get_db().get_collection('processed_messages')

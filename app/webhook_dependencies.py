@@ -1,15 +1,9 @@
 """Dependências específicas para webhooks."""
 
 from fastapi import Depends
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from .cache import (
-    MessageCache,
-    StatusImageCache,
-    UserSessionCache,
-    get_message_cache,
-    get_status_image_cache,
-    get_user_session_cache,
-)
+from .database import get_db
 from .services.gemini import GeminiService, get_gemini_service
 from .services.whatsapp import WhatsAppService, get_whatsapp_service
 
@@ -21,29 +15,21 @@ class WebhookDependencies:
         self,
         gemini_service: GeminiService,
         whatsapp_service: WhatsAppService,
-        status_image_cache: StatusImageCache,
-        message_cache: MessageCache,
-        user_session_cache: UserSessionCache,
+        db: AsyncIOMotorDatabase,
     ):
         self.gemini_service = gemini_service
         self.whatsapp_service = whatsapp_service
-        self.status_image_cache = status_image_cache
-        self.message_cache = message_cache
-        self.user_session_cache = user_session_cache
+        self.db = db
 
 
 def get_webhook_dependencies(
     gemini_service: GeminiService = Depends(get_gemini_service),
     whatsapp_service: WhatsAppService = Depends(get_whatsapp_service),
-    status_image_cache: StatusImageCache = Depends(get_status_image_cache),
-    message_cache: MessageCache = Depends(get_message_cache),
-    user_session_cache: UserSessionCache = Depends(get_user_session_cache),
+    db: AsyncIOMotorDatabase = Depends(get_db),
 ) -> WebhookDependencies:
     """Função de dependência para o webhook."""
     return WebhookDependencies(
         gemini_service=gemini_service,
         whatsapp_service=whatsapp_service,
-        status_image_cache=status_image_cache,
-        message_cache=message_cache,
-        user_session_cache=user_session_cache,
+        db=db,
     )
