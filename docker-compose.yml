@@ -58,11 +58,14 @@ services:
       DB_DATABASE: klique
       DB_USERNAME: root
       DB_PASSWORD: password
-      GMAIL_EMAIL: joaodacruznatividade@gmail.com
-      GMAIL_APP_PASSWORD: vjvo pcau vvxx jivi # Senha de app do Gmail
+      GMAIL_EMAIL: ${GMAIL_EMAIL}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD} # Senha de app do Gmail
+      SECURE_1PSID: ${SECURE_1PSID}
+      SECURE_1PSIDTS: ${SECURE_1PSIDTS}
     volumes:
       - ./app:/app/app
       - ./logs:/app/logs
+      - gemini_cookies:/usr/local/lib/python3.12/site-packages/gemini_webapi/utils/temp
     develop:
       # Create a `watch` configuration to update the app
       # https://docs.docker.com/compose/file-watch/#compose-watch-versus-bind-mounts
@@ -83,3 +86,4 @@ services:
 volumes:
   mongodb_data:
   whatsapp:
+  gemini_cookies:
