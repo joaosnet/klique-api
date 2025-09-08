@@ -294,10 +294,10 @@ class WhatsAppService:
                  ou None se não for encontrado.
         """
         try:
-            logger.info(
-                'Buscando informações do contato para '
-                f'o número: {phone_number}'
-            )
+            # logger.info(
+            #     'Buscando informações do contato para '
+            #     f'o número: {phone_number}'
+            # )
             response = await self.client.get(
                 '/user/my/contacts', auth=self.auth, timeout=60.0
             )
