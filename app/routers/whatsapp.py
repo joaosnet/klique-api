@@ -4,7 +4,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from loguru import logger
 
 from ..cache import (
-    MessageCache,
     StatusImageCache,
 )
 from ..database import get_status_views_collection
@@ -26,42 +25,6 @@ router = APIRouter(
     prefix='/webhooks',
     tags=['webhooks'],
 )
-
-
-def extract_prompt(data: dict) -> tuple[str | None, str]:
-    """Extrai prompt de texto ou caption de imagem e o nome do remetente."""
-    msg = data.get('message', {})
-    sender_name = data.get('sender_name', 'Alguém')
-
-    if text := msg.get('text'):
-        return text, sender_name
-
-    caption = data.get('image', {}).get('caption')
-    return caption, sender_name
-
-
-async def send_or_edit_failure(
-    whatsapp_service: WhatsAppService,
-    phone: str | None,
-    processing_message_id: str | None,
-) -> None:
-    """Centraliza envio/edição de mensagem de falha com sugestão de ajuda."""
-    if not phone:
-        return
-    base_message = whatsapp_service.get_random_failure_message()
-    failure_message = f"{base_message} Envie 'ajuda' para instruções."
-    if processing_message_id:
-        edited = await whatsapp_service.edit_message(
-            processing_message_id, failure_message
-        )
-        if not edited:
-            await whatsapp_service.send_message(
-                phone_number=phone, message=failure_message
-            )
-    else:
-        await whatsapp_service.send_message(
-            phone_number=phone, message=failure_message
-        )
 
 
 async def _save_session_data(
@@ -94,124 +57,6 @@ async def _save_session_data(
         logger.warning(f'⚠️ Falha ao atualizar sessão do usuário: {sess_e}')
 
 
-async def process_image_generation(
-    data: dict,
-    gemini_service: GeminiService,
-    whatsapp_service: WhatsAppService,
-    user_session_cache,
-    status_image_cache: StatusImageCache,
-) -> None:
-    """Processa a geração de imagem em background"""
-    sender_phone = data.get('sender_id')  # Para enviar a resposta
-    processing_message_id = data.get('processing_message_id')
-
-    try:
-        # Extrai dados necessários
-        prompt, sender_name = extract_prompt(data)
-        user_number = extract_primary_user_number(data)
-
-        contact_name = sender_name
-        if contact_name == 'Alguém' and user_number:
-            contact_info = await whatsapp_service.get_contact_info(user_number)
-            if contact_info and contact_info.get('name'):
-                contact_name = contact_info.get('name')
-
-        # Atualiza mensagem de processamento se possível
-        if processing_message_id:
-            await whatsapp_service.edit_message(
-                processing_message_id,
-                '🎨 Gerando sua imagem... Por favor, aguarde!',
-            )
-
-        media_path = data.get('image', {}).get('media_path')
-
-        image_bytes = None
-        if media_path:
-            image_bytes = await whatsapp_service.download_media(media_path)
-
-        generated_bytes = await gemini_service.generate_image_from_prompt(
-            prompt, image_bytes
-        )
-
-        if not generated_bytes:
-            logger.warning(
-                '⚠️ Gemini não conseguiu gerar imagem para este prompt'
-            )
-            await send_or_edit_failure(
-                whatsapp_service,
-                sender_phone,
-                processing_message_id,
-            )
-            return
-
-        logger.success('✅ Imagem gerada! Enviando para o chat...')
-
-        # Atualiza mensagem de processamento
-        if processing_message_id:
-            await whatsapp_service.edit_message(
-                processing_message_id,
-                '✅ Imagem gerada! Enviando para você...',
-            )
-
-        send_result = await whatsapp_service.send_image_message(
-            phone_number=sender_phone,
-            image_bytes=generated_bytes,
-            caption=f'Imagem gerada para {contact_name}: {prompt}',
-        )
-
-        if not send_result:
-            logger.error('❌ Falha ao enviar a imagem')
-            return
-
-        logger.info('📤 Postando no status do WhatsApp...')
-
-        # Posta a imagem no status usando status@broadcast
-        status_id = await whatsapp_service.post_status_update(
-            image_bytes=generated_bytes,
-            caption=f"Editado por: {sender_name} | Prompt: '{prompt}'",
-        )
-
-        # Salva a imagem e o ID do status no cache global
-        if status_id:
-            await status_image_cache.save_status_image(generated_bytes)
-            await status_image_cache.save_last_status_id(status_id)
-
-        # Atualiza sessão por usuário (unifica comandos)
-        session_data = {
-            'prompt': prompt,
-            'generated_bytes': generated_bytes,
-            'image_bytes': image_bytes,
-            'status_id': status_id,
-        }
-        await _save_session_data(
-            user_session_cache=user_session_cache,
-            user_number=user_number,
-            session_data=session_data,
-        )
-
-        # Atualiza mensagem final
-        if processing_message_id:
-            await whatsapp_service.edit_message(
-                processing_message_id,
-                f'🎉 Processo concluído! Imagem enviada e publicada '
-                f"no status para: '{prompt}'",
-            )
-
-        logger.success('🎉 Processamento concluído com sucesso!')
-
-    except Exception as e:
-        logger.error(
-            '❌ Erro no processamento em background:'
-            f' {type(e).__name__}: {str(e)}'
-        )
-        logger.exception('Detalhes do erro:')
-        await send_or_edit_failure(
-            whatsapp_service,
-            sender_phone,
-            processing_message_id,
-        )
-
-
 async def process_status_viewed_for_image_generation(
     data: dict,
     gemini_service: GeminiService,
@@ -235,9 +80,7 @@ async def process_status_viewed_for_image_generation(
         viewer_name = None
         try:
             contact_info = await whatsapp_service.get_contact_info(user_number)
-            viewer_name = (
-                contact_info.get('name') if contact_info else None
-            )
+            viewer_name = contact_info.get('name') if contact_info else None
         except Exception as e:
             logger.debug(f'Erro ao buscar nome do contato {user_number}: {e}')
 
@@ -344,87 +187,12 @@ async def process_status_view(data: dict) -> None:
         except Exception as db_e:
             logger.warning(f'⚠️ Não foi possível salvar no banco: {db_e}')
             logger.info(
-                f'👁️ Status visualizado por {user_number} '
-                '(não salvo no DB).'
+                f'👁️ Status visualizado por {user_number} (não salvo no DB).'
             )
 
     except Exception as e:
         logger.error(f'❌ Erro ao processar visualização de status: {e}')
         logger.exception('Detalhes do erro:')
-
-
-def _is_status_delivery_ack(data: dict) -> bool:
-    """Verifica se é ACK de entrega de status (não read)."""
-    return (
-        data.get('event') == 'message.ack'
-        and data.get('payload', {}).get('chat_id') == 'status@broadcast'
-        and data.get('payload', {}).get('receipt_type') != 'read'
-    )
-
-
-def _is_duplicate_message(data: dict, message_cache: MessageCache) -> bool:
-    """Verifica se a mensagem já foi processada."""
-    message_id = data.get('message', {}).get('id')
-    return message_id and message_cache.is_message_processed(message_id)
-
-
-def _get_ignore_reason(data: dict, prompt_cached: str | None) -> str | None:
-    """Determina o motivo para ignorar o webhook."""
-    event = data.get('event', '')
-    action = data.get('action', '')
-
-    reason = None
-    if event == 'message.ack':
-        reason = 'message.ack'
-    elif event in {
-        'message.revoke',
-        'group.join',
-        'group.leave',
-        'user.status',
-    }:
-        reason = event
-    elif action in {'message_edited', 'message_deleted'}:
-        reason = action
-    elif 'message' not in data and 'image' not in data:
-        reason = 'no_content'
-    elif not prompt_cached:
-        reason = 'no_prompt'
-    elif prompt_cached and any(
-        prompt_cached.startswith(prefix)
-        for prefix in [
-            'Sua imagem gerada a partir de:',
-            'Gerado por Klique AI:',
-        ]
-    ):
-        reason = 'bot_message'
-    elif not data.get('sender_id'):
-        reason = 'no_sender'
-    return reason
-
-
-async def should_ignore_webhook(
-    data: dict, message_cache: MessageCache
-) -> tuple[bool, str]:
-    """Verifica se o webhook deve ser ignorado e retorna (ignorar, motivo)"""
-
-    if _is_status_delivery_ack(data):
-        logger.debug('📨 ACK de entrega de status (não read) - ignorando')
-        return True, 'status_delivery_ack'
-
-    prompt_cached, _ = extract_prompt(data)
-
-    # Verifica se a mensagem já foi processada (usando cache MongoDB)
-    message_id = data.get('message', {}).get('id')
-    if message_id and await message_cache.is_message_processed(message_id):
-        logger.debug(f'🔄 Mensagem duplicata (ID: {message_id})')
-        return True, 'duplicate'
-
-    reason = _get_ignore_reason(data, prompt_cached)
-    if reason:
-        logger.debug(f'⏭️ Webhook ignorado: {reason}')
-        return True, reason
-
-    return False, ''
 
 
 # ----------------------------- Command Operations ----------------------------
@@ -489,9 +257,7 @@ async def _handle_imagem_command(
     await user_session_cache.save_prompt(user_number, prompt)
     await user_session_cache.save_generated_image(user_number, generated)
     if base_image_bytes:
-        await user_session_cache.save_base_image(
-            user_number, base_image_bytes
-        )
+        await user_session_cache.save_base_image(user_number, base_image_bytes)
     if status_id:
         await user_session_cache.save_status_id(user_number, status_id)
 
@@ -619,9 +385,7 @@ async def _handle_editar_command(
         return
 
     last_prompt = await user_session_cache.get_prompt(user_number)
-    generated_image = (
-        await user_session_cache.get_generated_image(user_number)
-    )
+    generated_image = await user_session_cache.get_generated_image(user_number)
 
     if not generated_image:
         await whatsapp_service.send_message(
@@ -835,48 +599,6 @@ async def _handle_command(
     }
 
 
-async def _handle_normal_message(
-    data: dict,
-    background_tasks: BackgroundTasks,
-    deps: WebhookDependencies,
-) -> dict:
-    """Trata mensagens normais (não comandos nem status)."""
-    ignore, reason = await should_ignore_webhook(data, deps.message_cache)
-    if ignore:
-        return {'status': 'ok', 'reason': reason}
-
-    sender = data.get('sender_id')
-    processing_message_id = None
-
-    if sender:
-        processing_message = (
-            deps.whatsapp_service.get_random_processing_message()
-        )
-        processing_message_id = await deps.whatsapp_service.send_message(
-            phone_number=sender, message=processing_message
-        )
-
-    logger.info('📱 Webhook processável recebido, agendando task...')
-
-    task_data = {
-        **data,
-        'processing_message_id': processing_message_id,
-    }
-    background_tasks.add_task(
-        process_image_generation,
-        task_data,
-        deps.gemini_service,
-        deps.whatsapp_service,
-        deps.user_session_cache,
-        deps.status_image_cache,
-    )
-
-    return {
-        'status': 'accepted',
-        'detail': 'Webhook agendado para processamento',
-    }
-
-
 @router.post('/whatsapp')
 async def receive_whatsapp_webhook(
     request: Request,
@@ -914,8 +636,13 @@ async def receive_whatsapp_webhook(
             if command_result:
                 return command_result
 
-        # ----------------------------- Normal message flow -------------------
-        return await _handle_normal_message(data, background_tasks, deps)
+        # ----------------------------- Normal message flow (REMOVED) ---------
+        # O fluxo de mensagens normais foi removido.
+        # Apenas comandos explícitos são processados.
+        logger.debug(
+            'Nenhum comando ou evento de status detectado. Ignorando.'
+        )
+        return {'status': 'ok', 'reason': 'no_command_or_event'}
 
     except Exception as e:
         logger.error(f'❌ Erro no webhook: {str(e)}')

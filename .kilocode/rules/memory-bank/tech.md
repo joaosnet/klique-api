@@ -11,14 +11,14 @@
 ## Dependências Principais
 
 *   `fastapi[standard]`: Inclui o FastAPI e dependências recomendadas como `pydantic` para validação de dados e `uvicorn` para o servidor ASGI.
-*   `google-genai`: A biblioteca oficial do Google para interagir com a API do Gemini (`google.genai`).
+*   `google-genai`: A biblioteca oficial do Google para interagir com a API do Gemini (`google.genai`) - versão atual para geração de imagens.
 *   `pillow`: Biblioteca para manipulação e processamento de imagens.
 *   `python-dotenv`: Para carregar variáveis de ambiente a partir de um arquivo `.env`.
 
 ## Dependências de Banco de Dados e Cache
 
 *   `motor`: Driver assíncrono para MongoDB usado com FastAPI.
-*   `pymongo`: Driver Python para MongoDB (usado pelos índices do cache).
+*   Sistema de cache unificado MongoDB substituindo cache em memória anterior.
 
 ## Dependências de Autenticação e Segurança
 
@@ -32,7 +32,7 @@
 *   `firebase-admin`: SDK do Firebase Admin para Python.
 *   `google-auth`: Biblioteca de autenticação do Google.
 *   `requests`: Cliente HTTP síncrono.
-*   `gemini-webapi`: API web do Gemini (legacy/compatibilidade).
+*   `gemini-webapi`: API web do Gemini (mantida para compatibilidade, mas não é a implementação principal).
 
 ## Ferramentas de Desenvolvimento e Testes
 

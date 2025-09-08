@@ -11,15 +11,19 @@ O serviço elimina a necessidade de um aplicativo separado, integrando a geraç�
 ## Como Funciona
 
 1.  **Recebimento de Mensagens (Webhook):** A API (fastapi-app) recebe notificações (webhooks) do gateway `go-whatsapp` sempre que um usuário envia uma mensagem.
-2.  **Processamento de Prompt:** A API extrai o texto da mensagem para ser usado como prompt para a geração da imagem.
-3.  **Integração com IA:** A API envia o prompt para o serviço do Gemini, que gera a imagem correspondente.
-4.  **Envio de Resposta:** A API utiliza a interface REST do `go-whatsapp` para:
+2.  **Sistema de Comandos:** O sistema reconhece comandos específicos (`imagem`, `legenda`, `refazer`, `editar`, `ajuda`) em vez de processar mensagens livres automaticamente.
+3.  **Processamento de Prompt:** Para comandos de geração, a API extrai o prompt e aprimora-o automaticamente usando o Gemini antes da geração.
+4.  **Integração com IA:** A API utiliza o modelo `gemini-2.5-flash-image-preview` para gerar imagens, com suporte completo a image-to-image.
+5.  **Envio de Resposta:** A API utiliza a interface REST do `go-whatsapp` para:
     *   Enviar a imagem gerada diretamente para a conversa com o usuário.
     *   Publicar a mesma imagem como um novo status na conta do WhatsApp conectada.
+6.  **Geração Automática:** Quando alguém visualiza um status, o sistema gera automaticamente uma nova imagem personalizada com o nome do visualizador.
 
 ## Objetivos de Experiência do Usuário
 
-*   **Interatividade:** A experiência deve ser conversacional e instantânea, como um bate-papo normal.
-*   **Simplicidade:** O usuário só precisa enviar um texto; o bot cuida de todo o resto.
-*   **Engajamento:** A publicação automática de status gera visibilidade e incentiva o uso contínuo.
-*   **Feedback Claro:** Em casos onde a IA não consegue gerar uma imagem a partir de um prompt, o bot envia uma mensagem proativa com sugestões para ajudar o usuário a refinar seu pedido.
+*   **Controle Explícito:** O usuário utiliza comandos específicos para cada ação, garantindo previsibilidade e controle total.
+*   **Simplicidade:** Sistema de comandos intuitivo (`imagem <prompt>`, `refazer`, `editar <instruções>`, etc.).
+*   **Persistência de Sessão:** O sistema lembra do último prompt e imagens geradas, permitindo edições e variações.
+*   **Engajamento:** A publicação automática de status e geração personalizada para visualizadores aumenta a interação.
+*   **Feedback Imediato:** Resposta instantânea aos comandos com processamento em background para operações pesadas.
+*   **Feedback Claro:** Mensagens de ajuda e orientação quando comandos são usados incorretamente ou falham.

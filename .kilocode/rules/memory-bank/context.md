@@ -1,19 +1,47 @@
-# Contexto (Atualizado em Setembro 2025)
+# Contexto (Atualizado em Janeiro 2025)
 
-## Revisão e Sincronização do Memory Bank
+## Estado Atual do Sistema
 
-O "memory bank" foi completamente revisado e atualizado para garantir que a documentação esteja perfeitamente sincronizada com o código-fonte atual da aplicação. As otimizações e funcionalidades que já estavam implementadas agora estão devidamente documentadas.
+O Klique WhatsApp Bot está em produção com uma arquitetura madura e funcionalidades completas implementadas. O sistema opera através de comandos explícitos, tendo removido o processamento automático de mensagens livres para maior controle e previsibilidade.
 
-## Destaques da Atualização
+## Funcionalidades Implementadas
 
-A revisão resultou nas seguintes melhorias na documentação:
+### Sistema de Comandos Estruturado
+- **Comandos implementados**: `imagem`, `legenda`, `refazer`, `editar`, `ajuda`
+- **Parser robusto**: Sistema em `command.py` com `CommandOperation` enum e `CommandContext`
+- **Processamento assíncrono**: Comandos são executados em background tasks para resposta rápida
 
-1.  **Tecnologia da IA Atualizada**: O arquivo `tech.md` agora reflete o uso da biblioteca `google-generativeai`, que é a implementação atual, em vez da antiga `gemini-webapi`.
+### Cache e Sessão Avançados
+- **Cache unificado MongoDB**: Substituiu completamente sistema híbrido anterior
+- **Sessões por usuário**: `UserSessionCache` mantém estado individual (prompt, imagens, status_id)
+- **Cache de status global**: `StatusImageCache` para geração automática em visualizações
+- **Sistema anti-duplicação**: `MessageCache` previne reprocessamento
 
-2.  **Fluxo de Imagem-para-Imagem Documentado**: Os arquivos `architecture.md` e `brief.md` foram atualizados para incluir o fluxo onde o usuário pode enviar uma imagem junto com um prompt de texto, que serve como entrada para o modelo de IA.
+### Geração Automática de Status
+- **Trigger por visualização**: Gera nova imagem quando alguém visualiza status
+- **Personalização dinâmica**: Inclui nome do visualizador na imagem
+- **Substituição inteligente**: Remove status anterior automaticamente
 
-3.  **Melhoria na Documentação de UX**: O `product.md` agora menciona o comportamento do bot de enviar uma mensagem de ajuda proativa quando a geração da imagem falha, um detalhe importante da experiência do usuário.
+### Integração com Gemini Avançada
+- **Modelo atual**: `gemini-2.5-flash-image-preview` para geração
+- **Enhancement de prompts**: `gemini-2.5-flash-lite` aprimora prompts automaticamente
+- **Suporte image-to-image**: Aceita imagens como entrada para edição/variação
 
-## Estado do Sistema
+## Arquitetura Atual
 
-O sistema continua estável e funcional, e agora a sua documentação interna (`memory bank`) reflete com precisão seu estado atual, facilitando futuras manutenções e desenvolvimentos.
+### Processamento Webhook Otimizado
+- Resposta imediata com feedback de processamento
+- Background tasks para operações pesadas
+- Sistema robusto de tratamento de erros
+
+### Dependências Atualizadas
+- `google-genai`: Biblioteca oficial atual (substituiu `gemini-webapi`)
+- Cache unificado MongoDB (removeu dependências de cache em memória)
+- Sistema de logs melhorado com `loguru` e Rich
+
+## Próximos Desenvolvimentos
+
+O sistema está estável e pronto para:
+- Expansão de comandos (V2)
+- Melhorias na UX dos comandos existentes
+- Otimizações de performance conforme necessário

@@ -20,7 +20,8 @@ klique-api/
 │   │   ├── gemini.py         # Lógica para interagir com a API do Gemini
 │   │   ├── whatsapp.py       # Cliente para a API REST do go-whatsapp
 │   │   └── shared.py         # Serviços compartilhados e lifespan
-│   ├── cache.py              # Sistema de cache MongoDB
+│   ├── cache.py              # Sistema de cache MongoDB unificado
+│   ├── command.py            # Sistema de comandos (imagem, legenda, refazer, editar, ajuda)
 │   ├── config.py             # Configurações da aplicação
 │   ├── database.py           # Conexões MongoDB
 │   ├── dependencies.py       # Dependências para autenticação
@@ -48,11 +49,13 @@ klique-api/
     *   Envia um webhook para a `fastapi-app` a cada nova mensagem recebida.
 
 *   **`fastapi-app` (Backend/Orquestrador)**:
-    *   Recebe os webhooks do `go-whatsapp` em um endpoint dedicado (ex: `/webhooks/whatsapp`).
-    *   Processa o prompt da mensagem recebida (texto e/ou imagem).
-    *   Faz o download da imagem de entrada, se houver, através do `WhatsAppService`.
-    *   Chama o `GeminiService` para gerar a imagem.
-    *   Utiliza um cliente HTTP interno (`WhatsAppService`) para fazer chamadas à API REST do `go-whatsapp`, enviando a imagem gerada e atualizando o status.
+    *   Recebe os webhooks do `go-whatsapp` no endpoint `/webhooks/whatsapp`.
+    *   **Sistema de Comandos**: Implementa comandos específicos (`imagem`, `legenda`, `refazer`, `editar`, `ajuda`) sem processamento automático de mensagens livres.
+    *   **Processamento de Prompt**: Processa prompts de texto e imagens através do `GeminiService`.
+    *   **Download de Mídia**: Faz download de imagens enviadas pelos usuários via `WhatsAppService`.
+    *   **Geração Automática em Status**: Gera novas imagens automaticamente quando alguém visualiza um status.
+    *   **Cache de Sessão**: Mantém cache por usuário (último prompt, imagens geradas, IDs de status) no MongoDB.
+    *   **Cliente WhatsApp**: Utiliza `WhatsAppService` para enviar mensagens, imagens e gerenciar status.
 
 *   **`mongodb` (Banco de Dados)**:
     *   Armazena logs, informações de usuários e prompts.

@@ -47,24 +47,27 @@ graph TD
 
 ## 4. Fluxo de Dados: Geração de Imagem via WhatsApp
 
-1.  O usuário envia uma mensagem para o número de WhatsApp conectado. A mensagem pode ser um texto (prompt) ou uma imagem com uma legenda (prompt).
+1.  O usuário envia um comando para o número de WhatsApp conectado (ex: `imagem gato astronauta`). O comando pode incluir uma imagem anexada para edição.
 2.  O serviço `go-whatsapp` recebe a mensagem e dispara um webhook para a `fastapi-app`.
-3.  A `fastapi-app` recebe o webhook, extrai o prompt e o ID do usuário (remetente).
-4.  A API chama o serviço do Gemini para gerar a imagem com base no prompt.
+3.  A `fastapi-app` recebe o webhook, identifica o comando e extrai o prompt e dados do usuário.
+4.  A API aprimora o prompt automaticamente e chama o serviço do Gemini para gerar a imagem.
 5.  Após receber a imagem gerada, a API faz duas chamadas para a API REST do `go-whatsapp`:
     a.  Uma para enviar a imagem diretamente para o chat do usuário.
     b.  Outra para publicar a imagem como um novo status do WhatsApp.
-6.  O usuário recebe a imagem no chat e pode ver a mesma imagem no status do bot.
+6.  O usuário recebe a imagem no chat e pode usar outros comandos (`refazer`, `editar`, `legenda`) para modificá-la.
+7.  Quando alguém visualiza o status, uma nova imagem personalizada é gerada automaticamente.
 
 ## 5. Escalabilidade e Considerações de Segurança
 
 *   **Escalabilidade:** A arquitetura em contêineres permite escalar os serviços individualmente. O `fastapi-app` pode ser replicado para lidar com um volume maior de webhooks.
 *   **Segurança:** A comunicação entre os serviços (`fastapi-app` e `go-whatsapp`) ocorre na rede interna do Docker. A API do `go-whatsapp` é protegida por autenticação básica. O endpoint de webhook na `fastapi-app` deve ser protegido para aceitar requisições apenas do gateway.
 
-## 6. Próximos Passos (MVP)
+## 6. Estado Atual (Sistema Completo)
 
-*   Desenvolver o endpoint de webhook na `fastapi-app`.
-*   Implementar o cliente para a API REST do `go-whatsapp`.
-*   Integrar a lógica de geração de imagem (Gemini) ao novo fluxo.
-*   Configurar os webhooks no serviço `go-whatsapp`.
-*   Testar o fluxo de ponta a ponta.
+*   ✅ Endpoint de webhook implementado e funcional na `fastapi-app`.
+*   ✅ Cliente completo para a API REST do `go-whatsapp` implementado.
+*   ✅ Integração com Gemini (`gemini-2.5-flash-image-preview`) implementada.
+*   ✅ Sistema de comandos estruturado funcionando.
+*   ✅ Cache de sessão por usuário implementado.
+*   ✅ Geração automática de status por visualização funcionando.
+*   ✅ Sistema testado e em produção.
