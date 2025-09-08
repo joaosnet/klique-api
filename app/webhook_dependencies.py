@@ -4,7 +4,7 @@ from fastapi import Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from .database import get_db
-from .services.protocols import ImageGenerationServiceProtocol
+from .services.gemini import GeminiService
 from .services.shared import AppServices
 from .services.whatsapp import WhatsAppService
 
@@ -14,7 +14,7 @@ class WebhookDependencies:
 
     def __init__(
         self,
-        image_generation_service: ImageGenerationServiceProtocol,
+        image_generation_service: GeminiService,
         whatsapp_service: WhatsAppService,
         db: AsyncIOMotorDatabase,
     ):

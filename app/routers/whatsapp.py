@@ -1,4 +1,5 @@
 from datetime import datetime  # noqa: I001
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from loguru import logger
@@ -6,7 +7,6 @@ from motor.motor_asyncio import AsyncIOMotorCollection
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from ..routers import schemas
-from ..services.protocols import ImageGenerationServiceProtocol
 from ..services.whatsapp import WhatsAppService
 from ..utils import extract_user_number, extract_primary_user_number
 from ..webhook_dependencies import (
@@ -27,7 +27,7 @@ router = APIRouter(
 
 async def process_status_viewed_for_image_generation(
     data: dict,
-    image_generation_service: ImageGenerationServiceProtocol,
+    image_generation_service: Any,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ) -> None:
@@ -172,7 +172,7 @@ NO_SESSION_FALLBACK = (
 
 async def _handle_imagem_command(
     command_data: dict,
-    image_generation_service: ImageGenerationServiceProtocol,
+    image_generation_service: Any,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ):
@@ -296,7 +296,7 @@ async def _handle_legenda_command(
 
 async def _handle_refazer_command(
     command_data: dict,
-    image_generation_service: ImageGenerationServiceProtocol,
+    image_generation_service: Any,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ):
@@ -363,7 +363,7 @@ async def _handle_refazer_command(
 
 async def _handle_editar_command(
     command_data: dict,
-    image_generation_service: ImageGenerationServiceProtocol,
+    image_generation_service: Any,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ):
@@ -444,7 +444,7 @@ async def _handle_editar_command(
 
 async def process_command_operation(
     command_data: dict,
-    image_generation_service: ImageGenerationServiceProtocol,
+    image_generation_service: Any,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
 ):
