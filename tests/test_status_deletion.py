@@ -11,7 +11,6 @@ from app.services.whatsapp import WhatsAppService
 @pytest.mark.asyncio
 async def test_status_deletion_detailed():
     """Teste detalhado para investigar o problema de deleção de status."""
-    print('\n=== Teste detalhado deleção de status ===')
 
     # Criar serviço WhatsApp
     service = WhatsAppService(base_url='http://localhost:3000')
