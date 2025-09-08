@@ -1,8 +1,8 @@
-import io
+import io  # noqa: I001
 import os
 import random
 from pathlib import Path
-
+from fastapi import status
 import httpx
 
 from ..logger import logger
@@ -98,8 +98,8 @@ class WhatsAppService:
             response.raise_for_status()
             response_data = response.json()
 
-            # A resposta da API mudou e agora retorna o ID diretamente
-            message_id = response_data.get('message_id')
+            # A resposta da API mudou e agora retorna o ID dentro de 'results'
+            message_id = response_data.get('results', {}).get('message_id')
             if message_id:
                 logger.info(
                     f'Imagem enviada para {phone} com ID: {message_id}'
@@ -215,6 +215,28 @@ class WhatsAppService:
             filename='status.png',
         )
 
+    async def status_exists(self, status_id: str) -> bool:
+        """
+        Verifica se um status ainda existe consultando as mensagens de status.
+
+        :param status_id: O ID do status a verificar.
+        :return: True se o status existe, False caso contrário.
+        """
+        try:
+            status_messages = await self.get_status_messages(limit=50)
+            if status_messages:
+                for message in status_messages:
+                    if message.get('id') == status_id:
+                        return True
+            return False
+        except Exception as e:
+            logger.warning(
+                f'Erro ao verificar existência do status {status_id}: {e}'
+            )
+            # Em caso de erro na verificação,
+            #  assume que existe para tentar deleção
+            return True
+
     async def delete_status(self, status_id: str) -> bool:
         """
         Deleta um status específico.
@@ -230,6 +252,17 @@ class WhatsAppService:
             logger.info(f'Status {status_id} deletado com sucesso.')
             return True
         except httpx.HTTPStatusError as e:
+            # Status 404 significa que o status não existe mais
+            # (expirou ou foi deletado)
+            # Isso é normal e não deve ser tratado como erro
+            if e.response.status_code == status.HTTP_404_NOT_FOUND:
+                logger.info(
+                    f'Status {status_id} não encontrado'
+                    ' (provavelmente expirou). '
+                    'Considerando como deletado.'
+                )
+                return True
+
             logger.error(
                 f'Erro ao deletar status {status_id}: '
                 f'{e.response.status_code} - {e.response.text}'
@@ -362,6 +395,72 @@ class WhatsAppService:
             logger.error(f'Erro inesperado ao buscar status: {e}')
 
         return None
+
+    async def get_status_messages(
+        self, offset: int = 0, limit: int = 20, is_from_me: bool = True
+    ) -> list[dict] | None:
+        """
+        Busca mensagens de status do WhatsApp.
+
+        :param offset: Offset para paginação.
+        :param limit: Limite de mensagens a buscar.
+        :param is_from_me: Se True, busca apenas status próprios.
+        :return: Lista de mensagens de status ou None em caso de erro.
+        """
+        try:
+            params = {
+                'offset': offset,
+                'limit': limit,
+                'is_from_me': str(is_from_me).lower(),
+            }
+            response = await self.client.get(
+                '/chat/status@broadcast/messages',
+                params=params,
+                auth=self.auth,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get('results', {}).get('data', [])
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f'Erro ao buscar mensagens de status: '
+                f'{e.response.status_code} - {e.response.text}'
+            )
+        except Exception as e:
+            logger.error(f'Erro inesperado ao buscar mensagens de status: {e}')
+
+        return None
+
+    async def get_latest_status_id(self) -> str | None:
+        """
+        Busca o ID do status mais recente consultando as mensagens de status.
+
+        :return: O ID do status mais recente ou None se não encontrado.
+        """
+        try:
+            # Busca apenas a primeira mensagem (mais recente)
+            # dos status próprios
+            status_messages = await self.get_status_messages(
+                offset=0, limit=1, is_from_me=True
+            )
+
+            if status_messages and len(status_messages) > 0:
+                latest_status = status_messages[0]
+                status_id = latest_status.get('id')
+
+                if status_id:
+                    logger.info(
+                        f'📋 Status mais recente encontrado: {status_id}'
+                    )
+                    return status_id
+
+            logger.warning('📋 Nenhum status próprio encontrado.')
+            return None
+
+        except Exception as e:
+            logger.error(f'❌ Erro ao buscar status mais recente: {e}')
+            return None
 
     async def edit_message(self, message_id: str, new_text: str) -> bool:
         """

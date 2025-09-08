@@ -349,10 +349,35 @@ async def _handle_imagem_command(
         caption=f'Imagem gerada: {prompt}',
     )
 
-    # Posta status
+    # Gera legenda criativa usando Gemini Web API
+    status_caption = None
+    try:
+        # Verifica se o serviço é o GeminiWebApiService
+        if hasattr(image_generation_service, 'generate_status_caption'):
+            # Obtém informações do contato para personalização
+            contact_info = await whatsapp_service.get_contact_info(user_number)
+            user_name = contact_info.get('name') if contact_info else None
+
+            status_caption = (
+                await image_generation_service.generate_status_caption(
+                    chat=chat, image_prompt=prompt, user_name=user_name
+                )
+            )
+            logger.info(f'Legenda criativa gerada: "{status_caption}"')
+
+        if not status_caption:
+            # Fallback para legenda padrão
+            status_caption = f'Prompt: {prompt}'
+            logger.debug('Usando legenda padrão como fallback')
+
+    except Exception as e:
+        logger.warning(f'Erro ao gerar legenda criativa: {e}')
+        status_caption = f'Prompt: {prompt}'
+
+    # Posta status com legenda criativa
     status_id = await whatsapp_service.post_status_update(
         image_bytes=generated_bytes,
-        caption=f'Prompt: {prompt}',
+        caption=status_caption,
     )
 
     # Atualiza sessão
@@ -476,8 +501,36 @@ async def _handle_refazer_command(
     last_status_id = session.get('last_status_id') if session else None
     if last_status_id:
         await whatsapp_service.delete_status(last_status_id)
+
+    # Gera legenda criativa para variação usando Gemini Web API
+    status_caption = None
+    try:
+        # Verifica se o serviço é o GeminiWebApiService
+        if hasattr(image_generation_service, 'generate_status_caption'):
+            # Obtém informações do contato para personalização
+            contact_info = await whatsapp_service.get_contact_info(user_number)
+            user_name = contact_info.get('name') if contact_info else None
+
+            status_caption = (
+                await image_generation_service.generate_status_caption(
+                    chat=chat, image_prompt=last_prompt, user_name=user_name
+                )
+            )
+            logger.info(
+                f'Legenda criativa para variação gerada: "{status_caption}"'
+            )
+
+        if not status_caption:
+            # Fallback para legenda padrão
+            status_caption = f'Variação: {last_prompt}'
+            logger.debug('Usando legenda padrão como fallback para variação')
+
+    except Exception as e:
+        logger.warning(f'Erro ao gerar legenda criativa para variação: {e}')
+        status_caption = f'Variação: {last_prompt}'
+
     status_id = await whatsapp_service.post_status_update(
-        image_bytes=generated_bytes, caption=f'Variação: {last_prompt}'
+        image_bytes=generated_bytes, caption=status_caption
     )
 
     await user_sessions.update_one(
@@ -537,6 +590,7 @@ async def _process_edited_images(
     data: EditProcessData,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
+    image_generation_service: Any = None,
 ) -> None:
     """Processa e envia imagens editadas."""
     for i, edited_bytes in enumerate(data.generation_result):
@@ -563,7 +617,7 @@ async def _process_edited_images(
                 session=data.session,
             )
             await _update_status_and_session_for_edit(
-                update_data, whatsapp_service, db
+                update_data, whatsapp_service, db, image_generation_service
             )
 
 
@@ -571,6 +625,7 @@ async def _update_status_and_session_for_edit(
     data: EditStatusUpdateData,
     whatsapp_service: WhatsAppService,
     db: AsyncIOMotorDatabase,
+    image_generation_service: Any = None,
 ) -> None:
     """Atualiza status e sessão após edição."""
     # Remove status antigo
@@ -579,10 +634,47 @@ async def _update_status_and_session_for_edit(
         if last_status_id:
             await whatsapp_service.delete_status(last_status_id)
 
+    # Gera legenda criativa para edição usando Gemini Web API
+    status_caption = None
+    try:
+        # Verifica se o serviço é o GeminiWebApiService
+        if image_generation_service and hasattr(
+            image_generation_service, 'generate_status_caption'
+        ):
+            # Obtém informações do contato para personalização
+            contact_info = await whatsapp_service.get_contact_info(
+                data.user_number
+            )
+            user_name = contact_info.get('name') if contact_info else None
+
+            # Cria um chat temporário para gerar a legenda da edição
+            temp_chat = await image_generation_service.get_or_create_chat(
+                f'edit_caption_{data.user_number}'
+            )
+            status_caption = (
+                await image_generation_service.generate_status_caption(
+                    chat=temp_chat,
+                    image_prompt=f'Edição: {data.argument}',
+                    user_name=user_name,
+                )
+            )
+            logger.info(
+                f'Legenda criativa para edição gerada: "{status_caption}"'
+            )
+
+        if not status_caption:
+            # Fallback para legenda padrão
+            status_caption = f'Edição aplicada: {data.argument}'
+            logger.debug('Usando legenda padrão como fallback para edição')
+
+    except Exception as e:
+        logger.warning(f'Erro ao gerar legenda criativa para edição: {e}')
+        status_caption = f'Edição aplicada: {data.argument}'
+
     # Cria novo status
     status_id = await whatsapp_service.post_status_update(
         image_bytes=data.edited_bytes,
-        caption=f'Edição aplicada: {data.argument}',
+        caption=status_caption,
     )
 
     # Atualiza sessão do usuário
@@ -664,7 +756,9 @@ async def _handle_editar_command(
         user_number=user_number,
         session=session,
     )
-    await _process_edited_images(edit_data, whatsapp_service, db)
+    await _process_edited_images(
+        edit_data, whatsapp_service, db, image_generation_service
+    )
 
     await whatsapp_service.send_message(
         phone_number=sender,

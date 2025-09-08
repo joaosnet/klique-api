@@ -270,6 +270,102 @@ class GeminiWebApiService:
 
         return result
 
+    async def generate_status_caption(
+        self,
+        chat: Any,
+        image_prompt: str | None = None,
+        user_name: str | None = None,
+    ) -> str | None:
+        """
+        Gera uma legenda criativa e com quebra de padrão para status do WhatsApp
+        usando a mesma sessão de chat da imagem gerada.
+
+        Args:
+            chat (Any): A sessão de chat do usuário (mesma da imagem).
+            image_prompt (str, optional): O prompt original usado para gerar a imagem.
+            user_name (str, optional): Nome do usuário para personalização.
+
+        Returns:
+            str | None: Legenda criativa gerada ou None em caso de erro.
+        """  # noqa: E501
+        try:
+            # Constrói o prompt para gerar a legenda criativa
+            caption_prompt = self._build_caption_prompt(
+                image_prompt, user_name
+            )
+
+            logger.info(
+                'Gerando legenda criativa para status via Gemini Web API'
+            )
+
+            # Usa a mesma sessão de chat para manter contexto
+            response = await chat.send_message(caption_prompt)
+
+            if response and response.text:
+                caption = response.text.strip()
+                logger.success(
+                    f'Legenda gerada com sucesso: "{caption[:50]}..."'
+                )
+                return caption
+
+            logger.warning('Resposta vazia ao gerar legenda para status')
+            return None
+
+        except Exception as e:
+            logger.error(f'Erro ao gerar legenda para status: {e}')
+            return None
+
+    @staticmethod
+    def _build_caption_prompt(
+        image_prompt: str | None = None, user_name: str | None = None
+    ) -> str:
+        """
+        Constrói o prompt para gerar legenda criativa para status.
+
+        Args:
+            image_prompt (str, optional): O prompt original da imagem.
+            user_name (str, optional): Nome do usuário.
+
+        Returns:
+            str: Prompt otimizado para geração de legenda.
+        """
+        base_prompt = (
+            'Agora crie uma legenda criativa e '
+            'com quebra de padrão para esta imagem '
+            'que será postada como status no WhatsApp. A legenda deve ser:\n\n'
+            '• Criativa e original, fugindo do óbvio\n'
+            '• Quebrar padrões e expectativas\n'
+            '• Provocativa ou intrigante\n'
+            '• Máximo 2-3 linhas\n'
+            '• Pode usar emojis estrategicamente\n'
+            '• Deve gerar engajamento e curiosidade\n'
+            "• Evite clichês como 'arte é vida', "
+            "'criatividade sem limites', etc.\n\n"
+        )
+
+        if image_prompt:
+            context_prompt = (
+                'Baseando-se na imagem que acabamos de criar'
+                f" com o tema '{image_prompt}', "
+            )
+        else:
+            context_prompt = 'Baseando-se na imagem que acabamos de criar, '
+
+        if user_name:
+            personalization = (
+                'A legenda pode incluir uma referência sutil'
+                f' ao {user_name} se fizer sentido. '
+            )
+        else:
+            personalization = ''
+
+        return (
+            base_prompt
+            + context_prompt
+            + personalization
+            + 'Crie APENAS a legenda, sem explicações adicionais.'
+        )
+
     @staticmethod
     def _extract_user_number_from_chat(chat) -> str | None:
         """Extrai o user_number do chat ou metadata."""
