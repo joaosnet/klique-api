@@ -21,7 +21,6 @@ klique-api/
 │   │   ├── gemini_webapi_service.py # Serviço alternativo Gemini Web API
 │   │   ├── whatsapp.py       # Cliente para a API REST do go-whatsapp
 │   │   └── shared.py         # Serviços compartilhados e lifespan
-│   ├── cache.py              # Sistema de cache MongoDB unificado
 │   ├── command.py            # Sistema de comandos (imagem, legenda, refazer, editar, ajuda)
 │   ├── config.py             # Configurações da aplicação
 │   ├── database.py           # Conexões MongoDB
@@ -91,4 +90,3 @@ sequenceDiagram
     
     API->>WAPP: Chama API REST para atualizar status
     deactivate API
-```

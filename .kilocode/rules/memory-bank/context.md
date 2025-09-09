@@ -12,12 +12,6 @@ O Klique WhatsApp Bot está em produção estável com arquitetura madura e func
 - **Processamento assíncrono**: Comandos são executados em background tasks para resposta rápida
 - **Feedback imediato**: Mensagens de confirmação antes do processamento pesado
 
-### Cache e Sessão Avançados
-- **Cache unificado MongoDB**: Sistema implementado em [`cache.py`](app/cache.py:1) usando apenas MongoDB
-- **Sessões por usuário**: `UserSessionCache` mantém estado individual (prompt, imagens, status_id)
-- **Cache de status global**: `StatusImageCache` para geração automática em visualizações
-- **Sistema anti-duplicação**: `MessageCache` previne reprocessamento de mensagens
-
 ### Geração Automática de Status
 - **Trigger por visualização**: Gera nova imagem personalizada quando alguém visualiza status
 - **Personalização dinâmica**: Inclui nome do visualizador na imagem gerada
