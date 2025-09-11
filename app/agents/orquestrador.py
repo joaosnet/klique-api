@@ -52,8 +52,8 @@ def supervisor_node(state: AgentState):
         return {'next': END}
     llm_orquestrador = ChatOpenAI(
         api_key=OPENROUTER_API_KEY,
-        base_url='https://openrouter.ai/api/v1',
-        model='openrouter/sonoma-sky-alpha',
+        base_url='http://g4f:8080/v1',
+        model='gpt-5-high',
     )
     # Caso contrário, use o LLM para rotear para o agente apropriado.
     response = llm_orquestrador.invoke(
