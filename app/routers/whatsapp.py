@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from langchain_core.messages import HumanMessage
 from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 
-from ..command import HELP_MESSAGE, CommandOperation, parse_command
+from app.agents.orquestrador import create_graph_runnable
+
 from ..routers import schemas
 from ..services.whatsapp import WhatsAppService
 from ..utils import extract_primary_user_number, extract_user_number
@@ -23,8 +25,8 @@ class SessionUpdateData:
     user_number: str
     prompt: str
     generated_bytes: bytes
-    base_images_bytes: list[bytes] = None
-    status_id: str = None
+    base_images_bytes: Optional[list[bytes]] = None
+    status_id: Optional[str] = None
 
 
 router = APIRouter(prefix='/webhooks', tags=['webhooks'])
@@ -32,6 +34,68 @@ router = APIRouter(prefix='/webhooks', tags=['webhooks'])
 NO_SESSION_FALLBACK = (
     'Nenhuma imagem anterior encontrada. Envie: imagem <prompt>'
 )
+
+
+async def _is_message_already_processed(
+    db: AsyncIOMotorDatabase, message_id: str, user_number: str
+) -> bool:
+    """Verifica se uma mensagem já foi processada anteriormente."""
+    try:
+        collection = db.get_collection('processed_messages')
+        existing_message = await collection.find_one({
+            'message_id': message_id,
+            'user_number': user_number,
+        })
+
+        if existing_message:
+            logger.info(
+                f'📋 Mensagem {message_id} já processada para {user_number}'
+            )
+            return True
+        return False
+    except Exception as e:
+        logger.error(f'❌ Erro ao verificar mensagem processada: {e}')
+        # Em caso de erro, permite o processamento para evitar bloqueios
+        return False
+
+
+async def _mark_message_as_processed(
+    db: AsyncIOMotorDatabase,
+    message_id: str,
+    user_number: str,
+    message_text: str,
+) -> None:
+    """Marca uma mensagem como processada no cache."""
+    try:
+        collection = db.get_collection('processed_messages')
+        await collection.insert_one({
+            'message_id': message_id,
+            'user_number': user_number,
+            'message_text': message_text,
+            'processed_at': datetime.utcnow(),
+        })
+        logger.info(f'✅ Mensagem {message_id} marcada como processada')
+    except Exception as e:
+        logger.error(f'❌ Erro ao marcar mensagem como processada: {e}')
+
+
+async def _cleanup_old_processed_messages(db: AsyncIOMotorDatabase) -> None:
+    """Remove mensagens processadas com mais de 24 horas."""
+    try:
+        collection = db.get_collection('processed_messages')
+        twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+
+        result = await collection.delete_many({
+            'processed_at': {'$lt': twenty_four_hours_ago}
+        })
+
+        if result.deleted_count > 0:
+            logger.debug(
+                f'🧹 Removidas {result.deleted_count} '
+                'mensagens antigas do cache'
+            )
+    except Exception as e:
+        logger.error(f'❌ Erro ao limpar mensagens antigas: {e}')
 
 
 async def _check_rate_limit(db: AsyncIOMotorDatabase) -> bool:
@@ -114,7 +178,7 @@ def _format_viewers_text(viewers: list[str], max_names: int = 3) -> str:
 async def _generate_status_caption(
     image_generation_service: Any,
     prompt: str,
-    user_name: str = None,
+    user_name: Optional[str] = None,
     chat=None,
 ) -> str:
     """Gera legenda criativa ou retorna fallback."""
@@ -153,6 +217,9 @@ async def process_status_viewed_for_image_generation(
             return
 
         user_number = extract_user_number(sender_id)
+        if not user_number:
+            logger.warning('⚠️ User number not found in status view, skipping.')
+            return
 
         # Obtém nome do visualizador
         viewer_name = None
@@ -276,6 +343,9 @@ async def process_status_view(
             return
 
         user_number = extract_user_number(sender_id)
+        if not user_number:
+            logger.warning('⚠️ User number not found in status view, skipping.')
+            return
         viewed_at = datetime.fromisoformat(
             timestamp_str.replace('Z', '+00:00')
         )
@@ -394,7 +464,7 @@ async def _update_status_cache(
     db: AsyncIOMotorDatabase,
     image_bytes: bytes,
     prompt: str,
-    status_id: str = None,
+    status_id: str | None = None,
 ) -> None:
     """Atualiza cache de status para variações automáticas."""
     collection = db.get_collection('status_images')
@@ -408,355 +478,6 @@ async def _update_status_cache(
         },
         upsert=True,
     )
-
-
-async def _handle_imagem_command(
-    command_data: dict,
-    image_generation_service: Any,
-    whatsapp_service: WhatsAppService,
-    db: AsyncIOMotorDatabase,
-):
-    """Handler para comando 'imagem'."""
-    argument = command_data.get('argument', '')
-    sender = command_data.get('sender')
-    user_number = command_data.get('user_number')
-    original_payload = command_data.get('original_payload', {})
-
-    if not argument:
-        await whatsapp_service.send_message(
-            sender, 'Uso: imagem <prompt>. Ex: imagem gato astronauta neon'
-        )
-        return
-
-    # Processa mídia de entrada
-    media_paths = _extract_media_paths(original_payload)
-    base_images_bytes = await _download_media_files(
-        whatsapp_service, media_paths
-    )
-
-    # Gera imagem
-    chat = await image_generation_service.get_or_create_chat(user_number)
-    generation_result = (
-        await image_generation_service.generate_content_from_chat(
-            argument, chat, base_images_bytes
-        )
-    )
-
-    if not generation_result:
-        await whatsapp_service.send_message(
-            sender,
-            "Falha ao gerar imagem. Tente ajustar o prompt ou envie 'ajuda'.",
-        )
-        return
-
-    generated_bytes = generation_result[0]
-
-    # Envia ao chat
-    await whatsapp_service.send_image_message(
-        sender, generated_bytes, f'Imagem gerada: {argument}'
-    )
-
-    # Gera legenda e posta status
-    contact_info = await whatsapp_service.get_contact_info(user_number)
-    user_name = contact_info.get('name') if contact_info else None
-
-    status_caption = await _generate_status_caption(
-        image_generation_service, argument, user_name, chat
-    )
-    status_id = await whatsapp_service.post_status_update(
-        generated_bytes, status_caption
-    )
-
-    # Atualiza dados
-    session_data = SessionUpdateData(
-        user_number=user_number,
-        prompt=argument,
-        generated_bytes=generated_bytes,
-        base_images_bytes=base_images_bytes,
-        status_id=status_id,
-    )
-    await _update_user_session(db, session_data)
-    await _update_status_cache(db, generated_bytes, argument, status_id)
-
-    logger.success(f'✅ Comando imagem concluído user={user_number}')
-
-
-async def _handle_legenda_command(
-    command_data: dict,
-    whatsapp_service: WhatsAppService,
-    db: AsyncIOMotorDatabase,
-):
-    """Handler para comando 'legenda'."""
-    argument = command_data.get('argument', '')
-    sender = command_data.get('sender')
-    user_number = command_data.get('user_number')
-
-    if not argument:
-        await whatsapp_service.send_message(
-            sender, 'Uso: legenda <novo texto>'
-        )
-        return
-
-    # Busca imagem da sessão
-    collection = db.get_collection('user_sessions')
-    session = await collection.find_one({'user_number': user_number})
-
-    if not session or 'last_generated_image' not in session:
-        await whatsapp_service.send_message(sender, NO_SESSION_FALLBACK)
-        return
-
-    existing_image = bytes(session['last_generated_image'])
-
-    # Atualiza status com nova legenda
-    await _delete_latest_status(whatsapp_service)
-    new_status_id = await whatsapp_service.post_status_update(
-        existing_image, argument
-    )
-
-    if new_status_id:
-        await collection.update_one(
-            {'user_number': user_number},
-            {'$set': {'last_status_id': new_status_id}},
-        )
-
-    await whatsapp_service.send_message(
-        sender, f'✅ Legenda atualizada: {argument}'
-    )
-    logger.success(f'📝 Legenda atualizada user={user_number}')
-
-
-async def _handle_refazer_command(
-    command_data: dict,
-    image_generation_service: Any,
-    whatsapp_service: WhatsAppService,
-    db: AsyncIOMotorDatabase,
-):
-    """Handler para comando 'refazer'."""
-    sender = command_data.get('sender')
-    user_number = command_data.get('user_number')
-
-    # Busca sessão
-    collection = db.get_collection('user_sessions')
-    session = await collection.find_one({'user_number': user_number})
-
-    if not session or 'last_prompt' not in session:
-        await whatsapp_service.send_message(sender, NO_SESSION_FALLBACK)
-        return
-
-    last_prompt = session['last_prompt']
-
-    # Recupera imagem base
-    base_bytes = None
-    if 'last_base_image' in session:
-        base_bytes = bytes(session['last_base_image'])
-    elif 'last_generated_image' in session:
-        base_bytes = bytes(session['last_generated_image'])
-
-    # Regenera imagem
-    chat = await image_generation_service.get_or_create_chat(user_number)
-    generation_result = (
-        await image_generation_service.generate_content_from_chat(
-            last_prompt, chat, [base_bytes] if base_bytes else None
-        )
-    )
-
-    if not generation_result:
-        await whatsapp_service.send_message(
-            sender,
-            "Falha ao regenerar. Ajuste o prompt com 'imagem <novo prompt>'",
-        )
-        return
-
-    generated_bytes = generation_result[0]
-
-    # Envia e atualiza
-    await whatsapp_service.send_image_message(
-        sender, generated_bytes, f'Variação gerada: {last_prompt}'
-    )
-    await _delete_latest_status(whatsapp_service)
-
-    # Gera legenda para variação
-    contact_info = await whatsapp_service.get_contact_info(user_number)
-    user_name = contact_info.get('name') if contact_info else None
-
-    status_caption = await _generate_status_caption(
-        image_generation_service, f'Variação: {last_prompt}', user_name, chat
-    )
-    status_id = await whatsapp_service.post_status_update(
-        generated_bytes, status_caption
-    )
-
-    # Atualiza dados
-    await collection.update_one(
-        {'user_number': user_number},
-        {
-            '$set': {
-                'last_generated_image': generated_bytes,
-                'last_status_id': status_id,
-            }
-        },
-    )
-    await _update_status_cache(db, generated_bytes, last_prompt, status_id)
-
-    await whatsapp_service.send_message(sender, '✅ Variação pronta.')
-    logger.success(f'🔁 Refazer concluído user={user_number}')
-
-
-async def _handle_editar_command(  # noqa: PLR0914
-    command_data: dict,
-    image_generation_service: Any,
-    whatsapp_service: WhatsAppService,
-    db: AsyncIOMotorDatabase,
-):
-    """Handler para comando 'editar'."""
-    argument = command_data.get('argument', '')
-    sender = command_data.get('sender')
-    user_number = command_data.get('user_number')
-    original_payload = command_data.get('original_payload', {})
-
-    if not argument:
-        await whatsapp_service.send_message(
-            sender,
-            'Uso: editar <instruções>. Ex: editar adicionar brilho roxo',
-        )
-        return
-
-    # Coleta imagens para edição
-    collection = db.get_collection('user_sessions')
-    session = await collection.find_one({'user_number': user_number})
-
-    images_for_editing = []
-
-    # Adiciona imagem da sessão
-    if session and 'last_generated_image' in session:
-        images_for_editing.append(bytes(session['last_generated_image']))
-
-    # Adiciona novas imagens do payload
-    media_paths = _extract_media_paths(original_payload)
-    new_images = await _download_media_files(whatsapp_service, media_paths)
-    images_for_editing.extend(new_images)
-
-    if not images_for_editing:
-        await whatsapp_service.send_message(
-            sender,
-            'Nenhuma imagem encontrada para editar. '
-            'Envie uma imagem ou use o comando `imagem` primeiro.',
-        )
-        return
-
-    # Gera edição
-    combined_prompt = f'Edite esta imagem: {argument}'
-    chat = await image_generation_service.get_or_create_chat(user_number)
-    generation_result = (
-        await image_generation_service.generate_content_from_chat(
-            combined_prompt, chat, images_for_editing
-        )
-    )
-
-    if not generation_result:
-        await whatsapp_service.send_message(
-            sender, "Falha ao editar. Refine as instruções ou tente 'refazer'."
-        )
-        return
-
-    # Processa resultados
-    for i, edited_bytes in enumerate(generation_result):
-        caption = (
-            f'Edição: {argument}'
-            if len(generation_result) == 1
-            else f'Edição: {argument} ({i + 1}/{len(generation_result)})'
-        )
-        await whatsapp_service.send_image_message(
-            sender, edited_bytes, caption
-        )
-
-        # Apenas a primeira imagem atualiza status e sessão
-        if i == 0:
-            await _delete_latest_status(whatsapp_service)
-
-            # Gera legenda para edição
-            contact_info = await whatsapp_service.get_contact_info(user_number)
-            user_name = contact_info.get('name') if contact_info else None
-
-            temp_chat = await image_generation_service.get_or_create_chat(
-                f'edit_caption_{user_number}'
-            )
-            status_caption = await _generate_status_caption(
-                image_generation_service,
-                f'Edição: {argument}',
-                user_name,
-                temp_chat,
-            )
-
-            status_id = await whatsapp_service.post_status_update(
-                edited_bytes, status_caption
-            )
-
-            # Atualiza dados
-            await collection.update_one(
-                {'user_number': user_number},
-                {
-                    '$set': {
-                        'last_generated_image': edited_bytes,
-                        'last_prompt': combined_prompt,
-                        'last_status_id': status_id,
-                    }
-                },
-            )
-            await _update_status_cache(
-                db, edited_bytes, combined_prompt, status_id
-            )
-
-    await whatsapp_service.send_message(sender, '✅ Edição concluída.')
-    logger.success(f'✏️ Edição concluída user={user_number}')
-
-
-async def process_command_operation(
-    command_data: dict,
-    image_generation_service: Any,
-    whatsapp_service: WhatsAppService,
-    db: AsyncIOMotorDatabase,
-):
-    """Processa comandos em background."""
-    operation = command_data.get('operation')
-    sender = command_data.get('sender')
-    user_number = command_data.get('user_number')
-
-    logger.info(f'⚙️ Processando comando {operation} user={user_number}')
-
-    try:
-        handlers = {
-            'imagem': _handle_imagem_command,
-            'legenda': _handle_legenda_command,
-            'refazer': _handle_refazer_command,
-            'editar': _handle_editar_command,
-        }
-
-        handler = handlers.get(operation)
-        if handler:
-            if operation == 'legenda':
-                await handler(command_data, whatsapp_service, db)
-            else:
-                await handler(
-                    command_data,
-                    image_generation_service,
-                    whatsapp_service,
-                    db,
-                )
-        else:
-            logger.warning(f'⚠️ Operação desconhecida: {operation}')
-
-    except Exception as e:
-        logger.error(
-            f'❌ Erro ao processar comando {operation} user={user_number}: {e}'
-        )
-        logger.exception('Detalhes do erro:')
-        try:
-            await whatsapp_service.send_message(
-                sender, 'Erro interno no processamento do comando.'
-            )
-        except Exception:
-            pass
 
 
 def _handle_status_view(
@@ -785,64 +506,6 @@ def _handle_status_view(
     return None
 
 
-async def _handle_command(
-    data: dict,
-    cmd_ctx,
-    background_tasks: BackgroundTasks,
-    deps: WebhookDependencies,
-) -> dict | None:
-    """Trata comandos recebidos."""
-    sender = data.get('sender_id')
-    if not sender:
-        return {'status': 'ignored', 'detail': 'command_without_sender'}
-
-    # AJUDA: responde imediatamente
-    if cmd_ctx.operation == CommandOperation.AJUDA:
-        await deps.whatsapp_service.send_message(sender, HELP_MESSAGE)
-        return {
-            'status': 'accepted',
-            'detail': 'help_sent',
-            'command': 'ajuda',
-        }
-
-    # Mapeia operação
-    operation_map = {
-        CommandOperation.IMAGEM: 'imagem',
-        CommandOperation.LEGENDA: 'legenda',
-        CommandOperation.REFAZER: 'refazer',
-        CommandOperation.EDITAR: 'editar',
-    }
-    operation_str = operation_map.get(cmd_ctx.operation)
-
-    # Feedback imediato
-    await deps.whatsapp_service.send_message(
-        sender, f'⚙️ Processando comando {operation_str}...'
-    )
-
-    command_data = {
-        'operation': operation_str,
-        'argument': cmd_ctx.argument,
-        'sender': sender,
-        'raw_text': cmd_ctx.raw_text,
-        'original_payload': data,
-        'user_number': extract_primary_user_number(data),
-    }
-
-    background_tasks.add_task(
-        process_command_operation,
-        command_data,
-        deps.image_generation_service,
-        deps.whatsapp_service,
-        deps.db,
-    )
-
-    return {
-        'status': 'accepted',
-        'detail': 'command_queued',
-        'command': operation_str,
-    }
-
-
 @router.post('/whatsapp')
 async def receive_whatsapp_webhook(
     request: Request,
@@ -852,11 +515,15 @@ async def receive_whatsapp_webhook(
     """Recebe webhooks do go-whatsapp e processa comandos/eventos."""
     try:
         data = await request.json()
+        logger.bind(payload=data).info(f'📩 Webhook recebido: {data}')
         user_number = extract_primary_user_number(data)
+        if not user_number:
+            logger.warning('⚠️ User number not found, ignoring.')
+            return {'status': 'ignored', 'reason': 'no_user_number'}
+
         contact_info = await deps.whatsapp_service.get_contact_info(
             user_number
         )
-
         logger.bind(payload=data).info(
             f'Contato: {contact_info} recebeu sua mensagem'
         )
@@ -866,7 +533,7 @@ async def receive_whatsapp_webhook(
         if status_result:
             return status_result
 
-        # Fluxo 2: Comandos
+        # Fluxo 2: Orquestrador
         message_body = data.get('message', {})
         image_body = data.get('image', {})
         message_text = (
@@ -875,19 +542,67 @@ async def receive_whatsapp_webhook(
             or image_body.get('caption')
         )
 
-        cmd_ctx = parse_command(message_text)
-        if cmd_ctx:
-            command_result = await _handle_command(
-                data, cmd_ctx, background_tasks, deps
+        if message_text:
+            # Verifica se a mensagem possui ID e se já foi processada
+            message_id = message_body.get('id')
+            if message_id:
+                logger.info(
+                    f'🔍 Verificando duplicata para mensagem ID: {message_id}'
+                )
+                # Verifica se mensagem já foi processada
+                already_processed = await _is_message_already_processed(
+                    deps.db, message_id, user_number
+                )
+                if already_processed:
+                    logger.warning(
+                        f'🔄 Mensagem duplicada ignorada: {message_id} '
+                        f'do usuário {user_number}'
+                    )
+                    return {
+                        'status': 'ok',
+                        'detail': 'duplicate_message_ignored',
+                    }
+
+                logger.info(f'✅ Mensagem {message_id} é nova, processando...')
+
+                # Marca mensagem como processada ANTES do processamento
+                # para evitar duplicatas durante o processamento
+                await _mark_message_as_processed(
+                    deps.db, message_id, user_number, message_text
+                )
+
+                # Adiciona tarefa de limpeza em background
+                # (executa esporadicamente)
+                background_tasks.add_task(
+                    _cleanup_old_processed_messages, deps.db
+                )
+            else:
+                logger.warning(
+                    '⚠️ Mensagem sem ID, não é possível verificar duplicatas'
+                )
+
+            logger.info(
+                f'🤖 Mensagem recebida para o orquestrador: "{message_text}"'
             )
-            if command_result:
-                return command_result
+            graph = create_graph_runnable()
+            resposta = await graph.ainvoke({
+                'messages': [HumanMessage(content=message_text)],
+                'next': None,
+            })
+            final_response = resposta['messages'][-1].content
+            logger.info(f'🤖 Resposta do orquestrador: "{final_response}"')
+            await deps.whatsapp_service.send_message(
+                user_number, final_response
+            )
+
+            return {'status': 'ok', 'detail': 'processed_by_orchestrator'}
 
         # Nenhum comando ou evento detectado
         logger.debug(
-            'Nenhum comando ou evento de status detectado. Ignorando.'
+            'Nenhuma mensagem de texto ou evento de status detectado.'
+            ' Ignorando.'
         )
-        return {'status': 'ok', 'reason': 'no_command_or_event'}
+        return {'status': 'ok', 'reason': 'no_text_or_event'}
 
     except Exception as e:
         logger.error(f'❌ Erro no webhook: {e}')

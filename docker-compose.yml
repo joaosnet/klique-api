@@ -60,8 +60,11 @@ services:
       DB_PASSWORD: password
       GMAIL_EMAIL: ${GMAIL_EMAIL}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD} # Senha de app do Gmail
-      SECURE_1PSID: ${SECURE_1PSID}
-      SECURE_1PSIDTS: ${SECURE_1PSIDTS}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      OPENAI_API_BASE: ${OPENAI_API_BASE}
+      PUTER_API_KEY: ${PUTER_API_KEY}
     volumes:
       - ./app:/app/app
       - ./logs:/app/logs
@@ -83,7 +86,21 @@ services:
         - action: rebuild
           path: ./uv.lock
 
+  g4f:
+    image: hlohaus789/g4f:latest
+    container_name: g4f
+    ports:
+      - "8080:8080"
+      - "7900:7900"
+    shm_size: "2g"
+    volumes:
+      - ./har_and_cookies:/app/har_and_cookies
+      - ./generated_media:/app/generated_media
+    restart: always
+
 volumes:
   mongodb_data:
   whatsapp:
   gemini_cookies:
+  har_and_cookies:
+  generated_media:

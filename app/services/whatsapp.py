@@ -31,7 +31,7 @@ FAILURE_MESSAGES = [
 ]
 
 
-class WhatsAppService:
+class WhatsAppService:  # noqa: PLR0904
     """
     Serviço para interagir com a API REST do go-whatsapp.
     """
@@ -178,13 +178,37 @@ class WhatsAppService:
 
             response.raise_for_status()
             response_data = response.json()
-            message_id = response_data.get('data', {}).get('key', {}).get('id')
+
+            # Log da resposta completa para debug
+            logger.debug(f'Resposta completa da API: {response_data}')
+
+            # Tenta múltiplos caminhos para extrair o message_id
+            message_id = None
+
+            # Formato atual esperado
+            if 'data' in response_data and 'key' in response_data['data']:
+                message_id = response_data['data']['key'].get('id')
+
+            # Formato alternativo (results -> message_id)
+            elif 'results' in response_data:
+                message_id = response_data['results'].get('message_id')
+
+            # Formato direto (message_id)
+            elif 'message_id' in response_data:
+                message_id = response_data['message_id']
+
+            # Formato direto (id)
+            elif 'id' in response_data:
+                message_id = response_data['id']
 
             if message_id:
                 logger.info(f'Mensagem enviada com ID: {message_id}')
                 return message_id
 
-            logger.warning('Não foi possível obter o ID da mensagem enviada.')
+            logger.warning(
+                'Não foi possível obter o ID da mensagem enviada. '
+                f'Resposta: {response_data}'
+            )
             return None
 
         except httpx.HTTPStatusError as e:
@@ -487,6 +511,315 @@ class WhatsAppService:
             )
 
         return False
+
+    async def send_link(
+        self, phone_number: str, url: str, caption: str = ''
+    ) -> str | None:
+        """Envia um link com preview."""
+        try:
+            data = {'phone': phone_number, 'link': url, 'caption': caption}
+            response = await self.client.post(
+                '/send/link', json=data, auth=self.auth, timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json().get('data', {}).get('key', {}).get('id')
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao enviar link: {e.response.text}')
+        return None
+
+    async def send_contact(
+        self, phone_number: str, contact_name: str, contact_phone: str
+    ) -> str | None:
+        """Envia um cartão de contato."""
+        try:
+            data = {
+                'phone': phone_number,
+                'contact_name': contact_name,
+                'contact_phone': contact_phone,
+            }
+            response = await self.client.post(
+                '/send/contact', json=data, auth=self.auth, timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json().get('data', {}).get('key', {}).get('id')
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao enviar contato: {e.response.text}')
+        return None
+
+    async def send_location(
+        self, phone_number: str, latitude: float, longitude: float
+    ) -> str | None:
+        """Envia uma localização."""
+        try:
+            data = {
+                'phone': phone_number,
+                'latitude': latitude,
+                'longitude': longitude,
+            }
+            response = await self.client.post(
+                '/send/location', json=data, auth=self.auth, timeout=30.0
+            )
+            response.raise_for_status()
+            return response.json().get('data', {}).get('key', {}).get('id')
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao enviar localização: {e.response.text}')
+        return None
+
+    async def get_my_groups(self) -> list[dict] | None:
+        """Busca os grupos do usuário."""
+        try:
+            response = await self.client.get('/user/my/groups', auth=self.auth)
+            response.raise_for_status()
+            return response.json().get('results', {}).get('data', [])
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao buscar grupos: {e.response.text}')
+        return None
+
+    async def get_my_contacts(self) -> list[dict] | None:
+        """Busca os contatos do usuário."""
+        try:
+            response = await self.client.get(
+                '/user/my/contacts', auth=self.auth
+            )
+            response.raise_for_status()
+            return response.json().get('results', {}).get('data', [])
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao buscar contatos: {e.response.text}')
+        return None
+
+    async def create_group(
+        self, name: str, participants: list[str]
+    ) -> dict | None:
+        """Cria um novo grupo."""
+        try:
+            data = {'name': name, 'participants': participants}
+            response = await self.client.post(
+                '/group', json=data, auth=self.auth, timeout=60.0
+            )
+            response.raise_for_status()
+            return response.json().get('results', {})
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao criar grupo: {e.response.text}')
+        return None
+
+    async def react_message(self, message_id: str, reaction: str) -> bool:
+        """Reage a uma mensagem com um emoji."""
+        try:
+            data = {'reaction': reaction}
+            response = await self.client.post(
+                f'/message/{message_id}/reaction',
+                json=data,
+                auth=self.auth,
+            )
+            response.raise_for_status()
+            logger.info(f'Reagiu com "{reaction}" à mensagem {message_id}.')
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao reagir à mensagem: {e.response.text}')
+            return False
+
+    async def check_user(self, phone_number: str) -> dict | None:
+        """Verifica a existência de um usuário no WhatsApp."""
+        try:
+            logger.debug(f'Verificando usuário: {phone_number}')
+            response = await self.client.get(
+                f'/user/check?phone={phone_number}',
+                auth=self.auth,
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            result = response.json().get('results')
+            logger.debug(
+                f'Resultado da verificação para {phone_number}: {result}'
+            )
+            return result
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f'Erro ao verificar usuário {phone_number}:'
+                f' {e.response.status_code} - {e.response.text}'
+            )
+            return None
+        except Exception as e:
+            logger.error(
+                f'Erro inesperado ao verificar usuário {phone_number}: {e}'
+            )
+            return None
+
+    async def get_group_info(self, group_id: str) -> dict | None:
+        """Obtém informações detalhadas de um grupo."""
+        try:
+            response = await self.client.get(
+                f'/group/info?id={group_id}', auth=self.auth
+            )
+            response.raise_for_status()
+            return response.json().get('results')
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f'Erro ao obter informações do grupo: {e.response.text}'
+            )
+            return None
+
+    async def leave_group(self, group_id: str) -> bool:
+        """Sai de um grupo."""
+        try:
+            response = await self.client.post(
+                '/group/leave', json={'id': group_id}, auth=self.auth
+            )
+            response.raise_for_status()
+            logger.info(f'Saiu do grupo {group_id}.')
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao sair do grupo: {e.response.text}')
+            return False
+
+    async def add_group_participants(
+        self, group_id: str, participants: list[str]
+    ) -> bool:
+        """Adiciona participantes a um grupo."""
+        try:
+            data = {'id': group_id, 'participants': participants}
+            response = await self.client.post(
+                '/group/participants', json=data, auth=self.auth
+            )
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao adicionar participantes: {e.response.text}')
+            return False
+
+    async def remove_group_participants(
+        self, group_id: str, participants: list[str]
+    ) -> bool:
+        """Remove participantes de um grupo."""
+        try:
+            data = {'id': group_id, 'participants': participants}
+            response = await self.client.post(
+                '/group/participants/remove', json=data, auth=self.auth
+            )
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao remover participantes: {e.response.text}')
+            return False
+
+    async def promote_group_participant(
+        self, group_id: str, participant: str
+    ) -> bool:
+        """Promove um participante a administrador do grupo."""
+        try:
+            data = {'id': group_id, 'participants': [participant]}
+            response = await self.client.post(
+                '/group/participants/promote', json=data, auth=self.auth
+            )
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao promover participante: {e.response.text}')
+            return False
+
+    async def demote_group_participant(
+        self, group_id: str, participant: str
+    ) -> bool:
+        """Rebaixa um administrador a participante comum."""
+        try:
+            data = {'id': group_id, 'participants': [participant]}
+            response = await self.client.post(
+                '/group/participants/demote', json=data, auth=self.auth
+            )
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao rebaixar participante: {e.response.text}')
+            return False
+
+    async def revoke_message(self, message_id: str) -> bool:
+        """Revoga uma mensagem para todos."""
+        try:
+            response = await self.client.post(
+                f'/message/{message_id}/revoke', auth=self.auth
+            )
+            response.raise_for_status()
+            logger.info(f'Mensagem {message_id} revogada.')
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao revogar mensagem: {e.response.text}')
+            return False
+
+    async def read_message(self, message_id: str) -> bool:
+        """Marca uma mensagem como lida."""
+        try:
+            response = await self.client.post(
+                f'/message/{message_id}/read', auth=self.auth
+            )
+            response.raise_for_status()
+            logger.info(f'Mensagem {message_id} marcada como lida.')
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f'Erro ao marcar mensagem como lida: {e.response.text}'
+            )
+            return False
+
+    async def get_chats(self) -> list[dict] | None:
+        """Obtém a lista de chats."""
+        try:
+            response = await self.client.get('/chats', auth=self.auth)
+            response.raise_for_status()
+            return response.json().get('results', [])
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao obter chats: {e.response.text}')
+            return None
+
+    async def get_chat_messages(self, chat_jid: str) -> list[dict] | None:
+        """Obtém as mensagens de um chat específico."""
+        try:
+            response = await self.client.get(
+                f'/chat/{chat_jid}/messages', auth=self.auth
+            )
+            response.raise_for_status()
+            return response.json().get('results', {}).get('data', [])
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao obter mensagens do chat: {e.response.text}')
+            return None
+
+    async def get_user_info(self) -> dict | None:
+        """Obtém as informações do usuário logado."""
+        try:
+            response = await self.client.get('/user/info', auth=self.auth)
+            response.raise_for_status()
+            return response.json().get('results')
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f'Erro ao obter informações do usuário: {e.response.text}'
+            )
+            return None
+
+    async def change_pushname(self, new_name: str) -> bool:
+        """Altera o nome de exibição (pushname) do usuário."""
+        try:
+            response = await self.client.post(
+                '/user/pushname', json={'pushname': new_name}, auth=self.auth
+            )
+            response.raise_for_status()
+            logger.info(f'Pushname alterado para "{new_name}".')
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao alterar pushname: {e.response.text}')
+            return False
+
+    async def change_avatar(self, image_bytes: bytes) -> bool:
+        """Altera a foto de perfil do usuário."""
+        try:
+            files = {'avatar': ('avatar.jpg', image_bytes, 'image/jpeg')}
+            response = await self.client.post(
+                '/user/avatar', files=files, auth=self.auth
+            )
+            response.raise_for_status()
+            logger.info('Avatar alterado com sucesso.')
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f'Erro ao alterar avatar: {e.response.text}')
+            return False
 
     async def close(self):
         """
