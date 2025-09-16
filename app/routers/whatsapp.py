@@ -547,13 +547,13 @@ async def receive_whatsapp_webhook(
                 logger.info(
                     f'🔒 Usuário {user_number} bloqueado para chat com IA.'
                 )
-                await deps.whatsapp_service.send_message(
-                    user_number,
-                    (
-                        '🚫 Apenas o administrador pode conversar com a IA '
-                        'no momento.'
-                    ),
-                )
+                # await deps.whatsapp_service.send_message(
+                #     user_number,
+                #     (
+                #         '🚫 Apenas o administrador pode conversar com a IA '
+                #         'no momento.'
+                #     ),
+                # )
                 return {'status': 'ok', 'detail': 'restricted_access'}
             # Verifica se a mensagem possui ID e se já foi processada
             message_id = message_body.get('id')
