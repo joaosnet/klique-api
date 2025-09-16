@@ -48,32 +48,37 @@ async def gerar_ou_editar_imagem(
         String com a URL da imagem gerada/editada ou uma mensagem de erro.
     """
     try:
-        chat_session = await gemini_webapi_service.get_or_create_chat(
-            user_number
-        )
+        chat_session = await gemini_webapi_service.get_or_create_chat(user_number)
         final_prompt = prompt
         if enhance_prompt:
-            # Esta é uma simplificação. A lógica real de enhancement pode ser mais complexa.
             final_prompt = f'Aprimore e gere uma imagem com base em: {prompt}'
 
         input_images = [image_bytes] if image_bytes else None
-        generated_images = (
-            await gemini_webapi_service.generate_content_from_chat(
-                prompt=final_prompt,
-                chat=chat_session,
-                input_images=input_images,
-            )
+        generated_images = await gemini_webapi_service.generate_content_from_chat(
+            prompt=final_prompt,
+            chat=chat_session,
+            input_images=input_images,
         )
 
-        if not generated_images:
-            return '❌ Não foi possível gerar a imagem.'
+        if not generated_images or not generated_images[0]:
+            return {
+                'success': False,
+                'message': '❌ Não foi possível gerar a imagem.',
+                'image_bytes': None,
+            }
 
-        # Simplesmente retornando uma mensagem de sucesso, já que não temos URL direta.
-        # A lógica de envio da imagem será tratada externamente.
-        return f'✅ Imagem gerada/editada com sucesso para o prompt: "{prompt}". A imagem será enviada em breve.'
-
+        # Retorna mensagem e bytes da imagem para envio externo
+        return {
+            'success': True,
+            'message': f'✅ Imagem gerada/editada com sucesso para o prompt: "{prompt}". A imagem será enviada em breve.',
+            'image_bytes': generated_images[0],
+        }
     except Exception as e:
-        return f'❌ Erro ao gerar ou editar imagem: {e}'
+        return {
+            'success': False,
+            'message': f'❌ Erro ao gerar ou editar imagem: {e}',
+            'image_bytes': None,
+        }
 
 
 @tool
@@ -140,7 +145,7 @@ async def postar_status_whatsapp(
         if image_url:
             # Lógica para baixar a imagem da URL
             try:
-                response = httpx.get(image_url, follow_redirects=True)
+                response = httpx.get(image_url, follow_redirects=True, timeout=30)
                 response.raise_for_status()
                 image_bytes = response.content
             except httpx.RequestError as e:
@@ -470,7 +475,7 @@ async def alterar_avatar(image_url: str) -> str:
     """Altera a foto de perfil (avatar) do usuário a partir de uma URL de
     imagem."""
     try:
-        response = httpx.get(image_url, follow_redirects=True)
+        response = httpx.get(image_url, follow_redirects=True, timeout=30)
         response.raise_for_status()
         image_bytes = response.content
         success = await whatsapp_service.change_avatar(image_bytes)

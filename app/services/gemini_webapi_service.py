@@ -41,7 +41,7 @@ class GeminiWebApiService:
         if not self.is_initialized:
             try:
                 await self.client.init(
-                    timeout=30,
+                    timeout=120,
                     auto_close=True,
                     close_delay=300,
                     auto_refresh=True,
