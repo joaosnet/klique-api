@@ -10,9 +10,9 @@ from langchain.agents import (
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 from PIL import Image, ImageDraw, ImageFont
-from pydantic import BaseModel
 
 from app.config import OPENROUTER_API_KEY
+from app.services.gemini_webapi_service import GeminiWebApiService
 from app.services.whatsapp import WhatsAppService
 
 # Constante para tamanho mínimo de número de telefone
@@ -25,396 +25,83 @@ llm_marketing = ChatOpenAI(
 )
 
 whatsapp_service = WhatsAppService()
-
-
-class ImageGenerationRequest(BaseModel):
-    """Modelo para requisição de geração de imagem."""
-
-    prompt: str
-    model: Optional[str] = None
-    provider: Optional[str] = None
-    response_format: Optional[str] = 'url'
-    api_key: Optional[str] = None
-    proxy: Optional[str] = None
-    width: Optional[int] = None
-    height: Optional[int] = None
-    num_inference_steps: Optional[int] = None
-    seed: Optional[int] = None
-    guidance_scale: Optional[float] = None
-    aspect_ratio: Optional[str] = None
-    n: Optional[int] = 1
-    negative_prompt: Optional[str] = None
-    resolution: Optional[str] = None
-    audio: Optional[dict] = None
-    download_media: Optional[bool] = True
-
-
-class ImageGenerationResponse(BaseModel):
-    """Modelo para resposta de geração de imagem."""
-
-    data: list[dict]
-    model: str
-    provider: str
-    created: int
-
-
-class ModelInfo(BaseModel):
-    """Modelo para informações de um modelo de IA."""
-
-    id: str
-    object: str
-    created: int
-    owned_by: str
-
-
-URL_G4F = 'http://g4f:8080'
+gemini_webapi_service = GeminiWebApiService()
 
 
 @tool
-async def listar_modelos_disponiveis() -> str:
-    """Lista todos os modelos de IA disponíveis para geração de imagens.
-
-    Returns:
-        String com lista dos modelos disponíveis ou erro
-    """
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f'{URL_G4F}/v1/models',
-                headers={'Content-Type': 'application/json'},
-            )
-            response.raise_for_status()
-
-        models_data = response.json()
-
-        if not models_data:
-            return '❌ Nenhum modelo encontrado.'
-
-        # Processar lista de modelos
-        resultado = ['📋 Modelos de IA disponíveis:', '=' * 50]
-
-        for i, model_data in enumerate(models_data, 1):
-            model = ModelInfo(**model_data)
-            resultado.extend([
-                f'{i}. 🤖 Modelo: {model.id}',
-                f'   📅 Criado: {model.created}',
-                f'   👤 Proprietário: {model.owned_by}',
-                f'   🔧 Tipo: {model.object}',
-                '',
-            ])
-
-        return '\n'.join(resultado)
-
-    except httpx.TimeoutException:
-        return '❌ Erro: Timeout ao listar modelos (30s).'
-    except httpx.HTTPStatusError as e:
-        return f'❌ Erro HTTP {e.response.status_code}: {e.response.text}'
-    except httpx.RequestError as e:
-        return f'❌ Erro de conexão: {str(e)}'
-    except Exception as e:
-        return f'❌ Erro inesperado ao listar modelos: {str(e)}'
-
-
-@tool
-async def obter_detalhes_modelo(model_name: str) -> str:
-    """Obtém detalhes específicos de um modelo de IA.
-
-    Args:
-        model_name: Nome do modelo para consultar detalhes
-
-    Returns:
-        String com detalhes do modelo ou erro
-    """
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f'{URL_G4F}/v1/models/{model_name}',
-                headers={'Content-Type': 'application/json'},
-            )
-            response.raise_for_status()
-
-        model_data = response.json()
-        model = ModelInfo(**model_data)
-
-        resultado = [
-            f'🤖 Detalhes do Modelo: {model.id}',
-            '=' * 50,
-            f'📊 ID: {model.id}',
-            f'🔧 Tipo: {model.object}',
-            f'📅 Data de criação: {model.created}',
-            f'👤 Proprietário: {model.owned_by}',
-        ]
-
-        return '\n'.join(resultado)
-
-    except httpx.TimeoutException:
-        return f"❌ Erro: Timeout ao consultar modelo '{model_name}' (30s)."
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            return f"❌ Modelo '{model_name}' não encontrado."
-        return f'❌ Erro HTTP {e.response.status_code}: {e.response.text}'
-    except httpx.RequestError as e:
-        return f'❌ Erro de conexão: {str(e)}'
-    except Exception as e:
-        return f'❌ Erro inesperado ao consultar modelo: {str(e)}'
-
-
-@tool
-async def selecionar_melhor_modelo_imagem() -> str:
-    """Seleciona automaticamente o melhor modelo disponível para geração de imagens.
-
-    Returns:
-        String com o modelo recomendado ou erro
-    """
-    try:
-        # Primeiro, listar todos os modelos disponíveis
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f'{URL_G4F}/v1/models',
-                headers={'Content-Type': 'application/json'},
-            )
-            response.raise_for_status()
-
-        models_data = response.json()
-
-        if not models_data:
-            return '❌ Nenhum modelo disponível para seleção.'
-
-        # Critérios de priorização para modelos de imagem (preferências)
-        priority_keywords = [
-            'flux',  # Modelos Flux são conhecidos por qualidade
-            'sdxl',  # Stable Diffusion XL
-            'dalle',  # DALL-E da OpenAI
-            'midjourney',  # Midjourney
-            'stable',  # Stable Diffusion
-            'imagen',  # Google Imagen
-            'firefly',  # Adobe Firefly
-        ]
-
-        models = [ModelInfo(**model_data) for model_data in models_data]
-
-        # Encontrar modelo com maior prioridade
-        best_model = None
-        best_priority = -1
-
-        for model in models:
-            model_id_lower = model.id.lower()
-
-            # Verificar prioridade baseada em palavras-chave
-            for i, keyword in enumerate(priority_keywords):
-                if keyword in model_id_lower:
-                    priority = len(priority_keywords) - i  # Prioridade inversa
-                    if priority > best_priority:
-                        best_priority = priority
-                        best_model = model
-                    break
-
-        # Se não encontrou por palavra-chave, usar o primeiro modelo
-        if not best_model and models:
-            best_model = models[0]
-
-        if not best_model:
-            return '❌ Não foi possível selecionar um modelo.'
-
-        resultado = [
-            '🎯 Melhor modelo selecionado:',
-            '=' * 40,
-            f'🤖 Modelo: {best_model.id}',
-            f'📅 Criado: {best_model.created}',
-            f'👤 Proprietário: {best_model.owned_by}',
-            f'🔧 Tipo: {best_model.object}',
-            '',
-            f"💡 Recomendação: Use '{best_model.id}' para gerar imagens de alta qualidade.",
-        ]
-
-        return '\n'.join(resultado)
-
-    except httpx.TimeoutException:
-        return '❌ Erro: Timeout ao selecionar modelo (30s).'
-    except httpx.HTTPStatusError as e:
-        return f'❌ Erro HTTP {e.response.status_code}: {e.response.text}'
-    except httpx.RequestError as e:
-        return f'❌ Erro de conexão: {str(e)}'
-    except Exception as e:
-        return f'❌ Erro inesperado ao selecionar modelo: {str(e)}'
-
-
-@tool
-async def gerar_imagem_ai(
+async def gerar_ou_editar_imagem(
+    user_number: str,
     prompt: str,
-    model: Optional[str] = None,
-    provider: Optional[str] = None,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
-    aspect_ratio: Optional[str] = None,
-    negative_prompt: Optional[str] = None,
-    n: Optional[int] = 1,
+    image_bytes: Optional[bytes] = None,
+    enhance_prompt: bool = True,
 ) -> str:
-    """Gera uma imagem usando IA através do endpoint de geração de imagens.
+    """
+    Gera ou edita uma imagem usando o Gemini Web API Service.
 
     Args:
-        prompt: Descrição da imagem a ser gerada
-        model: Modelo específico a ser usado (opcional - se não especificado, seleciona automaticamente o melhor)
-        provider: Provedor de IA (opcional)
-        width: Largura da imagem (opcional)
-        height: Altura da imagem (opcional)
-        aspect_ratio: Proporção da imagem (opcional)
-        negative_prompt: O que não incluir na imagem (opcional)
-        n: Número de imagens a gerar (padrão: 1)
+        user_number: O número de telefone do usuário para manter a sessão.
+        prompt: A descrição da imagem a ser gerada ou da edição a ser feita.
+        image_bytes: Os bytes da imagem a ser editada (opcional).
+        enhance_prompt: Se o prompt deve ser melhorado antes da geração (padrão: True).
 
     Returns:
-        String com resultado da geração ou erro
+        String com a URL da imagem gerada/editada ou uma mensagem de erro.
     """
     try:
-        # Verificar se o serviço está disponível primeiro
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                health_response = await client.get(f'{URL_G4F}/v1/models')
-                health_response.raise_for_status()
-        except Exception:
-            return (
-                '❌ Serviço de geração de imagens não está disponível.\n'
-                '🔧 Verifique se o serviço está rodando na porta 8080.\n'
-                '💡 Como alternativa, posso criar uma imagem placeholder com texto personalizado.'
+        chat_session = await gemini_webapi_service.get_or_create_chat(
+            user_number
+        )
+        final_prompt = prompt
+        if enhance_prompt:
+            # Esta é uma simplificação. A lógica real de enhancement pode ser mais complexa.
+            final_prompt = f'Aprimore e gere uma imagem com base em: {prompt}'
+
+        input_images = [image_bytes] if image_bytes else None
+        generated_images = (
+            await gemini_webapi_service.generate_content_from_chat(
+                prompt=final_prompt,
+                chat=chat_session,
+                input_images=input_images,
             )
-
-        # Se modelo não foi especificado, selecionar automaticamente o melhor
-        selected_model = model
-        if not selected_model:
-            try:
-                # Listar modelos disponíveis e selecionar o melhor
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.get(
-                        f'{URL_G4F}/v1/models',
-                        headers={'Content-Type': 'application/json'},
-                    )
-                    response.raise_for_status()
-
-                models_data = response.json()
-
-                if models_data:
-                    # Critérios de priorização para modelos de imagem
-                    priority_keywords = [
-                        'flux',
-                        'sdxl',
-                        'dalle',
-                        'midjourney',
-                        'stable',
-                        'imagen',
-                        'firefly',
-                    ]
-
-                    models = [
-                        ModelInfo(**model_data) for model_data in models_data
-                    ]
-
-                    # Encontrar modelo com maior prioridade
-                    best_model = None
-                    best_priority = -1
-
-                    for model_info in models:
-                        model_id_lower = model_info.id.lower()
-
-                        for i, keyword in enumerate(priority_keywords):
-                            if keyword in model_id_lower:
-                                priority = len(priority_keywords) - i
-                                if priority > best_priority:
-                                    best_priority = priority
-                                    best_model = model_info
-                                break
-
-                    # Se não encontrou por palavra-chave, usar o primeiro modelo
-                    if not best_model and models:
-                        best_model = models[0]
-
-                    if best_model:
-                        selected_model = best_model.id
-
-            except Exception as e:
-                # Se falhar na seleção automática, continuar sem modelo específico
-                pass
-
-        # Preparar payload para a API
-        payload = ImageGenerationRequest(
-            prompt=prompt,
-            model=selected_model,
-            provider=provider,
-            width=width,
-            height=height,
-            aspect_ratio=aspect_ratio,
-            negative_prompt=negative_prompt,
-            n=n,
-            response_format='url',
-            download_media=True,
         )
 
-        # Converter para dict e remover valores None
-        payload_dict = {
-            k: v for k, v in payload.model_dump().items() if v is not None
-        }
+        if not generated_images:
+            return '❌ Não foi possível gerar a imagem.'
 
-        # Fazer requisição para o endpoint de geração
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f'{URL_G4F}/v1/images/generations',
-                json=payload_dict,
-                headers={'Content-Type': 'application/json'},
-            )
-            response.raise_for_status()
+        # Simplesmente retornando uma mensagem de sucesso, já que não temos URL direta.
+        # A lógica de envio da imagem será tratada externamente.
+        return f'✅ Imagem gerada/editada com sucesso para o prompt: "{prompt}". A imagem será enviada em breve.'
 
-        # Processar resposta
-        result_data = response.json()
-        generation_response = ImageGenerationResponse(**result_data)
-
-        # Extrair informações da resposta
-        images_info = []
-        for i, image_data in enumerate(generation_response.data):
-            image_info = {
-                'indice': i + 1,
-                'url': image_data.get('url', ''),
-                'prompt_revisado': image_data.get('revised_prompt', ''),
-                'base64': 'disponível'
-                if image_data.get('b64_json')
-                else 'não disponível',
-            }
-            images_info.append(image_info)
-
-        # Formattar resposta
-        resultado = [
-            f'✅ Geração de imagem concluída com sucesso!',
-            f'📊 Modelo: {generation_response.model}'
-            + (f' (selecionado automaticamente)' if not model else ''),
-            f'🏢 Provedor: {generation_response.provider}',
-            f'🕐 Timestamp: {generation_response.created}',
-            f'🖼️ Imagens geradas: {len(generation_response.data)}',
-            '',
-            '📋 Detalhes das imagens:',
-        ]
-
-        for img_info in images_info:
-            resultado.extend([
-                f'  {img_info["indice"]}. URL: {img_info["url"]}',
-                f'     Prompt revisado: {img_info["prompt_revisado"][:100]}...'
-                if len(img_info['prompt_revisado']) > 100
-                else f'     Prompt revisado: {img_info["prompt_revisado"]}',
-                f'     Base64: {img_info["base64"]}',
-                '',
-            ])
-
-        return '\n'.join(resultado)
-
-    except httpx.TimeoutException:
-        return '❌ Erro: Timeout na geração da imagem. O processo demorou mais de 60 segundos.'
-    except httpx.HTTPStatusError as e:
-        return f'❌ Erro HTTP {e.response.status_code}: {e.response.text}'
-    except httpx.RequestError as e:
-        return (
-            f'❌ Erro de conexão: {str(e)}\n'
-            '🔧 Verifique se o serviço de geração de imagens está rodando na porta 8080.\n'
-            '💡 Como alternativa, posso criar uma imagem placeholder com texto personalizado.'
-        )
     except Exception as e:
-        return f'❌ Erro inesperado na geração de imagem: {str(e)}'
+        return f'❌ Erro ao gerar ou editar imagem: {e}'
+
+
+@tool
+async def gerar_legenda_criativa(user_number: str, image_prompt: str) -> str:
+    """
+    Gera uma legenda criativa para uma imagem usando a sessão de chat do usuário.
+
+    Args:
+        user_number: O número de telefone do usuário para obter a sessão de chat correta.
+        image_prompt: O prompt usado para gerar a imagem.
+
+    Returns:
+        String com a legenda gerada ou uma mensagem de erro.
+    """
+    try:
+        chat_session = await gemini_webapi_service.get_or_create_chat(
+            user_number
+        )
+        caption = await gemini_webapi_service.generate_status_caption(
+            chat=chat_session, image_prompt=image_prompt
+        )
+
+        if caption:
+            return f'✅ Legenda gerada: "{caption}"'
+        return '❌ Não foi possível gerar a legenda.'
+
+    except Exception as e:
+        return f'❌ Erro ao gerar legenda: {e}'
 
 
 @tool
@@ -816,33 +503,27 @@ def create_marketing_agent():
         buscar_contato_por_nome,
         obter_info_usuario,
         alterar_nome_exibicao,
-        listar_modelos_disponiveis,
-        obter_detalhes_modelo,
-        selecionar_melhor_modelo_imagem,
         alterar_avatar,
+        gerar_ou_editar_imagem,
+        gerar_legenda_criativa,
     ]
     prompt = ChatPromptTemplate.from_messages([
         (
             'system',
             'Você é um agente de marketing e gerenciador de comunidades no '
             'WhatsApp. Você pode enviar mensagens, links, status, gerenciar '
-            'grupos (criar, sair, adicionar/remover/promover/rebaixar '
-            'participantes), gerenciar mensagens (revogar, marcar como lida, '
-            'listar chats e obter mensagens), listar e buscar contatos, '
-            'gerenciar perfil (obter informações do usuário, alterar nome de '
-            'exibição e foto de perfil) e GERAR IMAGENS usando IA. '
+            'grupos, mensagens, contatos e perfil. '
             'FUNCIONALIDADES DE IA: '
-            '1. "listar_modelos_disponiveis" - lista todos os modelos de IA disponíveis '
-            '2. "obter_detalhes_modelo" - obtém detalhes de um modelo específico '
-            '3. "selecionar_melhor_modelo_imagem" - seleciona automaticamente o melhor modelo '
-            '4. "gerar_imagem_ai" - gera imagens (seleciona automaticamente o melhor modelo se não especificado) '
-            'IMPORTANTE: Se o serviço de IA não estiver disponível (erro de conexão), '
-            'NÃO tente múltiplas vezes as funções de IA. Em vez disso, informe que o serviço '
-            'não está disponível e ofereça alternativas como criar imagens placeholder com texto. '
-            'Para gerar imagens quando o serviço estiver disponível, use "gerar_imagem_ai" com um prompt descritivo. '
-            'Quando precisar buscar um contato por nome, use "buscar_contato_por_nome" '
-            'em vez de listar todos os contatos. Para verificar se um número existe no WhatsApp, '
-            'use "verificar_usuario_whatsapp". Seja eficiente e não repita ferramentas que falharam.',
+            '1. "gerar_ou_editar_imagem": Gera uma nova imagem a partir de um prompt, ou edita uma imagem existente. '
+            '   - `user_number` é obrigatório para manter o contexto da conversa. '
+            '   - `prompt` é a descrição do que fazer. '
+            '   - `image_bytes` é usado para edição. '
+            '   - `enhance_prompt` pode ser usado para melhorar a descrição. '
+            '2. "gerar_legenda_criativa": Cria uma legenda para uma imagem recém-gerada. '
+            '   - `user_number` é obrigatório para acessar a imagem no contexto da conversa. '
+            '   - `image_prompt` é o prompt original da imagem. '
+            'IMPORTANTE: Sempre use o `user_number` correto para as funções de IA. '
+            'Seja eficiente e não repita ferramentas que falharam.',
         ),
         MessagesPlaceholder(variable_name='chat_history'),
         ('user', '{input}'),

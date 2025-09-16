@@ -533,7 +533,7 @@ async def receive_whatsapp_webhook(
         if status_result:
             return status_result
 
-        # Fluxo 2: Orquestrador
+        # Fluxo 2: Orquestrador (restrito ao número do João Neto)
         message_body = data.get('message', {})
         image_body = data.get('image', {})
         message_text = (
@@ -541,8 +541,20 @@ async def receive_whatsapp_webhook(
             or message_body.get('caption')
             or image_body.get('caption')
         )
-
         if message_text:
+            # Permite apenas o número do João Neto conversar com a IA
+            if user_number != '559184497318':
+                logger.info(
+                    f'🔒 Usuário {user_number} bloqueado para chat com IA.'
+                )
+                await deps.whatsapp_service.send_message(
+                    user_number,
+                    (
+                        '🚫 Apenas o administrador pode conversar com a IA '
+                        'no momento.'
+                    ),
+                )
+                return {'status': 'ok', 'detail': 'restricted_access'}
             # Verifica se a mensagem possui ID e se já foi processada
             message_id = message_body.get('id')
             if message_id:
@@ -562,15 +574,12 @@ async def receive_whatsapp_webhook(
                         'status': 'ok',
                         'detail': 'duplicate_message_ignored',
                     }
-
                 logger.info(f'✅ Mensagem {message_id} é nova, processando...')
-
                 # Marca mensagem como processada ANTES do processamento
                 # para evitar duplicatas durante o processamento
                 await _mark_message_as_processed(
                     deps.db, message_id, user_number, message_text
                 )
-
                 # Adiciona tarefa de limpeza em background
                 # (executa esporadicamente)
                 background_tasks.add_task(
@@ -580,7 +589,6 @@ async def receive_whatsapp_webhook(
                 logger.warning(
                     '⚠️ Mensagem sem ID, não é possível verificar duplicatas'
                 )
-
             logger.info(
                 f'🤖 Mensagem recebida para o orquestrador: "{message_text}"'
             )
@@ -594,7 +602,6 @@ async def receive_whatsapp_webhook(
             await deps.whatsapp_service.send_message(
                 user_number, final_response
             )
-
             return {'status': 'ok', 'detail': 'processed_by_orchestrator'}
 
         # Nenhum comando ou evento detectado

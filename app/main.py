@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.services.gemini_webapi_service import GeminiWebApiService
+
 from .database import close_db_connection, get_client
 from .routers import auth, register, whatsapp
 from .services.whatsapp import WhatsAppService
@@ -23,15 +25,15 @@ async def lifespan(app: FastAPI):
     app.state.whatsapp_service = whatsapp_service
 
     # Inicializa o serviço Gemini WebAPI
-    # gemini_web_api_service = GeminiWebApiService()
-    # await gemini_web_api_service._initialize_client()  # noqa: SLF001
-    # app.state.gemini_web_api_service = gemini_web_api_service
+    gemini_web_api_service = GeminiWebApiService()
+    await gemini_web_api_service._initialize_client()  # noqa: SLF001
+    app.state.gemini_web_api_service = gemini_web_api_service
 
     yield
 
     # Encerra os serviços ao finalizar a aplicação
     await whatsapp_service.close()
-    # await gemini_web_api_service.close()
+    await gemini_web_api_service.close()
     close_db_connection()
 
 
