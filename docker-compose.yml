@@ -96,6 +96,7 @@ services:
     volumes:
       - ./har_and_cookies:/app/har_and_cookies
       - ./generated_media:/app/generated_media
+      - ./clear_cookies.conf:/etc/supervisor/conf.d/clear_cookies.conf
     restart: always
 
 volumes:

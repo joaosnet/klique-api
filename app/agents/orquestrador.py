@@ -20,6 +20,7 @@ install(show_locals=True)
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     next: Literal['crypto', 'marketing', END]  # type: ignore
+    user_context: dict  # Contexto do usuário (número de telefone, etc.)
 
 
 # Nós dos agentes
@@ -35,7 +36,9 @@ async def crypto_node(state: AgentState):
 
 
 async def marketing_node(state: AgentState):
-    result = await create_marketing_agent().ainvoke({
+    result = await create_marketing_agent(
+        user_context=state.get('user_context', {})
+    ).ainvoke({
         'input': state['messages'][-1].content,
         'chat_history': state['messages'],
     })

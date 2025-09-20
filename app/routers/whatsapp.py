@@ -596,34 +596,13 @@ async def receive_whatsapp_webhook(
             resposta = await graph.ainvoke({
                 'messages': [HumanMessage(content=message_text)],
                 'next': None,
+                'user_context': {'user_number': user_number},
             })
             final_response = resposta['messages'][-1].content
-            # Se o agente de marketing retornou imagem, envie como mídia
-            image_bytes = None
-            # Tenta extrair imagem do retorno (caso seja dict)
-            if isinstance(final_response, dict):
-                image_bytes = final_response.get('image_bytes')
-                message_text_to_send = final_response.get('message', '')
-            else:
-                message_text_to_send = final_response
-
-            if image_bytes:
-                # Envia imagem como mídia via WhatsApp
-                try:
-                    message_id = await deps.whatsapp_service._send_image(
-                        user_number,
-                        image_bytes,
-                        message_text_to_send,
-                        filename='imagem_gerada.png',
-                    )
-                    logger.info(f'🖼️ Imagem enviada com ID: {message_id}')
-                except Exception as e:
-                    logger.error(f'❌ Erro ao enviar imagem gerada: {e}')
-            else:
-                # Envia apenas texto se não houver imagem
-                await deps.whatsapp_service.send_message(
-                    user_number, message_text_to_send
-                )
+            logger.info(f'🤖 Resposta do orquestrador: "{final_response}"')
+            await deps.whatsapp_service.send_message(
+                user_number, final_response
+            )
             return {'status': 'ok', 'detail': 'processed_by_orchestrator'}
 
         # Nenhum comando ou evento detectado

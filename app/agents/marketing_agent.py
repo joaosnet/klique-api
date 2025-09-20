@@ -36,7 +36,7 @@ async def gerar_ou_editar_imagem(
     enhance_prompt: bool = True,
 ) -> str:
     """
-    Gera ou edita uma imagem usando o Gemini Web API Service.
+    Gera ou edita uma imagem usando o Gemini Web API Service e envia automaticamente para o usuário.
 
     Args:
         user_number: O número de telefone do usuário para manter a sessão.
@@ -45,40 +45,42 @@ async def gerar_ou_editar_imagem(
         enhance_prompt: Se o prompt deve ser melhorado antes da geração (padrão: True).
 
     Returns:
-        String com a URL da imagem gerada/editada ou uma mensagem de erro.
+        String com o resultado da operação (geração + envio).
     """
     try:
-        chat_session = await gemini_webapi_service.get_or_create_chat(user_number)
+        chat_session = await gemini_webapi_service.get_or_create_chat(
+            user_number
+        )
         final_prompt = prompt
         if enhance_prompt:
+            # Esta é uma simplificação. A lógica real de enhancement pode ser mais complexa.
             final_prompt = f'Aprimore e gere uma imagem com base em: {prompt}'
 
         input_images = [image_bytes] if image_bytes else None
-        generated_images = await gemini_webapi_service.generate_content_from_chat(
-            prompt=final_prompt,
-            chat=chat_session,
-            input_images=input_images,
+        generated_images = (
+            await gemini_webapi_service.generate_content_from_chat(
+                prompt=final_prompt,
+                chat=chat_session,
+                input_images=input_images,
+            )
         )
 
-        if not generated_images or not generated_images[0]:
-            return {
-                'success': False,
-                'message': '❌ Não foi possível gerar a imagem.',
-                'image_bytes': None,
-            }
+        if not generated_images:
+            return '❌ Não foi possível gerar a imagem.'
 
-        # Retorna mensagem e bytes da imagem para envio externo
-        return {
-            'success': True,
-            'message': f'✅ Imagem gerada/editada com sucesso para o prompt: "{prompt}". A imagem será enviada em breve.',
-            'image_bytes': generated_images[0],
-        }
+        # Envia a imagem gerada diretamente para o usuário
+        generated_image_bytes = generated_images[0]
+        image_message_id = await whatsapp_service.send_image_message(
+            user_number, generated_image_bytes, f'Imagem gerada: {prompt}'
+        )
+        
+        if not image_message_id:
+            return f'✅ Imagem gerada mas houve problema no envio. Prompt: "{prompt}"'
+
+        return f'✅ Imagem gerada e enviada com sucesso! ID da mensagem: {image_message_id}. Prompt: "{prompt}"'
+
     except Exception as e:
-        return {
-            'success': False,
-            'message': f'❌ Erro ao gerar ou editar imagem: {e}',
-            'image_bytes': None,
-        }
+        return f'❌ Erro ao gerar ou editar imagem: {e}'
 
 
 @tool
@@ -107,6 +109,53 @@ async def gerar_legenda_criativa(user_number: str, image_prompt: str) -> str:
 
     except Exception as e:
         return f'❌ Erro ao gerar legenda: {e}'
+
+
+@tool
+async def enviar_imagem_e_postar_status(
+    user_number: str,
+    image_bytes: bytes,
+    caption: str,
+    prompt: str
+) -> str:
+    """
+    Envia uma imagem para o usuário e posta a mesma imagem como status do WhatsApp.
+
+    Args:
+        user_number: O número de telefone do usuário.
+        image_bytes: Os bytes da imagem a ser enviada.
+        caption: Legenda para o status.
+        prompt: O prompt original usado para gerar a imagem.
+
+    Returns:
+        String com o resultado das operações.
+    """
+    try:
+        # Envia imagem para o usuário
+        image_message_id = await whatsapp_service.send_image_message(
+            user_number, image_bytes, f'Imagem gerada: {prompt}'
+        )
+        
+        # Posta como status
+        status_id = await whatsapp_service.post_status_update(
+            image_bytes, caption
+        )
+        
+        results = []
+        if image_message_id:
+            results.append(f'✅ Imagem enviada para o usuário (ID: {image_message_id})')
+        else:
+            results.append('❌ Falha ao enviar imagem para o usuário')
+            
+        if status_id:
+            results.append(f'✅ Status postado com sucesso (ID: {status_id})')
+        else:
+            results.append('❌ Falha ao postar status')
+            
+        return ' | '.join(results)
+
+    except Exception as e:
+        return f'❌ Erro ao enviar imagem e postar status: {e}'
 
 
 @tool
@@ -145,7 +194,7 @@ async def postar_status_whatsapp(
         if image_url:
             # Lógica para baixar a imagem da URL
             try:
-                response = httpx.get(image_url, follow_redirects=True, timeout=30)
+                response = httpx.get(image_url, follow_redirects=True)
                 response.raise_for_status()
                 image_bytes = response.content
             except httpx.RequestError as e:
@@ -475,7 +524,7 @@ async def alterar_avatar(image_url: str) -> str:
     """Altera a foto de perfil (avatar) do usuário a partir de uma URL de
     imagem."""
     try:
-        response = httpx.get(image_url, follow_redirects=True, timeout=30)
+        response = httpx.get(image_url, follow_redirects=True)
         response.raise_for_status()
         image_bytes = response.content
         success = await whatsapp_service.change_avatar(image_bytes)
@@ -486,7 +535,45 @@ async def alterar_avatar(image_url: str) -> str:
         return f'Ocorreu um erro ao alterar a foto de perfil: {e}'
 
 
-def create_marketing_agent():
+def create_marketing_agent(user_context: dict = None):
+    if user_context is None:
+        user_context = {}
+    
+    user_number = user_context.get('user_number', '559184497318')
+    
+    # Cria versões contextualizadas das tools de geração de imagem
+    @tool
+    async def gerar_ou_editar_imagem_contextualizada(
+        prompt: str,
+        image_bytes: Optional[bytes] = None,
+        enhance_prompt: bool = True,
+    ) -> str:
+        """
+        Gera ou edita uma imagem usando o Gemini Web API Service e envia automaticamente para o usuário.
+        O número do usuário é obtido automaticamente do contexto.
+        """
+        return await gerar_ou_editar_imagem(user_number, prompt, image_bytes, enhance_prompt)
+    
+    @tool
+    async def gerar_legenda_criativa_contextualizada(image_prompt: str) -> str:
+        """
+        Gera uma legenda criativa para uma imagem usando a sessão de chat do usuário.
+        O número do usuário é obtido automaticamente do contexto.
+        """
+        return await gerar_legenda_criativa(user_number, image_prompt)
+    
+    @tool
+    async def enviar_imagem_e_postar_status_contextualizada(
+        image_bytes: bytes,
+        caption: str,
+        prompt: str
+    ) -> str:
+        """
+        Envia uma imagem para o usuário e posta a mesma imagem como status do WhatsApp.
+        O número do usuário é obtido automaticamente do contexto.
+        """
+        return await enviar_imagem_e_postar_status(user_number, image_bytes, caption, prompt)
+    
     tools = [
         enviar_mensagem_whatsapp,
         postar_status_whatsapp,
@@ -509,25 +596,32 @@ def create_marketing_agent():
         obter_info_usuario,
         alterar_nome_exibicao,
         alterar_avatar,
-        gerar_ou_editar_imagem,
-        gerar_legenda_criativa,
+        gerar_ou_editar_imagem_contextualizada,
+        gerar_legenda_criativa_contextualizada,
+        enviar_imagem_e_postar_status_contextualizada,
     ]
+    
     prompt = ChatPromptTemplate.from_messages([
         (
             'system',
-            'Você é um agente de marketing e gerenciador de comunidades no '
+            f'Você é um agente de marketing e gerenciador de comunidades no '
             'WhatsApp. Você pode enviar mensagens, links, status, gerenciar '
             'grupos, mensagens, contatos e perfil. '
+            f'CONTEXTO DO USUÁRIO ATUAL: {user_number} '
             'FUNCIONALIDADES DE IA: '
-            '1. "gerar_ou_editar_imagem": Gera uma nova imagem a partir de um prompt, ou edita uma imagem existente. '
-            '   - `user_number` é obrigatório para manter o contexto da conversa. '
+            '1. "gerar_ou_editar_imagem_contextualizada": Gera uma nova imagem a partir de um prompt e envia automaticamente para o usuário atual. '
             '   - `prompt` é a descrição do que fazer. '
-            '   - `image_bytes` é usado para edição. '
-            '   - `enhance_prompt` pode ser usado para melhorar a descrição. '
-            '2. "gerar_legenda_criativa": Cria uma legenda para uma imagem recém-gerada. '
-            '   - `user_number` é obrigatório para acessar a imagem no contexto da conversa. '
+            '   - `image_bytes` é usado para edição (opcional). '
+            '   - `enhance_prompt` pode ser usado para melhorar a descrição (opcional). '
+            '2. "gerar_legenda_criativa_contextualizada": Cria uma legenda para uma imagem recém-gerada. '
             '   - `image_prompt` é o prompt original da imagem. '
-            'IMPORTANTE: Sempre use o `user_number` correto para as funções de IA. '
+            '3. "enviar_imagem_e_postar_status_contextualizada": Envia uma imagem para o usuário E posta como status simultaneamente. '
+            '   - `image_bytes`, `caption` e `prompt` são obrigatórios. '
+            'FLUXO RECOMENDADO PARA GERAÇÃO DE IMAGENS: '
+            '1. Use "gerar_ou_editar_imagem_contextualizada" para gerar e enviar a imagem para o usuário '
+            '2. Use "gerar_legenda_criativa_contextualizada" para criar uma legenda '
+            '3. Use "enviar_imagem_e_postar_status_contextualizada" para postar a mesma imagem como status '
+            'IMPORTANTE: O número do usuário está automaticamente configurado no contexto. '
             'Seja eficiente e não repita ferramentas que falharam.',
         ),
         MessagesPlaceholder(variable_name='chat_history'),
