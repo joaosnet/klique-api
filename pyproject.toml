@@ -25,6 +25,7 @@ dependencies = [
     "langgraph>=0.6.7",
     "langchain-mcp-adapters>=0.1.11",
     "langchain-google-genai>=2.1.12",
+    "apscheduler>=3.11.0",
 ]
 
 [dependency-groups]

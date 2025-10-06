@@ -46,6 +46,11 @@ def get_mongodb_url() -> str:
 
 MONGO_URL = get_mongodb_url()
 
+# Scheduler Settings
+SCHEDULED_TASKS_USER_NUMBER = os.getenv(
+    'SCHEDULED_TASKS_USER_NUMBER', '559184497318'
+)
+
 # Log Settings
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 LOG_ROTATION = os.getenv('LOG_ROTATION', '10 MB')

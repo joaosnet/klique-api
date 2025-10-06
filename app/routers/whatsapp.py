@@ -3,11 +3,10 @@ from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
-from langchain_core.messages import HumanMessage
 from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 
-from app.agents.agent import create_agent_runnable
+from app.agents.tasks import process_message_with_agent
 
 from ..routers import schemas
 from ..services.whatsapp import WhatsAppService
@@ -506,51 +505,6 @@ def _handle_status_view(
     return None
 
 
-async def _process_message_with_agent(
-    user_number: str,
-    message_text: str,
-    message_body: dict,
-    background_tasks: BackgroundTasks,
-    deps: WebhookDependencies,
-) -> dict:
-    """Processa mensagem com o agente IA após verificações de duplicata."""
-    message_id = message_body.get('id')
-    if message_id:
-        logger.info(f'🔍 Verificando duplicata para mensagem ID: {message_id}')
-        already_processed = await _is_message_already_processed(
-            deps.db, message_id, user_number
-        )
-        if already_processed:
-            logger.warning(
-                f'🔄 Mensagem duplicada ignorada: {message_id} '
-                f'do usuário {user_number}'
-            )
-            return {
-                'status': 'ok',
-                'detail': 'duplicate_message_ignored',
-            }
-        logger.info(f'✅ Mensagem {message_id} é nova, processando...')
-        await _mark_message_as_processed(
-            deps.db, message_id, user_number, message_text
-        )
-        background_tasks.add_task(_cleanup_old_processed_messages, deps.db)
-    else:
-        logger.warning(
-            '⚠️ Mensagem sem ID, não é possível verificar duplicatas'
-        )
-
-    logger.info(f'🤖 Mensagem recebida para o agente: "{message_text}"')
-    llm = await create_agent_runnable()
-    resposta = await llm.ainvoke(
-        {"messages": [HumanMessage(content=message_text)]},
-        config={"configurable": {"thread_id": user_number}}
-    )
-    final_response = resposta['messages'][-1].content
-    logger.info(f'🤖 Resposta do agente: "{final_response}"')
-    await deps.whatsapp_service.send_message(user_number, final_response)
-    return {'status': 'ok', 'detail': 'processed_by_agent'}
-
-
 @router.post('/whatsapp')
 async def receive_whatsapp_webhook(
     request: Request,
@@ -600,8 +554,10 @@ async def receive_whatsapp_webhook(
             )
             return {'status': 'ok', 'detail': 'restricted_access'}
 
-        return await _process_message_with_agent(
-            user_number, message_text, message_body, background_tasks, deps
+        return await process_message_with_agent(
+            user_number=user_number,
+            message_text=message_text,
+            whatsapp_service=deps.whatsapp_service,
         )
 
     except Exception as e:

@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .database import close_db_connection, get_client
 from .routers import auth, register, whatsapp
+from .scheduler import setup_scheduler, start_scheduler, stop_scheduler
 from .services.whatsapp import WhatsAppService
 
 
@@ -26,9 +27,14 @@ async def lifespan(app: FastAPI):
     # await gemini_web_api_service._initialize_client()  # noqa: SLF001
     # app.state.gemini_web_api_service = gemini_web_api_service
 
+    # Configura e inicia o scheduler de tarefas agendadas
+    await setup_scheduler()
+    await start_scheduler()
+
     yield
 
     # Encerra os serviços ao finalizar a aplicação
+    await stop_scheduler()
     await whatsapp_service.close()
     # await gemini_web_api_service.close()
     close_db_connection()
