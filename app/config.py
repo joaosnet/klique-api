@@ -4,18 +4,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Gemini API SettingsGEMINI_WEBAPI
+# Gemini API Settings (Official Google API)
 SECRET_KEY = os.getenv('SECRET_KEY')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-SECURE_1PSID = os.getenv('SECURE_1PSID')
-SECURE_1PSIDTS = os.getenv('SECURE_1PSIDTS')
-GEMINI_SERVICE_PROVIDER = os.getenv('GEMINI_SERVICE_PROVIDER', 'GEMINI_WEBAPI')
-GEMINI_WEBAPI_SECURE_1PSID = os.getenv('GEMINI_WEBAPI_SECURE_1PSID')
-GEMINI_WEBAPI_SECURE_1PSIDTS = os.getenv('GEMINI_WEBAPI_SECURE_1PSIDTS')
 GEMINI_TIMEOUT = int(os.getenv('GEMINI_TIMEOUT', '30'))
 GEMINI_AUTO_CLOSE = os.getenv('GEMINI_AUTO_CLOSE', 'true').lower() == 'true'
 GEMINI_CLOSE_DELAY = int(os.getenv('GEMINI_CLOSE_DELAY', '10'))
 GEMINI_CONCURRENCY_LIMIT = int(os.getenv('GEMINI_CONCURRENCY_LIMIT', '5'))
+
+# Legacy Gemini Web API settings (now handled by MCP server)
+SECURE_1PSID = os.getenv('SECURE_1PSID')  # Kept for backward compatibility
+SECURE_1PSIDTS = os.getenv('SECURE_1PSIDTS')  # Kept for backward compatibility
 
 # Google Cloud Settings
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
