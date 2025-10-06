@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from langchain_core.messages import HumanMessage
 from loguru import logger
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 
@@ -540,8 +541,11 @@ async def _process_message_with_agent(
 
     logger.info(f'🤖 Mensagem recebida para o agente: "{message_text}"')
     llm = await create_agent_runnable()
-    resposta = await llm.ainvoke({'input': message_text})
-    final_response = resposta['output']
+    resposta = await llm.ainvoke(
+        {"messages": [HumanMessage(content=message_text)]},
+        config={"configurable": {"thread_id": user_number}}
+    )
+    final_response = resposta['messages'][-1].content
     logger.info(f'🤖 Resposta do agente: "{final_response}"')
     await deps.whatsapp_service.send_message(user_number, final_response)
     return {'status': 'ok', 'detail': 'processed_by_agent'}
