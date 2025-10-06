@@ -592,8 +592,8 @@ async def receive_whatsapp_webhook(
                 f'🤖 Mensagem recebida para o agente: "{message_text}"'
             )
             llm = await create_agent_runnable()
-            resposta = await llm.ainvoke(message_text)
-            final_response = resposta.content
+            resposta = await llm.ainvoke({'input': message_text})
+            final_response = resposta['output']
             logger.info(f'🤖 Resposta do agente: "{final_response}"')
             await deps.whatsapp_service.send_message(
                 user_number, final_response

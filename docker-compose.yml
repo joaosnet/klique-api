@@ -1,6 +1,6 @@
 services:
   whatsapp:
-    image: ghcr.io/aldinokemal/go-whatsapp-web-multidevice
+    image: aldinokemal2104/go-whatsapp-web-multidevice
     container_name: whatsapp
     restart: always
     ports:
