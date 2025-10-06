@@ -34,6 +34,8 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: password
       MONGO_INITDB_DATABASE: klique  # Nome do banco padrão
+    networks:
+      - whatsapp-network
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -49,6 +51,8 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+    networks:
+      - whatsapp-network
     environment:
       SECRET_KEY: a8b28eaaa2aa5cd246d7318435738f5c914feb474051c72b7d54429ff51194fc
       GOOGLE_API_KEY: AIzaSyBgtTWw5XS1X6JdE-sddspxqCeM4nWl7iw
@@ -97,6 +101,8 @@ services:
       - "8080:8080"
       - "7900:7900"
     shm_size: "2g"
+    networks:
+      - whatsapp-network
     volumes:
       - ./har_and_cookies:/app/har_and_cookies
       - ./generated_media:/app/generated_media
