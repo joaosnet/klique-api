@@ -505,6 +505,48 @@ def _handle_status_view(
     return None
 
 
+async def _process_message_with_agent(
+    user_number: str,
+    message_text: str,
+    message_body: dict,
+    background_tasks: BackgroundTasks,
+    deps: WebhookDependencies,
+) -> dict:
+    """Processa mensagem com o agente IA após verificações de duplicata."""
+    message_id = message_body.get('id')
+    if message_id:
+        logger.info(f'🔍 Verificando duplicata para mensagem ID: {message_id}')
+        already_processed = await _is_message_already_processed(
+            deps.db, message_id, user_number
+        )
+        if already_processed:
+            logger.warning(
+                f'🔄 Mensagem duplicada ignorada: {message_id} '
+                f'do usuário {user_number}'
+            )
+            return {
+                'status': 'ok',
+                'detail': 'duplicate_message_ignored',
+            }
+        logger.info(f'✅ Mensagem {message_id} é nova, processando...')
+        await _mark_message_as_processed(
+            deps.db, message_id, user_number, message_text
+        )
+        background_tasks.add_task(_cleanup_old_processed_messages, deps.db)
+    else:
+        logger.warning(
+            '⚠️ Mensagem sem ID, não é possível verificar duplicatas'
+        )
+
+    logger.info(f'🤖 Mensagem recebida para o agente: "{message_text}"')
+    llm = await create_agent_runnable()
+    resposta = await llm.ainvoke({'input': message_text})
+    final_response = resposta['output']
+    logger.info(f'🤖 Resposta do agente: "{final_response}"')
+    await deps.whatsapp_service.send_message(user_number, final_response)
+    return {'status': 'ok', 'detail': 'processed_by_agent'}
+
+
 @router.post('/whatsapp')
 async def receive_whatsapp_webhook(
     request: Request,
@@ -540,72 +582,23 @@ async def receive_whatsapp_webhook(
             or message_body.get('caption')
             or image_body.get('caption')
         )
-        if message_text:
-            # Permite apenas o número do João Neto conversar com a IA
-            if user_number != '559184497318':
-                logger.info(
-                    f'🔒 Usuário {user_number} bloqueado para chat com IA.'
-                )
-                # await deps.whatsapp_service.send_message(
-                #     user_number,
-                #     (
-                #         '🚫 Apenas o administrador pode conversar com a IA '
-                #         'no momento.'
-                #     ),
-                # )
-                return {'status': 'ok', 'detail': 'restricted_access'}
-            # Verifica se a mensagem possui ID e se já foi processada
-            message_id = message_body.get('id')
-            if message_id:
-                logger.info(
-                    f'🔍 Verificando duplicata para mensagem ID: {message_id}'
-                )
-                # Verifica se mensagem já foi processada
-                already_processed = await _is_message_already_processed(
-                    deps.db, message_id, user_number
-                )
-                if already_processed:
-                    logger.warning(
-                        f'🔄 Mensagem duplicada ignorada: {message_id} '
-                        f'do usuário {user_number}'
-                    )
-                    return {
-                        'status': 'ok',
-                        'detail': 'duplicate_message_ignored',
-                    }
-                logger.info(f'✅ Mensagem {message_id} é nova, processando...')
-                # Marca mensagem como processada ANTES do processamento
-                # para evitar duplicatas durante o processamento
-                await _mark_message_as_processed(
-                    deps.db, message_id, user_number, message_text
-                )
-                # Adiciona tarefa de limpeza em background
-                # (executa esporadicamente)
-                background_tasks.add_task(
-                    _cleanup_old_processed_messages, deps.db
-                )
-            else:
-                logger.warning(
-                    '⚠️ Mensagem sem ID, não é possível verificar duplicatas'
-                )
-            logger.info(
-                f'🤖 Mensagem recebida para o agente: "{message_text}"'
+        if not message_text:
+            logger.debug(
+                'Nenhuma mensagem de texto ou evento de status detectado.'
+                ' Ignorando.'
             )
-            llm = await create_agent_runnable()
-            resposta = await llm.ainvoke({'input': message_text})
-            final_response = resposta['output']
-            logger.info(f'🤖 Resposta do agente: "{final_response}"')
-            await deps.whatsapp_service.send_message(
-                user_number, final_response
-            )
-            return {'status': 'ok', 'detail': 'processed_by_agent'}
+            return {'status': 'ok', 'reason': 'no_text_or_event'}
 
-        # Nenhum comando ou evento detectado
-        logger.debug(
-            'Nenhuma mensagem de texto ou evento de status detectado.'
-            ' Ignorando.'
+        # Permite apenas o número do João Neto conversar com a IA
+        if user_number != '559184497318':
+            logger.info(
+                f'🔒 Usuário {user_number} bloqueado para chat com IA.'
+            )
+            return {'status': 'ok', 'detail': 'restricted_access'}
+
+        return await _process_message_with_agent(
+            user_number, message_text, message_body, background_tasks, deps
         )
-        return {'status': 'ok', 'reason': 'no_text_or_event'}
 
     except Exception as e:
         logger.error(f'❌ Erro no webhook: {e}')
