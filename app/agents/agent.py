@@ -1,6 +1,6 @@
 from typing import Literal
 
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.messages.utils import (
     count_tokens_approximately,
     trim_messages,
@@ -12,9 +12,7 @@ from langgraph.graph import StateGraph
 from langgraph.graph.message import MessagesState
 from langgraph.prebuilt import ToolNode
 from langsmith import traceable
-
-# Global checkpointer to keep connection alive
-_checkpointer = None
+from loguru import logger
 
 
 @traceable
@@ -23,15 +21,11 @@ async def create_agent_runnable():
 
     # Configuração do cliente MCP para todos os servidores conectados
     # via Docker
-    # Inclui tanto o gateway principal quanto o Neo4j Memory
     client = MultiServerMCPClient({
         'MCP_GATEWAY': {
             'url': 'http://host.docker.internal:8020',
             'transport': 'sse',
         },
-        # O Neo4j Memory também será acessado via este cliente,
-        # presumindo que esteja
-        # configurado no mesmo ambiente Docker e acessível pelo nome do serviço
     })
 
     # Carregar ferramentas de todos os servidores conectados
@@ -111,6 +105,22 @@ async def create_agent_runnable():
         if not trimmed_messages or trimmed_messages[0].type != 'system':
             system_msg = SystemMessage(content=system_message)
             trimmed_messages = [system_msg] + trimmed_messages
+
+        # Log para debug
+        logger.debug(f'Mensagens trimmed: {len(trimmed_messages)} mensagens')
+        for i, msg in enumerate(trimmed_messages):
+            logger.debug(f'  {i}: {msg.type} - {msg.content[:100]}...')
+
+        # Garantir que temos pelo menos uma mensagem não-system
+        non_system_messages = [
+            msg for msg in trimmed_messages if msg.type != 'system'
+        ]
+        if not non_system_messages:
+            logger.error(
+                'Nenhuma mensagem não-system encontrada após trimming!'
+            )
+            # Adiciona uma mensagem dummy se necessário
+            trimmed_messages.append(HumanMessage(content='Olá'))
 
         # Invocar o modelo
         response = await bound_model.ainvoke(trimmed_messages)

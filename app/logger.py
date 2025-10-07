@@ -13,7 +13,7 @@ logger.remove()
 
 # Formato padrão para logs em arquivo
 file_format = (
-    '{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} |'
+    '{time:YYYY-MM-DD HH:mm:ss.SSS tz=America/Sao_Paulo} | {level: <8} |'
     ' {name}:{function}:{line} - {message}'
 )
 

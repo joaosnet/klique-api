@@ -37,8 +37,12 @@ NO_SESSION_FALLBACK = (
 
 async def _is_message_already_processed(
     db: AsyncIOMotorDatabase, message_id: str, user_number: str
-) -> bool:
-    """Verifica se uma mensagem já foi processada anteriormente."""
+) -> tuple[bool, bool]:
+    """Verifica se uma mensagem já foi processada anteriormente.
+
+    Returns:
+        tuple: (já_processada, deve_tentar_novamente)
+    """
     try:
         collection = db.get_collection('processed_messages')
         existing_message = await collection.find_one({
@@ -46,34 +50,119 @@ async def _is_message_already_processed(
             'user_number': user_number,
         })
 
-        if existing_message:
+        already_processed = False
+        should_retry = True
+
+        if not existing_message:
+            return already_processed, should_retry
+
+        status = existing_message.get('status', 'completed')
+        attempts = existing_message.get('attempts', 0)
+        last_attempt = existing_message.get('last_attempt')
+        max_attempts = 3  # Máximo de tentativas
+        now = datetime.utcnow()
+        five_minutes_ago = now - timedelta(minutes=5)
+
+        if status == 'completed':
             logger.info(
-                f'📋 Mensagem {message_id} já processada para {user_number}'
+                f'📋 Mensagem {message_id} já processada '
+                f'com sucesso para {user_number}'
             )
-            return True
-        return False
+            already_processed = True
+            should_retry = False
+        elif status == 'failed':
+            logger.info(
+                f'📋 Mensagem {message_id} falhou anteriormente '
+                f'para {user_number}'
+            )
+            already_processed = True
+            should_retry = False
+        elif status == 'processing':
+            if last_attempt and last_attempt > five_minutes_ago:
+                logger.info(
+                    f'📋 Mensagem {message_id} ainda em processamento '
+                    f'para {user_number}'
+                )
+                already_processed = True
+                should_retry = False
+            elif attempts >= max_attempts:
+                # Marca como falhou
+                await collection.update_one(
+                    {'message_id': message_id, 'user_number': user_number},
+                    {'$set': {'status': 'failed', 'last_attempt': now}},
+                )
+                logger.warning(
+                    f'📋 Mensagem {message_id} excedeu limite '
+                    f'de tentativas para {user_number}'
+                )
+                already_processed = True
+                should_retry = False
+            else:
+                # Pode tentar novamente
+                logger.info(
+                    f'📋 Mensagem {message_id} será retentada '
+                    f'para {user_number} (tentativa {attempts + 1})'
+                )
+                already_processed = False
+                should_retry = True
+        else:
+            # Default: tentar
+            already_processed = False
+            should_retry = True
+
+        return already_processed, should_retry
+
     except Exception as e:
         logger.error(f'❌ Erro ao verificar mensagem processada: {e}')
-        # Em caso de erro, permite o processamento para evitar bloqueios
-        return False
+        return False, True
+
+
+@dataclass
+class MessageProcessingData:
+    """Dados para marcar mensagem como processada."""
+    message_id: str
+    user_number: str
+    message_text: str
+    status: str = 'completed'
+    attempts: int = 0
 
 
 async def _mark_message_as_processed(
-    db: AsyncIOMotorDatabase,
-    message_id: str,
-    user_number: str,
-    message_text: str,
+    db: AsyncIOMotorDatabase, data: MessageProcessingData
 ) -> None:
     """Marca uma mensagem como processada no cache."""
     try:
         collection = db.get_collection('processed_messages')
-        await collection.insert_one({
-            'message_id': message_id,
-            'user_number': user_number,
-            'message_text': message_text,
-            'processed_at': datetime.utcnow(),
-        })
-        logger.info(f'✅ Mensagem {message_id} marcada como processada')
+        now = datetime.utcnow()
+
+        # Tenta atualizar se já existe, senão insere
+        result = await collection.update_one(
+            {'message_id': data.message_id, 'user_number': data.user_number},
+            {
+                '$set': {
+                    'message_text': data.message_text,
+                    'status': data.status,
+                    'attempts': data.attempts,
+                    'last_attempt': now,
+                    'processed_at': now,
+                },
+                '$setOnInsert': {
+                    'message_id': data.message_id,
+                    'user_number': data.user_number,
+                },
+            },
+            upsert=True,
+        )
+
+        if result.upserted_id:
+            logger.info(
+                f'✅ Mensagem {data.message_id} inserida como {data.status}'
+            )
+        else:
+            logger.info(
+                f'✅ Mensagem {data.message_id} atualizada para {data.status}'
+            )
+
     except Exception as e:
         logger.error(f'❌ Erro ao marcar mensagem como processada: {e}')
 
@@ -85,7 +174,10 @@ async def _cleanup_old_processed_messages(db: AsyncIOMotorDatabase) -> None:
         twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
 
         result = await collection.delete_many({
-            'processed_at': {'$lt': twenty_four_hours_ago}
+            '$or': [
+                {'processed_at': {'$lt': twenty_four_hours_ago}},
+                {'last_attempt': {'$lt': twenty_four_hours_ago}},
+            ]
         })
 
         if result.deleted_count > 0:
@@ -415,50 +507,6 @@ def _extract_media_paths(payload: dict) -> list[str]:
     return media_paths
 
 
-async def _download_media_files(
-    whatsapp_service: WhatsAppService, media_paths: list[str]
-) -> list[bytes]:
-    """Faz download dos arquivos de mídia."""
-    if not media_paths:
-        return []
-
-    logger.info(f'Baixando {len(media_paths)} imagens...')
-    images = []
-
-    for path in media_paths:
-        try:
-            image_bytes = await whatsapp_service.download_media(path)
-            if image_bytes:
-                images.append(image_bytes)
-        except Exception as e:
-            logger.warning(f'Falha ao baixar mídia de {path}: {e}')
-
-    return images
-
-
-async def _update_user_session(
-    db: AsyncIOMotorDatabase, data: SessionUpdateData
-) -> None:
-    """Atualiza sessão do usuário no banco."""
-    collection = db.get_collection('user_sessions')
-    update_data = {
-        'last_prompt': data.prompt,
-        'last_generated_image': data.generated_bytes,
-        'updated_at': datetime.utcnow(),
-    }
-
-    if data.base_images_bytes:
-        update_data['last_base_image'] = data.base_images_bytes[0]
-    if data.status_id:
-        update_data['last_status_id'] = data.status_id
-
-    await collection.update_one(
-        {'user_number': data.user_number},
-        {'$set': update_data},
-        upsert=True,
-    )
-
-
 async def _update_status_cache(
     db: AsyncIOMotorDatabase,
     image_bytes: bytes,
@@ -505,8 +553,130 @@ def _handle_status_view(
     return None
 
 
+def _validate_message_access(data: dict, user_number: str) -> dict | None:
+    """Valida acesso à mensagem e retorna resposta de erro se inválido."""
+    # Permite apenas o número do João Neto conversar com a IA
+    if user_number != '559184497318':
+        logger.info(
+            f'🔒 Usuário {user_number} bloqueado para chat com IA.'
+        )
+        return {'status': 'ok', 'detail': 'restricted_access'}
+
+    # Permite apenas mensagens no chat consigo mesmo
+    chat_id = data.get('chat_id')
+    if chat_id != '559184497318':
+        logger.info(
+            f'🔒 Mensagem não é do chat consigo mesmo '
+            f'(chat_id: {chat_id}).'
+        )
+        return {'status': 'ok', 'detail': 'not_self_chat'}
+
+    return None  # Acesso válido
+
+
+async def _process_message_request(
+    data: dict, user_number: str, deps: WebhookDependencies
+) -> dict:
+    """Processa uma solicitação de mensagem."""
+    # Extrai dados da mensagem
+    message_body = data.get('message', {})
+    image_body = data.get('image', {})
+    message_text = (
+        message_body.get('text')
+        or message_body.get('caption')
+        or image_body.get('caption')
+    )
+    message_id = message_body.get('id') or image_body.get('id')
+
+    if not message_text:
+        return {'status': 'ok', 'reason': 'no_text_or_event'}
+
+    # Validações de acesso
+    access_error = _validate_message_access(data, user_number)
+    if access_error:
+        return access_error
+
+    # Limpa mensagens processadas antigas
+    await _cleanup_old_processed_messages(deps.db)
+
+    # Verifica se a mensagem já foi processada
+    if message_id:
+        (
+            already_processed,
+            should_retry,
+        ) = await _is_message_already_processed(
+            deps.db, message_id, user_number
+        )
+        if already_processed:
+            logger.info(f'Mensagem duplicada recusada: {message_id}')
+            return {
+                'status': 'duplicate',
+                'detail': 'Mensagem já processada',
+            }
+
+    # Marca como em processamento
+    if message_id:
+        await _mark_message_as_processed(
+            deps.db,
+            MessageProcessingData(
+                message_id=message_id,
+                user_number=user_number,
+                message_text=message_text,
+                status='processing',
+                attempts=0,
+            ),
+        )
+
+    # Processa a mensagem normalmente
+    try:
+        response = await process_message_with_agent(
+            user_number=user_number,
+            message_text=message_text,
+            whatsapp_service=deps.whatsapp_service,
+        )
+
+        # Marca como processada após sucesso
+        if message_id:
+            await _mark_message_as_processed(
+                deps.db,
+                MessageProcessingData(
+                    message_id=message_id,
+                    user_number=user_number,
+                    message_text=message_text,
+                    status='completed',
+                    attempts=0,
+                ),
+            )
+        return response
+
+    except Exception:
+        # Em caso de erro, marca como falhou e incrementa tentativas
+        if message_id:
+            # Busca tentativas atuais
+            collection = deps.db.get_collection('processed_messages')
+            existing = await collection.find_one({
+                'message_id': message_id,
+                'user_number': user_number,
+            })
+            current_attempts = (
+                existing.get('attempts', 0) if existing else 0
+            )
+
+            await _mark_message_as_processed(
+                deps.db,
+                MessageProcessingData(
+                    message_id=message_id,
+                    user_number=user_number,
+                    message_text=message_text,
+                    status='failed',
+                    attempts=current_attempts + 1,
+                ),
+            )
+        raise  # Re-raise para o tratamento de erro geral
+
+
 @router.post('/whatsapp')
-async def receive_whatsapp_webhook(  # noqa: PLR0911
+async def receive_whatsapp_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
     deps: WebhookDependencies = Depends(get_webhook_dependencies),
@@ -532,54 +702,8 @@ async def receive_whatsapp_webhook(  # noqa: PLR0911
         if status_result:
             return status_result
 
-        # Fluxo 2: Orquestrador (restrito ao número do João Neto)
-        message_body = data.get('message', {})
-        image_body = data.get('image', {})
-        message_text = (
-            message_body.get('text')
-            or message_body.get('caption')
-            or image_body.get('caption')
-        )
-        message_id = message_body.get('id') or image_body.get('id')
-        if not message_text:
-            logger.debug(
-                'Nenhuma mensagem de texto ou evento de status detectado.'
-                ' Ignorando.'
-            )
-            return {'status': 'ok', 'reason': 'no_text_or_event'}
-
-        # Permite apenas o número do João Neto conversar com a IA
-        if user_number != '559184497318':
-            logger.info(
-                f'🔒 Usuário {user_number} bloqueado para chat com IA.'
-            )
-            return {'status': 'ok', 'detail': 'restricted_access'}
-
-        # Verifica se a mensagem já foi processada
-        if message_id:
-            already_processed = await _is_message_already_processed(
-                deps.db, message_id, user_number
-            )
-            if already_processed:
-                logger.info(f'Mensagem duplicada recusada: {message_id}')
-                return {
-                    'status': 'duplicate',
-                    'detail': 'Mensagem já processada',
-                }
-
-        # Processa a mensagem normalmente
-        response = await process_message_with_agent(
-            user_number=user_number,
-            message_text=message_text,
-            whatsapp_service=deps.whatsapp_service,
-        )
-
-        # Marca como processada após sucesso
-        if message_id:
-            await _mark_message_as_processed(
-                deps.db, message_id, user_number, message_text
-            )
-        return response
+        # Fluxo 2: Processamento de mensagem
+        return await _process_message_request(data, user_number, deps)
 
     except Exception as e:
         logger.error(f'❌ Erro no webhook: {e}')

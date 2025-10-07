@@ -54,6 +54,7 @@ services:
     networks:
       - whatsapp-network
     environment:
+      TZ: America/Sao_Paulo
       SECRET_KEY: a8b28eaaa2aa5cd246d7318435738f5c914feb474051c72b7d54429ff51194fc
       GOOGLE_API_KEY: AIzaSyBgtTWw5XS1X6JdE-sddspxqCeM4nWl7iw
       GOOGLE_APPLICATION_CREDENTIALS: "creds.json"
