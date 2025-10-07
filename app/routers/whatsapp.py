@@ -506,7 +506,7 @@ def _handle_status_view(
 
 
 @router.post('/whatsapp')
-async def receive_whatsapp_webhook(
+async def receive_whatsapp_webhook(  # noqa: PLR0911
     request: Request,
     background_tasks: BackgroundTasks,
     deps: WebhookDependencies = Depends(get_webhook_dependencies),
@@ -540,6 +540,7 @@ async def receive_whatsapp_webhook(
             or message_body.get('caption')
             or image_body.get('caption')
         )
+        message_id = message_body.get('id') or image_body.get('id')
         if not message_text:
             logger.debug(
                 'Nenhuma mensagem de texto ou evento de status detectado.'
@@ -554,11 +555,31 @@ async def receive_whatsapp_webhook(
             )
             return {'status': 'ok', 'detail': 'restricted_access'}
 
-        return await process_message_with_agent(
+        # Verifica se a mensagem já foi processada
+        if message_id:
+            already_processed = await _is_message_already_processed(
+                deps.db, message_id, user_number
+            )
+            if already_processed:
+                logger.info(f'Mensagem duplicada recusada: {message_id}')
+                return {
+                    'status': 'duplicate',
+                    'detail': 'Mensagem já processada',
+                }
+
+        # Processa a mensagem normalmente
+        response = await process_message_with_agent(
             user_number=user_number,
             message_text=message_text,
             whatsapp_service=deps.whatsapp_service,
         )
+
+        # Marca como processada após sucesso
+        if message_id:
+            await _mark_message_as_processed(
+                deps.db, message_id, user_number, message_text
+            )
+        return response
 
     except Exception as e:
         logger.error(f'❌ Erro no webhook: {e}')
