@@ -5,6 +5,7 @@ from langchain_core.messages.utils import (
     count_tokens_approximately,
     trim_messages,
 )
+# from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
@@ -44,19 +45,19 @@ async def create_agent_runnable():
 
     # llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash')
 
-    memory_prompt = """
-## Memory Tool Usage
-- Store all memory for this project in database: 'project-database-name'
-- Use MCP memory tools exclusively for storing project-related information
-- Begin each session by:
- 1. Switching to this project's database
-  2. Searching memory for data relevant to the user's prompt
+#     memory_prompt = """
+# ## Memory Tool Usage
+# - Store all memory for this project in database: 'project-database-name'
+# - Use MCP memory tools exclusively for storing project-related information
+# - Begin each session by:
+#  1. Switching to this project's database
+#   2. Searching memory for data relevant to the user's prompt
 
-## Long-term Memory (Neo4j)
-- Use Neo4j-specific tools to store and retrieve long-term memories
-- Store important user information, preferences, and context in Neo4j
-- Retrieve user history and preferences when relevant to current conversation
-"""
+# ## Long-term Memory (Neo4j)
+# - Use Neo4j-specific tools to store and retrieve long-term memories
+# - Store important user information, preferences, and context in Neo4j
+# - Retrieve user history and preferences when relevant to current conversation
+# """
 
     short_term_memory_prompt = """
 ## Short-term Memory (In-Memory)
@@ -73,7 +74,7 @@ async def create_agent_runnable():
     )
 
     # Criar o prompt como mensagem do sistema
-    system_message = system_prompt + memory_prompt + short_term_memory_prompt
+    system_message = system_prompt + short_term_memory_prompt
 
     # Bind tools to the model
     bound_model = llm.bind_tools(tools)
