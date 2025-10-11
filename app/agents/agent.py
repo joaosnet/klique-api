@@ -5,14 +5,16 @@ from langchain_core.messages.utils import (
     count_tokens_approximately,
     trim_messages,
 )
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph
 from langgraph.graph.message import MessagesState
 from langgraph.prebuilt import ToolNode
 from langsmith import traceable
 from loguru import logger
+
+from app.config import GROQ_API_KEY
 
 
 @traceable
@@ -34,13 +36,13 @@ async def create_agent_runnable():
     # Criar o nó de ferramentas
     tool_node = ToolNode(tools)
 
-    # llm = ChatOpenAI(
-    #     api_key=OPENROUTER_API_KEY,
-    #     base_url='http://g4f:8080/v1',
-    #     model='gpt-5-high',
-    # )
+    llm = ChatOpenAI(
+        api_key=GROQ_API_KEY,
+        base_url='http://g4f:8080/api/Groq/',
+        model='moonshotai/kimi-k2-instruct-0905',
+    )
 
-    llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash')
+    # llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash')
 
     memory_prompt = """
 ## Memory Tool Usage

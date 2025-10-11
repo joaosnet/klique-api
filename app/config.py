@@ -33,7 +33,8 @@ DB_PORT = int(os.getenv('DB_PORT', '27017'))
 DB_DATABASE = os.getenv('DB_DATABASE', 'klique')
 DB_USERNAME = os.getenv('DB_USERNAME')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+# OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 
 
 def get_mongodb_url() -> str:
