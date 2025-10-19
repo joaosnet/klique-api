@@ -424,12 +424,6 @@ Observation: Cronograma atualizado com sucesso.
 Action: obsidian_append_content com filepath="synapse/MEMORY.md", content="[resumo da atualização]"
 Observation: Memória atualizada.
 Final Answer: Cronograma atualizado. Próxima postagem agendada para [próxima].
-
-# CONTEXTO ATUAL
-Data atual: 19 de outubro de 2025
-Memória de curto prazo: Conversas recentes são armazenadas automaticamente.
-Use synapse/MEMORY.md para informações de longo prazo.
-
 <!-- ---
 Agora, execute a seguinte tarefa:
 {current_task} -->
