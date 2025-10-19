@@ -1,3 +1,4 @@
+import os
 from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -5,17 +6,14 @@ from langchain_core.messages.utils import (
     count_tokens_approximately,
     trim_messages,
 )
-# from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph
 from langgraph.graph.message import MessagesState
 from langgraph.prebuilt import ToolNode
 from langsmith import traceable
 from loguru import logger
-
-from app.config import GROQ_API_KEY
 
 
 @traceable
@@ -29,6 +27,10 @@ async def create_agent_runnable():
             'url': 'http://host.docker.internal:8020',
             'transport': 'sse',
         },
+        'sigaa-ufpa': {
+            'transport': 'http',
+            'url': 'http://host.docker.internal:8000/mcp',
+        },
     })
 
     # Carregar ferramentas de todos os servidores conectados
@@ -37,44 +39,20 @@ async def create_agent_runnable():
     # Criar o nó de ferramentas
     tool_node = ToolNode(tools)
 
-    llm = ChatOpenAI(
-        api_key=GROQ_API_KEY,
-        base_url='http://g4f:8080/api/Groq/',
-        model='moonshotai/kimi-k2-instruct-0905',
-    )
+    # llm = ChatOpenAI(
+    #     api_key=GROQ_API_KEY,
+    #     base_url='http://g4f:8080/api/Groq/',
+    #     model='moonshotai/kimi-k2-instruct-0905',
+    # )
 
-    # llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash')
-
-#     memory_prompt = """
-# ## Memory Tool Usage
-# - Store all memory for this project in database: 'project-database-name'
-# - Use MCP memory tools exclusively for storing project-related information
-# - Begin each session by:
-#  1. Switching to this project's database
-#   2. Searching memory for data relevant to the user's prompt
-
-# ## Long-term Memory (Neo4j)
-# - Use Neo4j-specific tools to store and retrieve long-term memories
-# - Store important user information, preferences, and context in Neo4j
-# - Retrieve user history and preferences when relevant to current conversation
-# """
-
-    short_term_memory_prompt = """
-## Short-term Memory (In-Memory)
-- Your conversation history with the user is automatically stored
-  and retrieved from memory
-- This includes the current conversation thread and recent interactions
-- Use this context to maintain continuity in the current session
-"""
-
-    system_prompt = (
-        'Você é um assistente útil com acesso a ferramentas MCP.'
-        ' Use as ferramentas disponíveis '
-        'para responder às perguntas do usuário.'
-    )
+    llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash')
 
     # Criar o prompt como mensagem do sistema
-    system_message = system_prompt + short_term_memory_prompt
+    system_message = open(
+        os.path.join(os.path.dirname(__file__), 'system_instrutions.md'),
+        'r',
+        encoding='utf-8'
+    ).read()
 
     # Bind tools to the model
     bound_model = llm.bind_tools(tools)
