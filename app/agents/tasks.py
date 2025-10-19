@@ -5,12 +5,35 @@ e tarefas agendadas.
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from langchain_core.messages import HumanMessage
 from loguru import logger
 
 from ..services.whatsapp import WhatsAppService
 from .agent import create_agent_runnable
+
+# Diretório base para prompts
+PROMPTS_DIR = Path(__file__).parent / 'prompts'
+
+
+def _load_prompt(filename: str) -> str:
+    """
+    Carrega um prompt de um arquivo Markdown.
+
+    :param filename: Nome do arquivo (ex: 'instagram_post.md')
+    :return: Conteúdo do prompt
+    """
+    prompt_path = PROMPTS_DIR / filename
+    try:
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        logger.error(f'❌ Arquivo de prompt não encontrado: {prompt_path}')
+        raise
+    except Exception as e:
+        logger.error(f'❌ Erro ao carregar prompt {filename}: {e}')
+        raise
 
 
 @dataclass
@@ -256,8 +279,8 @@ async def trigger_sigaa_summary_agent(
     try:
         logger.info('📅 Iniciando tarefa agendada: resumo dos avisos do SIGAA')
 
-        # Prompt para o agente buscar os avisos do SIGAA
-        prompt = 'Faça um resumo dos avisos do SIGAA das minhas turmas'
+        # Carrega prompt do arquivo
+        prompt = _load_prompt('sigaa_summary.md')
 
         # Processa com o agente
         result = await process_message_with_agent(
@@ -277,5 +300,131 @@ async def trigger_sigaa_summary_agent(
 
     except Exception as e:
         logger.error(f'❌ Erro na tarefa agendada do SIGAA: {e}')
+        logger.exception('Detalhes do erro:')
+        return {'status': 'error', 'detail': str(e)}
+
+
+async def trigger_instagram_post_agent(
+    user_number: str,
+    whatsapp_service: WhatsAppService,
+) -> dict:
+    """
+    Tarefa agendada para criar e postar no Instagram via agente.
+
+    Esta função é chamada diariamente nos horários de pico do Instagram
+    (10h, 15h e 17h) para criar conteúdo otimizado e fazer a postagem.
+
+    :param user_number: Número do usuário destinatário
+    :param whatsapp_service: Instância do serviço WhatsApp
+    :return: Dicionário com status da operação
+    """
+    try:
+        logger.info('📸 Iniciando tarefa agendada: postagem no Instagram')
+
+        # Carrega prompt do arquivo
+        prompt = _load_prompt('instagram_post.md')
+
+        # Processa com o agente
+        result = await process_message_with_agent(
+            user_number=user_number,
+            message_text=prompt,
+            whatsapp_service=whatsapp_service,
+        )
+
+        if result['status'] == 'ok':
+            logger.success('✅ Postagem no Instagram realizada com sucesso')
+        else:
+            logger.error(
+                f'❌ Falha na postagem do Instagram: {result["detail"]}'
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(f'❌ Erro na tarefa agendada do Instagram: {e}')
+        logger.exception('Detalhes do erro:')
+        return {'status': 'error', 'detail': str(e)}
+
+
+async def trigger_linkedin_post_agent(
+    user_number: str,
+    whatsapp_service: WhatsAppService,
+) -> dict:
+    """
+    Tarefa agendada para criar e postar no LinkedIn via agente.
+
+    Esta função é chamada diariamente nos horários de pico do LinkedIn
+    (8h e 14h) para criar conteúdo profissional e fazer a postagem.
+
+    :param user_number: Número do usuário destinatário
+    :param whatsapp_service: Instância do serviço WhatsApp
+    :return: Dicionário com status da operação
+    """
+    try:
+        logger.info('💼 Iniciando tarefa agendada: postagem no LinkedIn')
+
+        # Carrega prompt do arquivo
+        prompt = _load_prompt('linkedin_post.md')
+
+        # Processa com o agente
+        result = await process_message_with_agent(
+            user_number=user_number,
+            message_text=prompt,
+            whatsapp_service=whatsapp_service,
+        )
+
+        if result['status'] == 'ok':
+            logger.success('✅ Postagem no LinkedIn realizada com sucesso')
+        else:
+            logger.error(
+                f'❌ Falha na postagem do LinkedIn: {result["detail"]}'
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(f'❌ Erro na tarefa agendada do LinkedIn: {e}')
+        logger.exception('Detalhes do erro:')
+        return {'status': 'error', 'detail': str(e)}
+
+
+async def trigger_whatsapp_status_agent(
+    user_number: str,
+    whatsapp_service: WhatsAppService,
+) -> dict:
+    """
+    Tarefa agendada para criar e postar Status no WhatsApp via agente.
+
+    Esta função é chamada diariamente nos horários de pico do WhatsApp
+    (12h, 17h e 19h) para criar conteúdo visual e postar como Status.
+
+    :param user_number: Número do usuário destinatário
+    :param whatsapp_service: Instância do serviço WhatsApp
+    :return: Dicionário com status da operação
+    """
+    try:
+        logger.info('📱 Iniciando tarefa agendada: Status do WhatsApp')
+
+        # Carrega prompt do arquivo
+        prompt = _load_prompt('whatsapp_status.md')
+
+        # Processa com o agente
+        result = await process_message_with_agent(
+            user_number=user_number,
+            message_text=prompt,
+            whatsapp_service=whatsapp_service,
+        )
+
+        if result['status'] == 'ok':
+            logger.success('✅ Status do WhatsApp postado com sucesso')
+        else:
+            logger.error(
+                f'❌ Falha no Status do WhatsApp: {result["detail"]}'
+            )
+
+        return result
+
+    except Exception as e:
+        logger.error(f'❌ Erro na tarefa agendada do WhatsApp Status: {e}')
         logger.exception('Detalhes do erro:')
         return {'status': 'error', 'detail': str(e)}
