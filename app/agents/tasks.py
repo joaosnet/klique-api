@@ -97,8 +97,8 @@ async def _process_agent_node(
 async def _process_stream_events(
     llm, message_text: str, user_number: str, progress_context: ProgressContext
 ) -> str | None:
-    """Processa eventos do stream usando astream_events para capturar tokens em tempo real."""
-    final_response = []
+    """Processa eventos do stream capturando
+    apenas ferramentas e resposta final."""
     current_tool = None
 
     logger.info('🔄 Iniciando stream de eventos do agente...')
@@ -107,97 +107,36 @@ async def _process_stream_events(
     async for event in llm.astream_events(
         {'messages': [HumanMessage(content=message_text)]},
         config={'configurable': {'thread_id': user_number}},
-        version="v2",
+        version='v2',
     ):
-        kind = event["event"]
-        
+        kind = event['event']
+
         # Captura início de chamada de ferramenta
-        if kind == "on_tool_start":
-            tool_name = event.get("name", "unknown")
+        if kind == 'on_tool_start':
+            tool_name = event.get('name', 'unknown')
             current_tool = tool_name
             logger.info(f'🔧 Ferramenta iniciada: {tool_name}')
             progress_context.current_step = await _update_progress(
-                progress_context,
-                f'🔧 Usando: {tool_name}',
-                'tools'
+                progress_context, f'🔧 Executando: {tool_name}', 'tools'
             )
-        
+
         # Captura resultado de ferramenta
-        elif kind == "on_tool_end":
-            tool_name = event.get("name", current_tool or "unknown")
+        elif kind == 'on_tool_end':
+            tool_name = event.get('name', current_tool or 'unknown')
             logger.info(f'⚙️ Ferramenta finalizada: {tool_name}')
             progress_context.current_step = await _update_progress(
-                progress_context,
-                '⚙️ Processando resultados...',
-                'processing'
+                progress_context, '⚙️ Processando resultados...', 'processing'
             )
             current_tool = None
-        
-        # Captura tokens do modelo em tempo real
-        elif kind == "on_chat_model_stream":
-            chunk = event.get("data", {}).get("chunk")
-            if chunk and hasattr(chunk, 'content'):
-                content = chunk.content
-                if isinstance(content, str) and content:
-                    # Acumula resposta final
-                    final_response.append(content)
-                    
-                    # Detecta pensamento (Thought:) em tempo real
-                    full_text = ''.join(final_response)
-                    if 'Thought:' in full_text and 'Final Answer:' not in full_text:
-                        # Extrai preview do pensamento
-                        thinking_part = full_text.split('Final Answer')[0]
-                        preview = thinking_part.replace('Thought:', '').strip()
-                        if len(preview) > 20:
-                            preview_text = preview[-150:] if len(preview) > 150 else preview
-                            logger.debug(f'💭 Pensando: {preview_text}')
-                            
-                            # Atualiza WhatsApp ocasionalmente (não a cada token)
-                            if len(final_response) % 10 == 0:  # A cada 10 tokens
-                                progress_context.current_step = await _update_progress(
-                                    progress_context,
-                                    f'💭 Pensando: {preview_text[:100]}...',
-                                    'thinking'
-                                )
-                    
-                    # Detecta início da resposta final
-                    elif 'Final Answer:' in full_text and progress_context.current_step != 'finalizing':
-                        logger.info('✅ Resposta final iniciada')
-                        progress_context.current_step = await _update_progress(
-                            progress_context,
-                            '✅ Formulando resposta...',
-                            'finalizing'
-                        )
-        
-        # Captura conclusão do modelo
-        elif kind == "on_chat_model_end":
-            output = event.get("data", {}).get("output")
-            if output and hasattr(output, 'content'):
-                logger.info('✅ Modelo finalizou geração')
-                progress_context.current_step = await _update_progress(
-                    progress_context,
-                    '✅ Finalizando...',
-                    'done'
-                )
 
-    # Processa resposta final acumulada
-    full_response = ''.join(final_response)
-    
-    if full_response:
-        # Extrai apenas o Final Answer se houver
-        if 'Final Answer:' in full_response:
-            final_text = full_response.split('Final Answer:')[-1].strip()
-        # Remove marcadores de pensamento
-        elif 'Thought:' in full_response:
-            parts = full_response.split('Thought:')
-            final_text = parts[-1].strip()
-        else:
-            final_text = full_response.strip()
-        
-        logger.info(f'🏁 Stream finalizado. Resposta capturada: {len(final_text)} caracteres')
-        return final_text if len(final_text) > 10 else None
-    
-    logger.warning('🏁 Stream finalizado. Nenhuma resposta capturada')
+        # Captura conclusão do modelo
+        elif kind == 'on_chat_model_end':
+            logger.info('✅ Modelo finalizou geração')
+            progress_context.current_step = await _update_progress(
+                progress_context, '✅ Finalizando...', 'done'
+            )
+
+    logger.info('🏁 Stream finalizado, obtendo resposta final via ainvoke')
     return None
 
 
