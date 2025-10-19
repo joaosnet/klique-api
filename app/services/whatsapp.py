@@ -479,17 +479,25 @@ class WhatsAppService:  # noqa: PLR0904
             logger.error(f'❌ Erro ao buscar status mais recente: {e}')
             return None
 
-    async def edit_message(self, message_id: str, new_text: str) -> bool:
+    async def edit_message(
+        self, message_id: str, new_text: str, phone_number: str = None
+    ) -> bool:
         """
         Edita uma mensagem existente usando o endpoint
           /message/:message_id/update.
 
         :param message_id: O ID da mensagem a ser editada.
         :param new_text: O novo texto da mensagem.
+        :param phone_number: O número de telefone do destinatário (opcional).
         :return: True se a edição foi bem-sucedida, False caso contrário.
         """
         try:
-            data = {'text': new_text}
+            # A API go-whatsapp exige 'message' e 'phone' no body
+            data = {'message': new_text}
+            
+            # Adiciona phone se fornecido
+            if phone_number:
+                data['phone'] = phone_number
 
             response = await self.client.post(
                 f'/message/{message_id}/update',

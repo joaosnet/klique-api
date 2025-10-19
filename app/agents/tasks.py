@@ -4,11 +4,201 @@ incluindo processamento de mensagens
 e tarefas agendadas.
 """
 
+from dataclasses import dataclass
+
 from langchain_core.messages import HumanMessage
 from loguru import logger
 
 from ..services.whatsapp import WhatsAppService
 from .agent import create_agent_runnable
+
+
+@dataclass
+class ProgressContext:
+    """Contexto para gerenciar o progresso da mensagem."""
+
+    whatsapp_service: WhatsAppService
+    message_id: str
+    user_number: str
+    current_step: str
+
+
+async def _update_progress(
+    context: ProgressContext, text: str, new_step: str
+) -> str:
+    """Atualiza a mensagem de progresso se o passo mudou."""
+    if context.message_id and context.current_step != new_step:
+        logger.info(f'🔄 Atualizando progresso: {new_step} -> "{text}"')
+        await context.whatsapp_service.edit_message(
+            context.message_id, text, context.user_number
+        )
+        return new_step
+    return context.current_step
+
+
+async def _extract_final_response(node_data: dict) -> str | None:
+    """Extrai a resposta final do nó do agente."""
+    messages = node_data.get('messages', [])
+    if not messages:
+        return None
+
+    last_msg = messages[-1]
+
+    # Se não há tool_calls, é a resposta final
+    has_content = hasattr(last_msg, 'content') and last_msg.content
+    has_no_tools = not (
+        hasattr(last_msg, 'tool_calls') and last_msg.tool_calls
+    )
+
+    if has_content and has_no_tools:
+        return last_msg.content
+
+    return None
+
+
+async def _process_agent_node(
+    node_data: dict, context: ProgressContext, tools_used: set
+) -> str:
+    """Processa eventos do nó 'agent'."""
+    messages = node_data.get('messages', [])
+    if not messages:
+        logger.debug('   Nó agent sem mensagens')
+        return context.current_step
+
+    last_msg = messages[-1]
+    logger.debug(f'   Última mensagem tipo: {type(last_msg).__name__}')
+
+    # Detecta chamadas de ferramentas
+    if hasattr(last_msg, 'tool_calls') and last_msg.tool_calls:
+        tool_names = [tc['name'] for tc in last_msg.tool_calls]
+        tools_used.update(tool_names)
+
+        tools_text = ', '.join(tool_names)
+        logger.info(f'🔧 Ferramentas detectadas: {tools_text}')
+        new_step = await _update_progress(
+            context, f'🔧 Usando ferramentas: {tools_text}...', 'tools'
+        )
+        return new_step
+
+    # Detecta quando o agente está gerando resposta final
+    if (
+        hasattr(last_msg, 'content')
+        and last_msg.content
+        and not hasattr(last_msg, 'tool_calls')
+    ):
+        logger.info('✅ Resposta final detectada')
+        return await _update_progress(
+            context, '✅ Preparando resposta final...', 'finalizing'
+        )
+
+    return context.current_step
+
+
+async def _process_stream_events(
+    llm, message_text: str, user_number: str, progress_context: ProgressContext
+) -> str | None:
+    """Processa eventos do stream usando astream_events para capturar tokens em tempo real."""
+    final_response = []
+    current_tool = None
+
+    logger.info('🔄 Iniciando stream de eventos do agente...')
+
+    # Usa astream_events com version="v2" para capturar eventos detalhados
+    async for event in llm.astream_events(
+        {'messages': [HumanMessage(content=message_text)]},
+        config={'configurable': {'thread_id': user_number}},
+        version="v2",
+    ):
+        kind = event["event"]
+        
+        # Captura início de chamada de ferramenta
+        if kind == "on_tool_start":
+            tool_name = event.get("name", "unknown")
+            current_tool = tool_name
+            logger.info(f'🔧 Ferramenta iniciada: {tool_name}')
+            progress_context.current_step = await _update_progress(
+                progress_context,
+                f'🔧 Usando: {tool_name}',
+                'tools'
+            )
+        
+        # Captura resultado de ferramenta
+        elif kind == "on_tool_end":
+            tool_name = event.get("name", current_tool or "unknown")
+            logger.info(f'⚙️ Ferramenta finalizada: {tool_name}')
+            progress_context.current_step = await _update_progress(
+                progress_context,
+                '⚙️ Processando resultados...',
+                'processing'
+            )
+            current_tool = None
+        
+        # Captura tokens do modelo em tempo real
+        elif kind == "on_chat_model_stream":
+            chunk = event.get("data", {}).get("chunk")
+            if chunk and hasattr(chunk, 'content'):
+                content = chunk.content
+                if isinstance(content, str) and content:
+                    # Acumula resposta final
+                    final_response.append(content)
+                    
+                    # Detecta pensamento (Thought:) em tempo real
+                    full_text = ''.join(final_response)
+                    if 'Thought:' in full_text and 'Final Answer:' not in full_text:
+                        # Extrai preview do pensamento
+                        thinking_part = full_text.split('Final Answer')[0]
+                        preview = thinking_part.replace('Thought:', '').strip()
+                        if len(preview) > 20:
+                            preview_text = preview[-150:] if len(preview) > 150 else preview
+                            logger.debug(f'💭 Pensando: {preview_text}')
+                            
+                            # Atualiza WhatsApp ocasionalmente (não a cada token)
+                            if len(final_response) % 10 == 0:  # A cada 10 tokens
+                                progress_context.current_step = await _update_progress(
+                                    progress_context,
+                                    f'💭 Pensando: {preview_text[:100]}...',
+                                    'thinking'
+                                )
+                    
+                    # Detecta início da resposta final
+                    elif 'Final Answer:' in full_text and progress_context.current_step != 'finalizing':
+                        logger.info('✅ Resposta final iniciada')
+                        progress_context.current_step = await _update_progress(
+                            progress_context,
+                            '✅ Formulando resposta...',
+                            'finalizing'
+                        )
+        
+        # Captura conclusão do modelo
+        elif kind == "on_chat_model_end":
+            output = event.get("data", {}).get("output")
+            if output and hasattr(output, 'content'):
+                logger.info('✅ Modelo finalizou geração')
+                progress_context.current_step = await _update_progress(
+                    progress_context,
+                    '✅ Finalizando...',
+                    'done'
+                )
+
+    # Processa resposta final acumulada
+    full_response = ''.join(final_response)
+    
+    if full_response:
+        # Extrai apenas o Final Answer se houver
+        if 'Final Answer:' in full_response:
+            final_text = full_response.split('Final Answer:')[-1].strip()
+        # Remove marcadores de pensamento
+        elif 'Thought:' in full_response:
+            parts = full_response.split('Thought:')
+            final_text = parts[-1].strip()
+        else:
+            final_text = full_response.strip()
+        
+        logger.info(f'🏁 Stream finalizado. Resposta capturada: {len(final_text)} caracteres')
+        return final_text if len(final_text) > 10 else None
+    
+    logger.warning('🏁 Stream finalizado. Nenhuma resposta capturada')
+    return None
 
 
 async def process_message_with_agent(
@@ -27,29 +217,86 @@ async def process_message_with_agent(
     :param whatsapp_service: Instância do serviço WhatsApp
     :return: Dicionário com status e detalhes da operação
     """
+    progress_message_id = None
+
     try:
         logger.info(f'🤖 Mensagem recebida para o agente: "{message_text}"')
+
+        # Envia mensagem de confirmação inicial
+        progress_message_id = await whatsapp_service.send_message(
+            user_number, '🤖 Mensagem recebida! Processando...'
+        )
+        logger.debug(
+            f'📤 Mensagem de progresso enviada: {progress_message_id}'
+        )
 
         # Cria o agente IA
         llm = await create_agent_runnable()
 
-        # Processa a mensagem
-        resposta = await llm.ainvoke(
-            {'messages': [HumanMessage(content=message_text)]},
-            config={'configurable': {'thread_id': user_number}},
+        # Atualiza status para "pensando"
+        if progress_message_id:
+            await whatsapp_service.edit_message(
+                progress_message_id,
+                '🧠 Analisando sua solicitação...',
+                user_number,
+            )
+
+        # Variáveis para rastrear o progresso
+        current_step = None
+
+        # Cria contexto de progresso
+        progress_context = ProgressContext(
+            whatsapp_service=whatsapp_service,
+            message_id=progress_message_id,
+            user_number=user_number,
+            current_step=current_step,
         )
 
-        final_response = resposta['messages'][-1].content
+        # Processa o stream e captura a resposta final
+        final_response = await _process_stream_events(
+            llm, message_text, user_number, progress_context
+        )
+
+        # Valida se capturamos a resposta final
+        if not final_response:
+            logger.warning(
+                '⚠️ Resposta final não capturada do stream,'
+                ' fazendo fallback para ainvoke'
+            )
+            resposta = await llm.ainvoke(
+                {'messages': [HumanMessage(content=message_text)]},
+                config={'configurable': {'thread_id': user_number}},
+            )
+            final_response = resposta['messages'][-1].content
+
         logger.info(f'🤖 Resposta do agente: "{final_response}"')
 
-        # Envia a resposta via WhatsApp
-        await whatsapp_service.send_message(user_number, final_response)
+        # Substitui a mensagem de progresso pela resposta final
+        if progress_message_id:
+            await whatsapp_service.edit_message(
+                progress_message_id, final_response, user_number
+            )
+        else:
+            # Fallback: envia como nova mensagem
+            await whatsapp_service.send_message(user_number, final_response)
 
         return {'status': 'ok', 'detail': 'processed_by_agent'}
 
     except Exception as e:
         logger.error(f'❌ Erro ao processar mensagem com agente: {e}')
         logger.exception('Detalhes do erro:')
+
+        # Atualiza mensagem de progresso com erro
+        if progress_message_id:
+            try:
+                await whatsapp_service.edit_message(
+                    progress_message_id,
+                    f'❌ Erro ao processar: {str(e)}',
+                    user_number,
+                )
+            except Exception:
+                pass
+
         return {'status': 'error', 'detail': str(e)}
 
 
