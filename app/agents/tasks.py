@@ -418,9 +418,7 @@ async def trigger_whatsapp_status_agent(
         if result['status'] == 'ok':
             logger.success('✅ Status do WhatsApp postado com sucesso')
         else:
-            logger.error(
-                f'❌ Falha no Status do WhatsApp: {result["detail"]}'
-            )
+            logger.error(f'❌ Falha no Status do WhatsApp: {result["detail"]}')
 
         return result
 

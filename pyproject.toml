@@ -3,36 +3,36 @@ name = "klique-api"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12.4"
+requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]>=0.116.1",
+    "apscheduler>=3.11.0",
+    "fastapi[standard]>=0.120.0",
     "firebase-admin>=7.1.0",
-    "google-auth>=2.40.3",
-    "google-genai>=1.33.0",
+    "google-auth>=2.41.1",
+    "google-genai>=1.46.0",
+    "httpx>=0.28.1",
+    "langchain>=1.0.2",
+    "langchain-google-genai>=3.0.0",
+    "langchain-mcp-adapters>=0.1.11",
+    "langchain-openai>=1.0.1",
+    "langgraph>=1.0.1",
+    "loguru>=0.7.3",
     "motor>=3.7.1",
-    "pillow>=11.3.0",
-    "pwdlib[argon2]>=0.2.1",
+    "pillow>=12.0.0",
+    "pwdlib[argon2]>=0.3.0",
     "pyjwt>=2.10.1",
-    "python-dotenv>=1.1.1",
+    "pymongo>=4.15.3",
+    "python-dotenv>=1.2.0",
     "python-jose>=3.5.0",
     "requests>=2.32.5",
-    "httpx>=0.28.1",
-    "rich>=14.1.0",
-    "pymongo>=4.14.1",
-    "langchain-openai>=0.3.33",
-    "langchain>=0.3.27",
-    "langgraph>=0.6.7",
-    "langchain-mcp-adapters>=0.1.11",
-    "langchain-google-genai>=2.1.12",
-    "apscheduler>=3.11.0",
+    "rich>=14.2.0",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.12.11",
-    "browser-cookie3>=0.20.1",
-    "pytest>=8.4.1",
-    "pytest-asyncio>=1.1.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "ruff>=0.14.2",
     "taskipy>=1.14.1",
 ]
 
@@ -63,8 +63,8 @@ lint = 'ruff check . && ruff check . --diff'
 pre_format = 'uv sync --dev'
 format = 'ruff check . --fix && ruff format .'
 pre_run = 'task format'
-run = 'fastapi dev main.py --host 0.0.0.0'
-prod = 'uvicorn --host 0.0.0.0 main:app'
+run = 'fastapi dev app/main.py --host 0.0.0.0'
+prod = 'uvicorn --host 0.0.0.0 app/main:app'
 pre_test = 'task format'
 start = 'sudo supervisorctl stop fastapi & task run'
 back = 'sudo supervisorctl start fastapi'

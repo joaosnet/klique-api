@@ -494,7 +494,7 @@ class WhatsAppService:  # noqa: PLR0904
         try:
             # A API go-whatsapp exige 'message' e 'phone' no body
             data = {'message': new_text}
-            
+
             # Adiciona phone se fornecido
             if phone_number:
                 data['phone'] = phone_number

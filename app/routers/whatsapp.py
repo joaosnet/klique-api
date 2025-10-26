@@ -120,6 +120,7 @@ async def _is_message_already_processed(
 @dataclass
 class MessageProcessingData:
     """Dados para marcar mensagem como processada."""
+
     message_id: str
     user_number: str
     message_text: str
@@ -557,17 +558,14 @@ def _validate_message_access(data: dict, user_number: str) -> dict | None:
     """Valida acesso à mensagem e retorna resposta de erro se inválido."""
     # Permite apenas o número do João Neto conversar com a IA
     if user_number != '559184497318':
-        logger.info(
-            f'🔒 Usuário {user_number} bloqueado para chat com IA.'
-        )
+        logger.info(f'🔒 Usuário {user_number} bloqueado para chat com IA.')
         return {'status': 'ok', 'detail': 'restricted_access'}
 
     # Permite apenas mensagens no chat consigo mesmo
     chat_id = data.get('chat_id')
     if chat_id != '559184497318':
         logger.info(
-            f'🔒 Mensagem não é do chat consigo mesmo '
-            f'(chat_id: {chat_id}).'
+            f'🔒 Mensagem não é do chat consigo mesmo (chat_id: {chat_id}).'
         )
         return {'status': 'ok', 'detail': 'not_self_chat'}
 
@@ -658,9 +656,7 @@ async def _process_message_request(
                 'message_id': message_id,
                 'user_number': user_number,
             })
-            current_attempts = (
-                existing.get('attempts', 0) if existing else 0
-            )
+            current_attempts = existing.get('attempts', 0) if existing else 0
 
             await _mark_message_as_processed(
                 deps.db,

@@ -27,8 +27,8 @@ async def trigger_daily_summary():
     try:
         await _send_daily_sigaa_summary()
         return {
-            "status": "success",
-            "message": "Tarefa de resumo diário executada"
+            'status': 'success',
+            'message': 'Tarefa de resumo diário executada',
         }
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {'status': 'error', 'message': str(e)}
