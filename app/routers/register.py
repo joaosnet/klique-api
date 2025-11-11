@@ -42,7 +42,7 @@ async def register(
     db_profiles=Depends(get_profiles_collection),
 ):
     # Verificar se o e-mail já existe
-    existing_user = db_users.find_one({'email': user_data.email})
+    existing_user = await db_users.find_one({'email': user_data.email})
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -63,7 +63,9 @@ async def register(
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
-    new_profile = db_profiles.insert_one(profile.model_dump(exclude={'id'}))
+    new_profile = await db_profiles.insert_one(
+        profile.model_dump(exclude={'id'})
+    )
 
     # Criar usuário
     hashed_password = get_password_hash(user_data.password)
@@ -81,8 +83,8 @@ async def register(
         'updated_at': datetime.now(timezone.utc),
     }
 
-    result = db_users.insert_one(new_user_data)
-    created_user = db_users.find_one({'_id': result.inserted_id})
+    result = await db_users.insert_one(new_user_data)
+    created_user = await db_users.find_one({'_id': result.inserted_id})
 
     # Enviar e-mail de confirmação (opcional, mas recomendado)
     await send_confirmation_code(
@@ -141,8 +143,8 @@ async def verify_email(
         'confirmation_code': confirmation_code,
     }
 
-    result = db_users.insert_one(user)
-    created_user = db_users.find_one({'_id': result.inserted_id})
+    result = await db_users.insert_one(user)
+    created_user = await db_users.find_one({'_id': result.inserted_id})
 
     # Preparar resposta sem confirmation_code
     if not created_user or '_id' not in created_user:
@@ -181,7 +183,7 @@ async def verify_email(
 async def confirm_code(
     request: confirmCodeRequest, db_users=Depends(get_users_collection)
 ):
-    user = db_users.find_one({'_id': ObjectId(request.id)})
+    user = await db_users.find_one({'_id': ObjectId(request.id)})
 
     if not user:
         raise HTTPException(
@@ -195,7 +197,7 @@ async def confirm_code(
             detail='Código de confirmação inválido',
         )
 
-    db_users.update_one(
+    await db_users.update_one(
         {'_id': ObjectId(request.id)}, {'$set': {'confirmed_code': True}}
     )
 
@@ -259,10 +261,10 @@ async def send_confirmation_code(
 
 @router.post('/checkAccount', tags=['auth'])
 async def check_account(email: str, db=Depends(get_users_collection)):
-    user = db.find_one({'email': email})
+    user = await db.find_one({'email': email})
     if user:
         if not user.get('password'):  # conta incompleta
-            db.delete_one({'email': email})
+            await db.delete_one({'email': email})
             return False
         return True
     return False

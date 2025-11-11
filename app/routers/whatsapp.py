@@ -4,7 +4,6 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from loguru import logger
-from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 
 from app.agents.tasks import process_message_with_agent
 
@@ -36,7 +35,7 @@ NO_SESSION_FALLBACK = (
 
 
 async def _is_message_already_processed(
-    db: AsyncIOMotorDatabase, message_id: str, user_number: str
+    db, message_id: str, user_number: str
 ) -> tuple[bool, bool]:
     """Verifica se uma mensagem já foi processada anteriormente.
 
@@ -129,7 +128,7 @@ class MessageProcessingData:
 
 
 async def _mark_message_as_processed(
-    db: AsyncIOMotorDatabase, data: MessageProcessingData
+    db, data: MessageProcessingData
 ) -> None:
     """Marca uma mensagem como processada no cache."""
     try:
@@ -168,7 +167,7 @@ async def _mark_message_as_processed(
         logger.error(f'❌ Erro ao marcar mensagem como processada: {e}')
 
 
-async def _cleanup_old_processed_messages(db: AsyncIOMotorDatabase) -> None:
+async def _cleanup_old_processed_messages(db) -> None:
     """Remove mensagens processadas com mais de 24 horas."""
     try:
         collection = db.get_collection('processed_messages')
@@ -190,7 +189,7 @@ async def _cleanup_old_processed_messages(db: AsyncIOMotorDatabase) -> None:
         logger.error(f'❌ Erro ao limpar mensagens antigas: {e}')
 
 
-async def _check_rate_limit(db: AsyncIOMotorDatabase) -> bool:
+async def _check_rate_limit(db) -> bool:
     """Verifica rate limit para geração de status (1 por minuto)."""
     try:
         collection = db.get_collection('status_generation_rate_limit')
@@ -228,7 +227,7 @@ async def _check_rate_limit(db: AsyncIOMotorDatabase) -> bool:
 
 
 async def _manage_recent_viewers(
-    db: AsyncIOMotorDatabase, viewer_name: str, user_number: str
+    db, viewer_name: str, user_number: str
 ) -> list[str]:
     """Gerencia lista de visualizadores recentes (últimos 2 minutos)."""
     try:
@@ -297,7 +296,7 @@ async def process_status_viewed_for_image_generation(
     data: dict,
     image_generation_service: Any,
     whatsapp_service: WhatsAppService,
-    db: AsyncIOMotorDatabase,
+    db,
 ) -> None:
     """Gera nova imagem quando alguém visualiza status."""
     try:
@@ -415,7 +414,7 @@ async def process_status_viewed_for_image_generation(
 
 
 async def process_status_view(
-    data: dict, status_views_collection: AsyncIOMotorCollection
+    data: dict, status_views_collection
 ) -> None:
     """Processa e salva visualização de status no banco."""
     try:
@@ -509,7 +508,7 @@ def _extract_media_paths(payload: dict) -> list[str]:
 
 
 async def _update_status_cache(
-    db: AsyncIOMotorDatabase,
+    db,
     image_bytes: bytes,
     prompt: str,
     status_id: str | None = None,

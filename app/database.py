@@ -1,23 +1,26 @@
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from pymongo import AsyncMongoClient
+from pymongo.server_api import ServerApi
 
 from app.config import DB_DATABASE, get_mongodb_url
 
 # Cliente e banco de dados para conexões
-_client: AsyncIOMotorClient = None
-_client_traducao: AsyncIOMotorClient = None
+_client: AsyncMongoClient = None
+_client_traducao: AsyncMongoClient = None
 
 
-def get_client() -> AsyncIOMotorClient:
+def get_client() -> AsyncMongoClient:
     global _client  # noqa: PLW0603
     if _client is None:
         mongo_url = get_mongodb_url()
-        _client = AsyncIOMotorClient(mongo_url)
+        _client = AsyncMongoClient(
+            mongo_url, server_api=ServerApi(version='1')
+        )
     return _client
 
 
 # Dependency injection para bancos de dados
-def get_db() -> AsyncIOMotorDatabase:
-    return get_client().get_database(DB_DATABASE)
+def get_db():
+    return get_client()[DB_DATABASE]
 
 
 def close_db_connection():

@@ -1,7 +1,6 @@
 """Dependências específicas para webhooks."""
 
 from fastapi import Depends, Request
-from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from .database import get_db
 from .services.gemini import GeminiService
@@ -16,7 +15,7 @@ class WebhookDependencies:
         self,
         image_generation_service: GeminiService,
         whatsapp_service: WhatsAppService,
-        db: AsyncIOMotorDatabase,
+        db,
     ):
         self.image_generation_service = image_generation_service
         self.whatsapp_service = whatsapp_service
@@ -25,7 +24,7 @@ class WebhookDependencies:
 
 def get_webhook_dependencies(
     request: Request,
-    db: AsyncIOMotorDatabase = Depends(get_db),
+    db=Depends(get_db),
 ) -> WebhookDependencies:
     """Função de dependência para o webhook."""
     # Usa o serviço de geração de imagem do 'app.state' se estiver definido

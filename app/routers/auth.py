@@ -60,7 +60,7 @@ async def google_login(
                 detail='Email not found in Google token',
             )
 
-        user = db_users.find_one({'email': email})
+        user = await db_users.find_one({'email': email})
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -173,7 +173,7 @@ async def change_password(
         password = request['password']
         new_password = request['new_password']
         # Verificar se o usuário existe
-        user = db_users.find_one({'email': email})
+        user = await db_users.find_one({'email': email})
 
         if not user:
             raise HTTPException(
@@ -197,7 +197,7 @@ async def change_password(
 
         # Atualizar senha
         hashed_password = get_password_hash(new_password)
-        db_users.update_one(
+        await db_users.update_one(
             {'email': email}, {'$set': {'password': hashed_password}}
         )
 
@@ -251,7 +251,7 @@ async def change_email(
 
     try:
         # Verificar se o usuário existe
-        user = db_users.find_one({'email': email})
+        user = await db_users.find_one({'email': email})
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -269,13 +269,13 @@ async def change_email(
         confirmation_code = str(random.randint(1000, 9999))
 
         # Remover confirmações anteriores
-        df_mail_confirmation.delete_many({
+        await df_mail_confirmation.delete_many({
             'user_id': str(user['_id']),
             'request_type': 'change_email',
         })
 
         # Criar nova confirmação
-        df_mail_confirmation.insert_one({
+        await df_mail_confirmation.insert_one({
             'user_id': str(user['_id']),
             'request_type': 'change_email',
             'confirmation_code': confirmation_code,
@@ -359,7 +359,7 @@ async def confirm_change_email(
     confirmation_code = request.confirmation_code
     try:
         # Buscar usuário
-        user = db_users.find_one({'email': email})
+        user = await db_users.find_one({'email': email})
         if not user:
             raise HTTPException(
                 status_code=404,
@@ -367,7 +367,7 @@ async def confirm_change_email(
             )
 
         # Buscar confirmação de email
-        mail_confirm = df_mail_confirmation.find_one({
+        mail_confirm = await df_mail_confirmation.find_one({
             'user_id': str(user['_id']),
             'request_type': 'change_email',
         })
@@ -392,12 +392,12 @@ async def confirm_change_email(
             )
 
         # Atualizar email do usuário
-        db_users.update_one(
+        await db_users.update_one(
             {'_id': user['_id']}, {'$set': {'email': new_email}}
         )
 
         # Remover confirmação
-        df_mail_confirmation.delete_one({
+        await df_mail_confirmation.delete_one({
             'user_id': str(user['_id']),
             'request_type': 'change_email',
         })
@@ -429,7 +429,7 @@ async def search_by_email(
         request = request.model_dump(by_alias=True, exclude_unset=True)
         email = request['email']
         # Procurar por email no banco de dados
-        user = db_users.find_one({'email': email})
+        user = await db_users.find_one({'email': email})
 
         if user:
             raise HTTPException(
