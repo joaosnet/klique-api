@@ -80,18 +80,18 @@ class AgentCache:
         # Configuração do cliente MCP para todos os servidores conectados
         # via Docker
         client = MultiServerMCPClient({
-            'MCP_GATEWAY': {
-                'url': 'http://host.docker.internal:8020',
-                'transport': 'sse',
-            },
-            'sigaa-ufpa': {
-                'transport': 'streamable_http',
-                'url': 'http://host.docker.internal:8003/mcp',
-            },
-            'geminiwebapi': {
-                'transport': 'sse',
-                'url': 'http://host.docker.internal:8002/sse',
-            },
+            # 'MCP_GATEWAY': {
+            #     'url': 'http://host.docker.internal:8020',
+            #     'transport': 'sse',
+            # },
+            # 'sigaa-ufpa': {
+            #     'transport': 'streamable_http',
+            #     'url': 'http://host.docker.internal:8003/mcp',
+            # },
+            # 'geminiwebapi': {
+            #     'transport': 'sse',
+            #     'url': 'http://host.docker.internal:8002/sse',
+            # },
         })
 
         # Carregar ferramentas de todos os servidores conectados
