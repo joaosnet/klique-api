@@ -80,10 +80,13 @@ class AgentCache:
         # Configuração do cliente MCP para todos os servidores conectados
         # via Docker
         client = MultiServerMCPClient({
-            # 'MCP_GATEWAY': {
-            #     'url': 'http://host.docker.internal:8020',
-            #     'transport': 'sse',
-            # },
+            'MCP_GATEWAY': {
+                'url': 'http://host.docker.internal:8020',
+                'transport': 'sse',
+                'headers': {
+                    'Authorization': 'Bearer x36r9h2bink1cke4cqq7a1c209xywe5w67e617glzordfijxok'
+                },
+            },
             # 'sigaa-ufpa': {
             #     'transport': 'streamable_http',
             #     'url': 'http://host.docker.internal:8003/mcp',
