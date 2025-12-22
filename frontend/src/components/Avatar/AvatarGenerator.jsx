@@ -88,8 +88,9 @@ export default function AvatarGenerator() {
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
 
-            // Flip horizontal for natural preview if needed, 
-            // but for Christmas avatar usually we want what the camera sees.
+            // Espelhar horizontalmente para corresponder à visualização da câmera (UX mais natural)
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob((blob) => {

@@ -164,7 +164,7 @@ export const christmasAPI = {
                 if (line.startsWith('event: ')) {
                     eventType = line.slice(7).trim();
                 } else if (line.startsWith('data: ')) {
-                    eventData += line.slice(6).trim(); // Acumular data caso seja dividido
+                    eventData += line.slice(6); // Acumular data caso seja dividido
                 } else if (line === '' && eventType) {
                     try {
                         if (eventData) {
