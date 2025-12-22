@@ -31,10 +31,12 @@ services:
     volumes:
       - mongodb_data:/data/db
     restart: always
+    env_file:
+      - .env
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: klique  # Nome do banco padrão
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}  # Nome do banco padrão
     networks:
       - whatsapp-network
     healthcheck:
@@ -54,18 +56,20 @@ services:
         condition: service_healthy
     networks:
       - whatsapp-network
+    env_file:
+      - .env
     environment:
-      TZ: America/Sao_Paulo
-      SECRET_KEY: a8b28eaaa2aa5cd246d7318435738f5c914feb474051c72b7d54429ff51194fc
-      GOOGLE_API_KEY: AIzaSyBgtTWw5XS1X6JdE-sddspxqCeM4nWl7iw
-      GOOGLE_APPLICATION_CREDENTIALS: "creds.json"
-      GOOGLE_DRIVE_ROOT_FOLDER_ID: "1e6T4wsPmPjuP-8qzWUkD2RAmZeGXT8IR"
-      DB_CONNECTION: mongodb
-      DB_HOST: mongodb_kliqueq
-      DB_PORT: 27017
-      DB_DATABASE: klique
-      DB_USERNAME: root
-      DB_PASSWORD: password
+      TZ: ${TZ}
+      SECRET_KEY: ${SECRET_KEY}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      GOOGLE_DRIVE_ROOT_FOLDER_ID: ${GOOGLE_DRIVE_ROOT_FOLDER_ID}
+      DB_CONNECTION: ${DB_CONNECTION}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
       GMAIL_EMAIL: ${GMAIL_EMAIL}
       GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD} # Senha de app do Gmail
       OPENAI_API_KEY: ${OPENAI_API_KEY}
