@@ -4,6 +4,7 @@ Serviço de integração com Mercado Pago para pagamentos PIX.
 
 import hashlib
 import hmac
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -78,12 +79,17 @@ class MercadoPagoService:
             'external_reference': user_id,
         }
 
+        # Gerar chave de idempotência
+        idempotency_key = str(uuid.uuid4())
+        headers = self.headers.copy()
+        headers['X-Idempotency-Key'] = idempotency_key
+
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f'{MP_API_BASE}/v1/payments',
                     json=payload,
-                    headers=self.headers,
+                    headers=headers,
                     timeout=30.0,
                 )
 
