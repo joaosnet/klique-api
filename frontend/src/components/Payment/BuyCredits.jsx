@@ -4,22 +4,53 @@ import { paymentsAPI } from '../../services/api';
 import './BuyCredits.css';
 
 export default function BuyCredits() {
-    const [amount, setAmount] = useState(5);
+    const [unitPrice, setUnitPrice] = useState(1.00);
+    const [quantity, setQuantity] = useState(5);
     const [loading, setLoading] = useState(false);
     const [payment, setPayment] = useState(null);
     const [error, setError] = useState('');
     const [checkingPayment, setCheckingPayment] = useState(false);
+    const [limits, setLimits] = useState({
+        minPrice: 0.50,
+        minQuantity: 1
+    });
 
     const { credits, refreshCredits } = useAuth();
 
-    const creditsToReceive = Math.floor(amount);
-    const MIN_AMOUNT = 1;
-    const MAX_AMOUNT = 100;
+    const MIN_PRICE = limits.minPrice;
+    const MIN_QUANTITY = limits.minQuantity;
 
-    const handleAmountChange = (e) => {
+    const totalAmount = unitPrice * quantity;
+
+    useEffect(() => {
+        const fetchConfig = async () => {
+            try {
+                const config = await paymentsAPI.getPaymentConfig();
+                setLimits({
+                    minPrice: config.min_price_per_credit,
+                    minQuantity: config.min_quantity
+                });
+                // Atualizar valores iniciais se necessário
+                if (unitPrice < config.min_price_per_credit) setUnitPrice(config.min_price_per_credit);
+                if (quantity < config.min_quantity) setQuantity(config.min_quantity);
+            } catch (err) {
+                console.error('Erro ao carregar configurações de pagamento:', err);
+            }
+        };
+        fetchConfig();
+    }, []);
+
+    const handleUnitPriceChange = (e) => {
         const value = parseFloat(e.target.value);
-        if (value >= MIN_AMOUNT && value <= MAX_AMOUNT) {
-            setAmount(value);
+        if (value >= MIN_PRICE) {
+            setUnitPrice(value);
+        }
+    };
+
+    const handleQuantityChange = (e) => {
+        const value = parseInt(e.target.value);
+        if (value >= MIN_QUANTITY) {
+            setQuantity(value);
         }
     };
 
@@ -28,7 +59,7 @@ export default function BuyCredits() {
         setLoading(true);
 
         try {
-            const result = await paymentsAPI.createPixPayment(amount);
+            const result = await paymentsAPI.createPixPayment(totalAmount, quantity);
             setPayment(result);
         } catch (err) {
             setError(
@@ -82,7 +113,7 @@ export default function BuyCredits() {
                 <div className="card-header">
                     <span className="card-icon">🎫</span>
                     <h2>Comprar Créditos</h2>
-                    <p>Cada crédito gera 1 avatar natalino</p>
+                    <p>Defina o valor e a quantidade de créditos</p>
                 </div>
 
                 <div className="current-balance">
@@ -99,42 +130,53 @@ export default function BuyCredits() {
                 {!payment ? (
                     <>
                         <div className="amount-selector">
-                            <label>Quanto você quer pagar?</label>
 
-                            <div className="amount-input-wrapper">
-                                <span className="currency">R$</span>
-                                <input
-                                    type="number"
-                                    value={amount}
-                                    onChange={handleAmountChange}
-                                    min={MIN_AMOUNT}
-                                    max={MAX_AMOUNT}
-                                    step="1"
-                                    disabled={loading}
-                                />
+                            <div className="input-group">
+                                <label>Quanto você quer pagar por crédito?</label>
+                                <div className="amount-input-wrapper">
+                                    <span className="currency">R$</span>
+                                    <input
+                                        type="number"
+                                        value={unitPrice}
+                                        onChange={(e) => setUnitPrice(e.target.value)}
+                                        onBlur={handleUnitPriceChange}
+                                        min={MIN_PRICE}
+                                        step="0.01"
+                                        disabled={loading}
+                                    />
+                                    <span className="unit-label">/crédito</span>
+                                </div>
+                                <small>Mínimo R$ {MIN_PRICE.toFixed(2)}</small>
                             </div>
 
-                            <input
-                                type="range"
-                                value={amount}
-                                onChange={handleAmountChange}
-                                min={MIN_AMOUNT}
-                                max={MAX_AMOUNT}
-                                step="1"
-                                className="amount-slider"
-                                disabled={loading}
-                            />
+                            <div className="input-group" style={{ marginTop: '20px' }}>
+                                <label>Quantos créditos você quer?</label>
+                                <div className="amount-input-wrapper">
+                                    <span className="currency">#</span>
+                                    <input
+                                        type="number"
+                                        value={quantity}
+                                        onChange={(e) => setQuantity(e.target.value)}
+                                        onBlur={handleQuantityChange}
+                                        min={MIN_QUANTITY}
+                                        step="1"
+                                        disabled={loading}
+                                    />
+                                </div>
+                            </div>
 
-                            <div className="amount-labels">
-                                <span>R$ {MIN_AMOUNT}</span>
-                                <span>R$ {MAX_AMOUNT}</span>
+                            <div className="total-preview" style={{ marginTop: '30px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px' }}>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Total a pagar</div>
+                                <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--christmas-green)' }}>
+                                    R$ {totalAmount.toFixed(2)}
+                                </div>
                             </div>
                         </div>
 
                         <div className="credits-preview">
                             <span className="preview-icon">✨</span>
                             <span className="preview-text">
-                                Você receberá <strong>{creditsToReceive} créditos</strong>
+                                Você receberá <strong>{quantity} créditos</strong>
                             </span>
                         </div>
 

@@ -45,13 +45,11 @@ export default function AvatarGenerator() {
     }, []);
 
     const startCamera = async () => {
-        console.log('Starting camera...');
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
             });
 
-            console.log('Stream obtained:', stream);
             setCameraStream(stream);
             setCameraActive(true);
             setError('');
@@ -59,10 +57,7 @@ export default function AvatarGenerator() {
             // Delay to ensure the video element is rendered
             setTimeout(() => {
                 if (videoRef.current) {
-                    console.log('Attaching stream to video element');
                     videoRef.current.srcObject = stream;
-                } else {
-                    console.error('videoRef.current is null!');
                 }
             }, 500);
 
@@ -158,9 +153,11 @@ export default function AvatarGenerator() {
                 }
             }
         } catch (err) {
-            if (err.message.includes('Faça login')) {
+            console.error('Erro na geração:', err);
+            if (err.status === 401 || err.message.includes('Faça login')) {
                 navigate('/login', { state: { message: err.message } });
-            } else if (err.message.includes('Créditos insuficientes')) {
+            } else if (err.status === 402 || err.message.includes('Créditos insuficientes')) {
+                // Redireciona para página de créditos se faltar saldo
                 navigate('/credits');
             } else {
                 setError(err.message || 'Erro ao gerar avatar');
@@ -201,107 +198,120 @@ export default function AvatarGenerator() {
                     </div>
                 )}
 
-                <div className="generator-grid">
-                    {/* Upload Section */}
-                    <div className="upload-section">
-                        <div
-                            className={`upload-zone ${imagePreview ? 'has-image' : ''} ${cameraActive ? 'camera-active' : ''}`}
-                            onClick={() => !processing && !cameraActive && !imagePreview && fileInputRef.current?.click()}
-                        >
-                            {imagePreview ? (
-                                <img src={imagePreview} alt="Preview" className="image-preview" />
-                            ) : cameraActive ? (
-                                <div className="camera-preview-container">
-                                    <video
-                                        ref={videoRef}
-                                        autoPlay
-                                        playsInline
-                                        className="camera-video"
-                                    />
-                                    <canvas ref={canvasRef} style={{ display: 'none' }} />
-                                    <div className="camera-overlay">
-                                        <button
-                                            className="btn-capture"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleCapture();
-                                            }}
-                                        >
-                                            <span className="capture-icon">📸</span>
-                                            Tirar Foto
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="upload-placeholder">
-                                    <span className="upload-icon">📷</span>
-                                    <p>Clique para enviar sua foto</p>
-                                    <span className="upload-hint">ou arraste e solte aqui</span>
-                                </div>
-                            )}
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageSelect}
-                                hidden
-                                disabled={processing}
+                <div className="generator-stage">
+                    {result ? (
+                        // Result State (Comparator)
+                        <div className="result-container" style={{ position: 'relative', minHeight: '450px' }}>
+                            <ImageComparator
+                                beforeImage={imagePreview}
+                                afterImage={result}
                             />
-                        </div>
-
-                        <div className="upload-actions">
-                            {imagePreview && !processing && (
-                                <button onClick={handleReset} className="btn-secondary">
-                                    🔄 Tentar novamente
+                            <div className="floating-actions">
+                                <button onClick={handleDownload} className="btn-floating-download" title="Baixar Avatar">
+                                    <span>⬇️</span>
                                 </button>
-                            )}
-                            {!imagePreview && !cameraActive && !processing && (
-                                <button onClick={startCamera} className="btn-secondary">
-                                    📷 Usar Câmera
+                                <button onClick={handleReset} className="btn-floating-reset" title="Criar Outro">
+                                    <span>🔄</span>
                                 </button>
-                            )}
-                            {cameraActive && !processing && (
-                                <button onClick={() => fileInputRef.current?.click()} className="btn-secondary">
-                                    📁 Fazer Upload
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Result Section */}
-                    <div className="result-section">
-                        {processing ? (
-                            <div className="processing-state">
-                                <div className="processing-animation">
-                                    <span className="processing-icon">✨</span>
-                                </div>
-                                <p className="processing-message">{progress.message}</p>
-                                <div className="progress-bar">
-                                    <div
-                                        className="progress-fill"
-                                        style={{ width: `${progress.percent}%` }}
-                                    />
-                                </div>
                             </div>
-                        ) : result && imagePreview ? (
-                            <>
-                                <ImageComparator
-                                    beforeImage={imagePreview}
-                                    afterImage={result}
+                        </div>
+                    ) : (
+                        // Upload / Preview / Camera State
+                        <div className="upload-container">
+                            <div
+                                className={`upload-zone ${imagePreview ? 'has-image' : ''} ${cameraActive ? 'camera-active' : ''}`}
+                                onClick={() => !processing && !cameraActive && !imagePreview && fileInputRef.current?.click()}
+                            >
+                                {imagePreview ? (
+                                    <img src={imagePreview} alt="Preview" className="image-preview" />
+                                ) : cameraActive ? (
+                                    <div className="camera-preview-container">
+                                        <video
+                                            ref={videoRef}
+                                            autoPlay
+                                            playsInline
+                                            className="camera-video"
+                                        />
+                                        <canvas ref={canvasRef} style={{ display: 'none' }} />
+                                        <div className="camera-overlay" style={{ gap: '15px' }}>
+                                            <button
+                                                className="btn-capture secondary-action"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    fileInputRef.current?.click();
+                                                }}
+                                                title="Fazer Upload da Galeria"
+                                                style={{ width: '50px', height: '50px', padding: 0, justifyContent: 'center', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(5px)' }}
+                                            >
+                                                <span className="capture-icon" style={{ fontSize: '1.5rem' }}>📁</span>
+                                            </button>
+
+                                            <button
+                                                className="btn-capture"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCapture();
+                                                }}
+                                            >
+                                                <span className="capture-icon">📸</span>
+                                                Tirar Foto
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="upload-placeholder">
+                                        <span className="upload-icon">📷</span>
+                                        <p>Clique para enviar sua foto</p>
+                                        <span className="upload-hint">ou arraste e solte aqui</span>
+                                        <div style={{ marginTop: '20px' }}>
+                                            {!cameraActive && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); startCamera(); }}
+                                                    className="btn-secondary"
+                                                    style={{ background: 'var(--christmas-green)', color: 'white', border: 'none' }}
+                                                >
+                                                    📷 Usar Câmera
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageSelect}
+                                    hidden
+                                    disabled={processing}
                                 />
-                                <div className="result-actions">
-                                    <button onClick={handleDownload} className="btn-download">
-                                        ⬇️ Baixar Avatar
+                            </div>
+
+                            {/* Actions overlay for preview mode (Reset button) */}
+                            {imagePreview && !processing && !result && (
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10 }}>
+                                    <button onClick={(e) => { e.stopPropagation(); handleReset(); }} className="btn-secondary">
+                                        🔄 Trocar Foto
                                     </button>
                                 </div>
-                            </>
-                        ) : (
-                            <div className="result-placeholder">
-                                <span>🎅</span>
-                                <p>Seu avatar aparecerá aqui</p>
-                            </div>
-                        )}
-                    </div>
+                            )}
+
+                            {/* PROCESSING OVERLAY */}
+                            {processing && (
+                                <div className="processing-overlay">
+                                    <div className="processing-content">
+                                        <span className="processing-icon">✨</span>
+                                        <p className="processing-message">{progress.message || 'Preparando magia...'}</p>
+                                        <div className="progress-bar">
+                                            <div
+                                                className="progress-fill"
+                                                style={{ width: `${progress.percent}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Templates Section */}
@@ -327,7 +337,15 @@ export default function AvatarGenerator() {
                                 onClick={() => setSelectedTemplate(template.id)}
                                 disabled={processing}
                             >
-                                <span className="template-emoji">{template.emoji}</span>
+                                {template.preview_url ? (
+                                    <img
+                                        src={template.preview_url}
+                                        alt={template.name}
+                                        className="template-preview-image"
+                                    />
+                                ) : (
+                                    <span className="template-emoji">{template.emoji}</span>
+                                )}
                                 <span className="template-name">{template.name}</span>
                             </button>
                         ))}

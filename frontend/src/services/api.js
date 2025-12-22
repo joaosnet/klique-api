@@ -97,8 +97,13 @@ export const creditsAPI = {
 // ========================================
 
 export const paymentsAPI = {
-    createPixPayment: async (amount) => {
-        const response = await api.post('/api/payments/pix/create', { amount });
+    getPaymentConfig: async () => {
+        const response = await api.get('/api/payments/config');
+        return response.data;
+    },
+
+    createPixPayment: async (amount, creditsCount) => {
+        const response = await api.post('/api/payments/pix/create', { amount, credits_count: creditsCount });
         return response.data;
     },
 
@@ -133,8 +138,10 @@ export const christmasAPI = {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Erro ao gerar avatar');
+            const errorData = await response.json();
+            const error = new Error(errorData.detail || 'Erro ao gerar avatar');
+            error.status = response.status;
+            throw error;
         }
 
         // Processar SSE stream
@@ -142,6 +149,8 @@ export const christmasAPI = {
         const decoder = new TextDecoder();
         let eventType = '';
         let eventData = '';
+        let buffer = '';
+        let result = null;
 
         while (true) {
             const { value, done } = await reader.read();

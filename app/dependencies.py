@@ -65,7 +65,7 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = db_users.find_one({'email': username})
+    user = await db_users.find_one({'email': username})
     if user is None:
         raise credentials_exception
     return user
@@ -123,7 +123,7 @@ def invalidate_token(token: str):
 async def authenticate_user(
     db_users: Collection, username: str, password: str
 ):
-    user = db_users.find_one({'email': username})
+    user = await db_users.find_one({'email': username})
     if not user:
         return False
     if not verify_password(password, user['password']):

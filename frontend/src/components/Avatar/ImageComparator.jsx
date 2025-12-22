@@ -11,7 +11,8 @@ export default function ImageComparator({ beforeImage, afterImage }) {
 
         const rect = containerRef.current.getBoundingClientRect();
         let position = ((clientX - rect.left) / rect.width) * 100;
-        position = Math.max(0, Math.min(100, position));
+        // Clamp to 0.1 - 99.9 to avoid division by zero or glitches in CSS calc
+        position = Math.max(0.1, Math.min(99.9, position));
         setSliderPosition(position);
     }, []);
 
@@ -73,25 +74,30 @@ export default function ImageComparator({ beforeImage, afterImage }) {
             onClick={handleContainerClick}
         >
             <div className="comparator-wrapper">
-                {/* Before Image (full width, bottom layer) */}
-                <div className="comparator-before">
+                {/* Right Side (Background) - Should be AFTER (Result) */}
+                <div className="comparator-background">
                     <img
-                        src={beforeImage}
-                        alt="Antes"
+                        src={afterImage}
+                        alt="Depois"
                         className="comparator-image"
                     />
                 </div>
 
-                {/* After Image (clipped overlay) */}
+                {/* Left Side (Overlay) - Should be BEFORE (Original) */}
                 <div
                     className="comparator-overlay"
-                    style={{ width: `${sliderPosition}%` }}
+                    style={{
+                        width: `${sliderPosition}%`,
+                        '--slider-pos': sliderPosition
+                    }}
                 >
-                    <img
-                        src={afterImage}
-                        alt="Depois"
-                        className="comparator-image after"
-                    />
+                    <div className="comparator-crop-container">
+                        <img
+                            src={beforeImage}
+                            alt="Antes"
+                            className="comparator-image fixed-scale"
+                        />
+                    </div>
                 </div>
 
                 {/* Slider Handle */}

@@ -81,21 +81,24 @@ button {
   height: 60px;
   background: radial-gradient(circle at 30% 30%, var(--christmas-red-light), var(--christmas-red-dark));
   border-radius: 50%;
-  box-shadow: inset -5px -5px 15px rgba(0, 0, 0, 0.3), 0 5px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: inset -5px -5px 15px rgba(0, 0, 0, 0.4),
+    0 15px 25px rgba(0, 0, 0, 0.3),
+    0 0 15px var(--christmas-red-light);
+  transform-origin: top center;
 }
 
+/* String for the ornament */
 .ornament::before {
   content: '';
   position: absolute;
-  top: -10px;
+  top: -40px;
   left: 50%;
-  transform: translateX(-50%);
-  width: 12px;
-  height: 15px;
-  background: var(--christmas-gold);
-  border-radius: 3px 3px 0 0;
+  width: 2px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.4);
 }
 
+/* Shine effect */
 .ornament::after {
   content: '';
   position: absolute;
@@ -103,44 +106,51 @@ button {
   left: 20%;
   width: 30%;
   height: 20%;
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.6);
   border-radius: 50%;
   transform: rotate(-30deg);
+  filter: blur(2px);
 }
 
 .ornament-1 {
-  top: -5px;
+  top: 0;
   right: 15%;
-  animation: swing 3s ease-in-out infinite;
+  animation: swing 4s ease-in-out infinite;
 }
 
 .ornament-2 {
-  top: -10px;
+  top: 0;
   right: 5%;
   width: 40px;
   height: 48px;
-  background: radial-gradient(circle at 30% 30%, var(--christmas-gold-light), #b8860b);
-  animation: swing 3.5s ease-in-out infinite 0.5s;
+  background: radial-gradient(circle at 30% 30%, var(--christmas-gold-light), var(--christmas-gold-dark));
+  animation: swing 3.5s ease-in-out infinite 0.7s;
+  box-shadow: inset -5px -5px 15px rgba(0, 0, 0, 0.4),
+    0 15px 25px rgba(0, 0, 0, 0.3),
+    0 0 20px var(--christmas-gold-light);
 }
 
 .ornament-3 {
-  top: -5px;
+  top: 0;
   right: 25%;
   width: 35px;
   height: 42px;
   background: radial-gradient(circle at 30% 30%, #87ceeb, #4169e1);
-  animation: swing 4s ease-in-out infinite 1s;
+  animation: swing 4.5s ease-in-out infinite 1.2s;
+  box-shadow: inset -5px -5px 15px rgba(0, 0, 0, 0.4),
+    0 15px 25px rgba(0, 0, 0, 0.3),
+    0 0 15px #87ceeb;
 }
 
 @keyframes swing {
 
   0%,
   100% {
-    transform: rotate(-5deg);
+    transform: rotate(-8deg);
   }
 
   50% {
-    transform: rotate(5deg);
+    transform: rotate(8deg);
   }
 }
 
@@ -149,32 +159,87 @@ button {
   top: 0;
   left: 0;
   right: 0;
-  height: 30px;
-  background: repeating-linear-gradient(90deg,
-      transparent 0px,
-      transparent 40px,
-      var(--christmas-red) 40px,
-      var(--christmas-red) 50px,
-      transparent 50px,
-      transparent 90px,
-      var(--christmas-green-light) 90px,
-      var(--christmas-green-light) 100px,
-      transparent 100px,
-      transparent 140px,
-      var(--christmas-gold) 140px,
-      var(--christmas-gold) 150px);
-  animation: lights-blink 2s infinite;
+  height: 20px;
+  display: flex;
+  justify-content: space-around;
+  padding: 0 5%;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(2px);
 }
 
-@keyframes lights-blink {
+.light-bulb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+  position: relative;
+}
+
+.light-bulb::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 4px;
+  height: 6px;
+  background: #333;
+  transform: translateX(-50%);
+}
+
+.light-bulb.red {
+  background: var(--christmas-red);
+  animation: bulb-glow-red 1.5s infinite;
+}
+
+.light-bulb.green {
+  background: var(--christmas-green-light);
+  animation: bulb-glow-green 2s infinite 0.5s;
+}
+
+.light-bulb.gold {
+  background: var(--christmas-gold);
+  animation: bulb-glow-gold 1.8s infinite 1s;
+}
+
+@keyframes bulb-glow-red {
 
   0%,
   100% {
-    opacity: 1;
+    box-shadow: 0 0 5px var(--christmas-red);
+    opacity: 0.8;
   }
 
   50% {
-    opacity: 0.7;
+    box-shadow: 0 0 20px var(--christmas-red);
+    opacity: 1;
+  }
+}
+
+@keyframes bulb-glow-green {
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--christmas-green-light);
+    opacity: 0.8;
+  }
+
+  50% {
+    box-shadow: 0 0 20px var(--christmas-green-light);
+    opacity: 1;
+  }
+}
+
+@keyframes bulb-glow-gold {
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--christmas-gold);
+    opacity: 0.8;
+  }
+
+  50% {
+    box-shadow: 0 0 20px var(--christmas-gold);
+    opacity: 1;
   }
 }
 

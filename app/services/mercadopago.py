@@ -36,6 +36,7 @@ class MercadoPagoService:
         user_email: str,
         user_id: str,
         description: str = 'Créditos Klique Natal',
+        credits_count: Optional[int] = None,
     ) -> dict:
         """
         Cria uma cobrança PIX no Mercado Pago.
@@ -45,6 +46,7 @@ class MercadoPagoService:
             user_email: Email do usuário pagador
             user_id: ID do usuário no sistema
             description: Descrição do pagamento
+            credits_count: Quantidade de créditos a serem adicionados
 
         Returns:
             dict com dados do PIX (qr_code, copy_paste, etc)
@@ -53,11 +55,16 @@ class MercadoPagoService:
             logger.error('MP_ACCESS_TOKEN não configurado')
             return {'success': False, 'error': 'Mercado Pago não configurado'}
 
-        # Calcular créditos baseado no valor
-        credits_amount = int(amount * CREDITS_PER_REAL)
+        # Calcular créditos baseado no valor se não informado
+        if credits_count:
+            credits_amount = credits_count
+        else:
+            credits_amount = int(amount * CREDITS_PER_REAL)
 
         # Data de expiração: 24 horas
         expiration = datetime.now(timezone.utc) + timedelta(hours=24)
+        # Formatar data estrita para Mercado Pago: YYYY-MM-DDThh:mm:ss.000Z
+        expiration_iso = expiration.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
         payload = {
             'transaction_amount': amount,
@@ -66,7 +73,7 @@ class MercadoPagoService:
             'payer': {
                 'email': user_email,
             },
-            'date_of_expiration': expiration.isoformat(),
+            'date_of_expiration': expiration_iso,
             # Para identificar o usuário no webhook
             'external_reference': user_id,
         }

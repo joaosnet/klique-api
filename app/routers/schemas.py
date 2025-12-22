@@ -257,6 +257,9 @@ class CreatePixPaymentRequest(BaseModel):
     """Request para criar pagamento PIX."""
 
     amount: float = Field(..., ge=1.0, description='Valor mínimo R$ 1,00')
+    credits_count: Optional[int] = Field(
+        None, ge=1, description='Quantidade de créditos a comprar.'
+    )
 
 
 class CreatePixPaymentResponse(BaseModel):
@@ -280,6 +283,14 @@ class PaymentStatusResponse(BaseModel):
     amount: float
     credits_amount: int
     paid_at: Optional[datetime] = None
+
+
+class PaymentConfigResponse(BaseModel):
+    """Configurações de pagamento."""
+
+    min_payment_amount: float
+    min_price_per_credit: float
+    min_quantity: int
 
 
 class CreditHistoryItem(BaseModel):

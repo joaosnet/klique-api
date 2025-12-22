@@ -110,28 +110,88 @@ TEMPLATE_PROMPTS = {
 # Configuração de categorias e templates para o frontend
 TEMPLATES_CONFIG = {
     'populares': [
-        {'id': 'papai-noel', 'name': 'Papai Noel', 'emoji': '🎅'},
-        {'id': 'duende', 'name': 'Duende', 'emoji': '🧝'},
-        {'id': 'cena-natal', 'name': 'Cena de Natal', 'emoji': '🎄'},
-        {'id': 'gorro-neve', 'name': 'Gorro de Neve', 'emoji': '⛄'},
+        {
+            'id': 'papai-noel',
+            'name': 'Papai Noel',
+            'emoji': '🎅',
+            'preview_url': None,
+        },
+        {'id': 'duende', 'name': 'Duende', 'emoji': '🧝', 'preview_url': None},
+        {
+            'id': 'cena-natal',
+            'name': 'Cena de Natal',
+            'emoji': '🎄',
+            'preview_url': None,
+        },
+        {
+            'id': 'gorro-neve',
+            'name': 'Gorro de Neve',
+            'emoji': '⛄',
+            'preview_url': None,
+        },
     ],
     'classico': [
-        {'id': 'anjo', 'name': 'Anjo', 'emoji': '👼'},
-        {'id': 'rena', 'name': 'Rena', 'emoji': '🦌'},
-        {'id': 'boneco-neve', 'name': 'Boneco de Neve', 'emoji': '☃️'},
-        {'id': 'presente', 'name': 'Presente', 'emoji': '🎁'},
+        {'id': 'anjo', 'name': 'Anjo', 'emoji': '👼', 'preview_url': None},
+        {'id': 'rena', 'name': 'Rena', 'emoji': '🦌', 'preview_url': None},
+        {
+            'id': 'boneco-neve',
+            'name': 'Boneco de Neve',
+            'emoji': '☃️',
+            'preview_url': None,
+        },
+        {
+            'id': 'presente',
+            'name': 'Presente',
+            'emoji': '🎁',
+            'preview_url': None,
+        },
     ],
     'divertido': [
-        {'id': 'grinch', 'name': 'Grinch', 'emoji': '💚'},
-        {'id': 'pinguim', 'name': 'Pinguim', 'emoji': '🐧'},
-        {'id': 'urso-polar', 'name': 'Urso Polar', 'emoji': '🐻‍❄️'},
-        {'id': 'biscoito', 'name': 'Biscoito', 'emoji': '🍪'},
+        {'id': 'grinch', 'name': 'Grinch', 'emoji': '💚', 'preview_url': None},
+        {
+            'id': 'pinguim',
+            'name': 'Pinguim',
+            'emoji': '🐧',
+            'preview_url': None,
+        },
+        {
+            'id': 'urso-polar',
+            'name': 'Urso Polar',
+            'emoji': '🐻‍❄️',
+            'preview_url': None,
+        },
+        {
+            'id': 'biscoito',
+            'name': 'Biscoito',
+            'emoji': '🍪',
+            'preview_url': None,
+        },
     ],
     'papai-noel': [
-        {'id': 'papai-noel-classico', 'name': 'Clássico', 'emoji': '🎅'},
-        {'id': 'papai-noel-moderno', 'name': 'Moderno', 'emoji': '🎅'},
-        {'id': 'papai-noel-tropical', 'name': 'Tropical', 'emoji': '🌴'},
-        {'id': 'papai-noel-festa', 'name': 'Festa', 'emoji': '🎉'},
+        {
+            'id': 'papai-noel-classico',
+            'name': 'Clássico',
+            'emoji': '🎅',
+            'preview_url': None,
+        },
+        {
+            'id': 'papai-noel-moderno',
+            'name': 'Moderno',
+            'emoji': '🎅',
+            'preview_url': None,
+        },
+        {
+            'id': 'papai-noel-tropical',
+            'name': 'Tropical',
+            'emoji': '🌴',
+            'preview_url': None,
+        },
+        {
+            'id': 'papai-noel-festa',
+            'name': 'Festa',
+            'emoji': '🎉',
+            'preview_url': None,
+        },
     ],
 }
 

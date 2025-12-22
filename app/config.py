@@ -81,3 +81,7 @@ CREDITS_PER_REAL = int(
 FREE_CREDITS_PER_USER = int(
     os.getenv('FREE_CREDITS_PER_USER', '1')
 )  # 1 grátis
+
+# Novos limites configuráveis
+MIN_PRICE_PER_CREDIT = float(os.getenv('MIN_PRICE_PER_CREDIT', '1'))
+MIN_CREDITS_QUANTITY = int(os.getenv('MIN_CREDITS_QUANTITY', '3'))

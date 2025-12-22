@@ -6,7 +6,18 @@ export default function ChristmasDecorations() {
                 <div className="ornament ornament-1"></div>
                 <div className="ornament ornament-2"></div>
                 <div className="ornament ornament-3"></div>
-                <div className="lights"></div>
+                <div className="lights">
+                    <div className="light-bulb red"></div>
+                    <div className="light-bulb green"></div>
+                    <div className="light-bulb gold"></div>
+                    <div className="light-bulb red"></div>
+                    <div className="light-bulb green"></div>
+                    <div className="light-bulb gold"></div>
+                    <div className="light-bulb red"></div>
+                    <div className="light-bulb green"></div>
+                    <div className="light-bulb gold"></div>
+                    <div className="light-bulb red"></div>
+                </div>
             </div>
 
             {/* Flocos de Neve Animados */}

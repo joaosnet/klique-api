@@ -7,7 +7,11 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 
-from ..config import MIN_PAYMENT_AMOUNT
+from ..config import (
+    MIN_CREDITS_QUANTITY,
+    MIN_PAYMENT_AMOUNT,
+    MIN_PRICE_PER_CREDIT,
+)
 from ..database import get_payment_transactions_collection
 from ..dependencies import get_current_active_user
 from ..logger import logger
@@ -16,11 +20,22 @@ from .credits import add_paid_credits
 from .schemas import (
     CreatePixPaymentRequest,
     CreatePixPaymentResponse,
+    PaymentConfigResponse,
     PaymentStatusResponse,
     User,
 )
 
 router = APIRouter(prefix='/api/payments', tags=['payments'])
+
+
+@router.get('/config', response_model=PaymentConfigResponse)
+async def get_payment_config():
+    """Retorna as configurações e limites de pagamento."""
+    return PaymentConfigResponse(
+        min_payment_amount=MIN_PAYMENT_AMOUNT,
+        min_price_per_credit=MIN_PRICE_PER_CREDIT,
+        min_quantity=MIN_CREDITS_QUANTITY,
+    )
 
 
 @router.post('/pix/create', response_model=CreatePixPaymentResponse)
@@ -49,6 +64,7 @@ async def create_pix_payment(
             amount=request.amount,
             user_email=user_email,
             user_id=user_id,
+            credits_count=request.credits_count,
         )
 
         if not result.get('success'):

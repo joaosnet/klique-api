@@ -349,3 +349,15 @@
         transform: rotate(360deg);
     }
 }
+
+.input-group {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 12px;
+}
+
+.unit-label {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.1rem;
+    white-space: nowrap;
+}
