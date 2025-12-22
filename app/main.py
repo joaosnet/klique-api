@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
     await stop_scheduler()
     await whatsapp_service.close()
     # await gemini_web_api_service.close()
-    close_db_connection()
+    await close_db_connection()
 
 
 app = FastAPI(title='Klique AI API', version='1.0.0', lifespan=lifespan)

@@ -23,16 +23,16 @@ def get_db():
     return get_client()[DB_DATABASE]
 
 
-def close_db_connection():
+async def close_db_connection():
     """
-    Closes the MongoDB connection.
+    Fecha a conexão com o MongoDB de forma assíncrona.
     """
     global _client, _client_traducao  # noqa: PLW0603
     if _client:
-        _client.close()
+        await _client.close()
         _client = None
     if _client_traducao:
-        _client_traducao.close()
+        await _client_traducao.close()
         _client_traducao = None
 
 
