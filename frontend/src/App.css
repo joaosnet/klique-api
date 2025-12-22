@@ -6,16 +6,15 @@
 
 html {
   font-size: 16px;
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #0d3320;
-  color: white;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
   min-height: 100vh;
+  color: var(--text-primary);
+  overflow-x: hidden;
 }
 
 a {
@@ -27,14 +26,17 @@ button {
   font-family: inherit;
 }
 
-/* Loading Screen */
+/* ========================================
+   Loading Screen
+   ======================================== */
+
 .loading-screen {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0d3320 0%, #1a5c3a 50%, #0d3320 100%);
+  background: var(--bg-primary);
 }
 
 .loading-spinner {
@@ -43,7 +45,7 @@ button {
 }
 
 .loading-screen p {
-  margin-top: 1rem;
+  margin-top: var(--spacing-sm);
   color: rgba(255, 255, 255, 0.7);
 }
 
@@ -51,11 +53,234 @@ button {
 
   0%,
   100% {
-    transform: translateY(0) rotate(0deg);
+    transform: translateY(0);
   }
 
   50% {
-    transform: translateY(-20px) rotate(10deg);
+    transform: translateY(-15px);
+  }
+}
+
+/* ========================================
+   Christmas Decorations
+   ======================================== */
+
+.christmas-decorations {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.ornament {
+  position: absolute;
+  width: 50px;
+  height: 60px;
+  background: radial-gradient(circle at 30% 30%, var(--christmas-red-light), var(--christmas-red-dark));
+  border-radius: 50%;
+  box-shadow: inset -5px -5px 15px rgba(0, 0, 0, 0.3), 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.ornament::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 15px;
+  background: var(--christmas-gold);
+  border-radius: 3px 3px 0 0;
+}
+
+.ornament::after {
+  content: '';
+  position: absolute;
+  top: 10%;
+  left: 20%;
+  width: 30%;
+  height: 20%;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+}
+
+.ornament-1 {
+  top: -5px;
+  right: 15%;
+  animation: swing 3s ease-in-out infinite;
+}
+
+.ornament-2 {
+  top: -10px;
+  right: 5%;
+  width: 40px;
+  height: 48px;
+  background: radial-gradient(circle at 30% 30%, var(--christmas-gold-light), #b8860b);
+  animation: swing 3.5s ease-in-out infinite 0.5s;
+}
+
+.ornament-3 {
+  top: -5px;
+  right: 25%;
+  width: 35px;
+  height: 42px;
+  background: radial-gradient(circle at 30% 30%, #87ceeb, #4169e1);
+  animation: swing 4s ease-in-out infinite 1s;
+}
+
+@keyframes swing {
+
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+.lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: repeating-linear-gradient(90deg,
+      transparent 0px,
+      transparent 40px,
+      var(--christmas-red) 40px,
+      var(--christmas-red) 50px,
+      transparent 50px,
+      transparent 90px,
+      var(--christmas-green-light) 90px,
+      var(--christmas-green-light) 100px,
+      transparent 100px,
+      transparent 140px,
+      var(--christmas-gold) 140px,
+      var(--christmas-gold) 150px);
+  animation: lights-blink 2s infinite;
+}
+
+@keyframes lights-blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* ========================================
+   Snowflakes Animation
+   ======================================== */
+
+.snowflakes {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 99;
+  overflow: hidden;
+}
+
+.snowflake {
+  position: absolute;
+  top: -20px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.5rem;
+  animation: snowfall linear infinite;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+.snowflake:nth-child(1) {
+  left: 5%;
+  animation-duration: 10s;
+  animation-delay: 0s;
+  font-size: 1rem;
+}
+
+.snowflake:nth-child(2) {
+  left: 15%;
+  animation-duration: 12s;
+  animation-delay: 1s;
+  font-size: 1.2rem;
+}
+
+.snowflake:nth-child(3) {
+  left: 25%;
+  animation-duration: 8s;
+  animation-delay: 2s;
+  font-size: 0.8rem;
+}
+
+.snowflake:nth-child(4) {
+  left: 35%;
+  animation-duration: 14s;
+  animation-delay: 0.5s;
+  font-size: 1.4rem;
+}
+
+.snowflake:nth-child(5) {
+  left: 45%;
+  animation-duration: 11s;
+  animation-delay: 3s;
+  font-size: 1rem;
+}
+
+.snowflake:nth-child(6) {
+  left: 55%;
+  animation-duration: 9s;
+  animation-delay: 1.5s;
+  font-size: 1.3rem;
+}
+
+.snowflake:nth-child(7) {
+  left: 65%;
+  animation-duration: 13s;
+  animation-delay: 2.5s;
+  font-size: 0.9rem;
+}
+
+.snowflake:nth-child(8) {
+  left: 75%;
+  animation-duration: 10s;
+  animation-delay: 4s;
+  font-size: 1.1rem;
+}
+
+.snowflake:nth-child(9) {
+  left: 85%;
+  animation-duration: 15s;
+  animation-delay: 0.8s;
+  font-size: 1.5rem;
+}
+
+.snowflake:nth-child(10) {
+  left: 95%;
+  animation-duration: 7s;
+  animation-delay: 3.5s;
+  font-size: 0.7rem;
+}
+
+@keyframes snowfall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0.3;
   }
 }
 

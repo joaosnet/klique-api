@@ -1,14 +1,15 @@
 .header {
-    background: linear-gradient(135deg, #1a5c3a 0%, #0d3320 100%);
-    padding: 1rem 2rem;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: var(--spacing-sm) var(--spacing-lg);
     position: sticky;
     top: 0;
-    z-index: 100;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 50;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-container {
-    max-width: 1200px;
+    max-width: 900px;
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
@@ -18,25 +19,17 @@
 .logo {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--spacing-sm);
     text-decoration: none;
-    color: white;
+    color: var(--text-light);
 }
 
 .logo-icon {
     font-size: 2rem;
-    animation: float 3s ease-in-out infinite;
+    animation: bounce 3s ease-in-out infinite;
 }
 
-.logo-text {
-    font-size: 1.5rem;
-    font-weight: 700;
-    background: linear-gradient(90deg, #fff, #ffd700);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-@keyframes float {
+@keyframes bounce {
 
     0%,
     100% {
@@ -48,28 +41,35 @@
     }
 }
 
+.logo-text {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-light);
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
 .nav {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: var(--spacing-md);
 }
 
 .credits-badge {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.15);
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
+    gap: var(--spacing-xs);
+    background: var(--card-bg);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-lg);
     text-decoration: none;
-    color: white;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
+    color: var(--text-primary);
+    transition: var(--transition-normal);
+    box-shadow: var(--shadow-sm);
 }
 
 .credits-badge:hover {
-    background: rgba(255, 255, 255, 0.25);
-    transform: scale(1.05);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .credits-icon {
@@ -77,60 +77,64 @@
 }
 
 .credits-count {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    color: #ffd700;
+    color: var(--christmas-green);
 }
 
 .credits-label {
-    font-size: 0.85rem;
-    opacity: 0.9;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
 }
 
 .user-menu {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: var(--spacing-sm);
 }
 
 .user-name {
-    color: white;
+    color: var(--text-light);
     font-weight: 500;
+    font-size: 0.9rem;
 }
 
 .btn-logout {
-    background: rgba(196, 30, 58, 0.8);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
+    background: rgba(196, 30, 58, 0.2);
+    color: var(--christmas-red-light);
+    border: 1px solid rgba(196, 30, 58, 0.3);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-weight: 500;
-    transition: all 0.3s ease;
+    font-size: 0.85rem;
+    transition: var(--transition-fast);
 }
 
 .btn-logout:hover {
-    background: #c41e3a;
-    transform: translateY(-2px);
+    background: var(--christmas-red);
+    color: white;
+    border-color: var(--christmas-red);
 }
 
 .auth-buttons {
     display: flex;
-    gap: 1rem;
+    gap: var(--spacing-sm);
 }
 
 .btn-login {
-    background: linear-gradient(135deg, #c41e3a, #a01830);
+    background: var(--christmas-red);
     color: white;
     text-decoration: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-lg);
     font-weight: 600;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(196, 30, 58, 0.4);
+    font-size: 0.9rem;
+    transition: var(--transition-normal);
+    box-shadow: 0 4px 15px rgba(196, 30, 58, 0.3);
 }
 
 .btn-login:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(196, 30, 58, 0.6);
+    box-shadow: 0 6px 20px rgba(196, 30, 58, 0.4);
 }

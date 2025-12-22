@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import ChristmasDecorations from './components/Layout/ChristmasDecorations';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import CreditsPage from './pages/CreditsPage';
 import './App.css';
 
@@ -25,6 +27,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route
         path="/credits"
         element={
@@ -41,6 +44,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ChristmasDecorations />
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>

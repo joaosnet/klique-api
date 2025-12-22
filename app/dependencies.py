@@ -79,6 +79,34 @@ async def get_current_active_user(
     return current_user
 
 
+async def get_current_user_optional(
+    authorization: Annotated[str | None, Header()] = None,
+    db_users: Collection = Depends(get_users_collection),
+):
+    """
+    Obtém o usuário atual se o token for válido, senão retorna None.
+    Não levanta exceções de autorização.
+    """
+    if not authorization or not authorization.startswith('Bearer '):
+        return None
+
+    token = authorization.split(' ')[1]
+
+    try:
+        if token in invalidated_tokens:
+            return None
+
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get('sub')
+        if username is None:
+            return None
+
+        user = await db_users.find_one({'email': username})
+        return user
+    except Exception:
+        return None
+
+
 def get_token_from_header(
     authorization: Annotated[str | None, Header()] = None,
 ) -> str | None:

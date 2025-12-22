@@ -9,32 +9,7 @@
 
 const API_BASE_URL = window.location.origin;
 
-const TEMPLATES = {
-    populares: [
-        { id: 'papai-noel', name: 'Papai Noel', emoji: '🎅' },
-        { id: 'duende', name: 'Duende', emoji: '🧝' },
-        { id: 'cena-natal', name: 'Cena de Natal', emoji: '🎄' },
-        { id: 'gorro-neve', name: 'Gorro de Neve', emoji: '⛄' }
-    ],
-    classico: [
-        { id: 'anjo', name: 'Anjo', emoji: '👼' },
-        { id: 'rena', name: 'Rena', emoji: '🦌' },
-        { id: 'boneco-neve', name: 'Boneco de Neve', emoji: '☃️' },
-        { id: 'presente', name: 'Presente', emoji: '🎁' }
-    ],
-    divertido: [
-        { id: 'grinch', name: 'Grinch', emoji: '💚' },
-        { id: 'pinguim', name: 'Pinguim', emoji: '🐧' },
-        { id: 'urso-polar', name: 'Urso Polar', emoji: '🐻‍❄️' },
-        { id: 'biscoito', name: 'Biscoito', emoji: '🍪' }
-    ],
-    'papai-noel': [
-        { id: 'papai-noel-classico', name: 'Clássico', emoji: '🎅' },
-        { id: 'papai-noel-moderno', name: 'Moderno', emoji: '🎅' },
-        { id: 'papai-noel-tropical', name: 'Tropical', emoji: '🌴' },
-        { id: 'papai-noel-festa', name: 'Festa', emoji: '🎉' }
-    ]
-};
+let TEMPLATES = {};
 
 const state = {
     uploadedImage: null,
@@ -89,7 +64,8 @@ const elements = {
     carouselTrack: document.getElementById('carouselTrack'),
     carouselPrev: document.getElementById('carouselPrev'),
     carouselNext: document.getElementById('carouselNext'),
-    categoryTabs: document.querySelectorAll('.category-tab'),
+    categoryTabsContainer: document.getElementById('categoryTabs'),
+    categoryTabs: () => document.querySelectorAll('.category-tab'),
 
     // Download
     downloadSection: document.getElementById('downloadSection'),
@@ -102,7 +78,8 @@ const elements = {
 // Initialization
 // ========================================
 
-function init() {
+async function init() {
+    await fetchTemplates();
     setupCamera();
     setupUploadZone();
     setupComparator();
@@ -110,6 +87,17 @@ function init() {
     setupActionButtons();
     setupDownload();
     renderTemplates();
+}
+
+async function fetchTemplates() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/christmas/templates`);
+        if (!response.ok) throw new Error('Falha ao buscar templates');
+        TEMPLATES = await response.json();
+    } catch (error) {
+        console.error('Erro ao carregar templates:', error);
+        // Fallback or alert
+    }
 }
 
 // ========================================
@@ -381,16 +369,38 @@ function setupComparator() {
 // ========================================
 
 function setupTemplates() {
-    const { carouselPrev, carouselNext, categoryTabs } = elements;
+    const { carouselPrev, carouselNext } = elements;
 
     // Carousel navigation
     carouselPrev.addEventListener('click', () => moveCarousel(-1));
     carouselNext.addEventListener('click', () => moveCarousel(1));
 
-    // Category tabs
-    categoryTabs.forEach(tab => {
+    renderCategories();
+}
+
+const CATEGORY_LABELS = {
+    'populares': 'Populares',
+    'classico': 'Clássico',
+    'divertido': 'Divertido',
+    'papai-noel': 'Papai Noel'
+};
+
+function renderCategories() {
+    const { categoryTabsContainer } = elements;
+    const categories = Object.keys(TEMPLATES);
+
+    let html = `<button class="category-tab ${state.currentCategory === 'todos' ? 'active' : ''}" data-category="todos">Todos</button>`;
+
+    categories.forEach(cat => {
+        html += `<button class="category-tab ${state.currentCategory === cat ? 'active' : ''}" data-category="${cat}">${CATEGORY_LABELS[cat] || cat}</button>`;
+    });
+
+    categoryTabsContainer.innerHTML = html;
+
+    // Add click handlers
+    elements.categoryTabs().forEach(tab => {
         tab.addEventListener('click', () => {
-            categoryTabs.forEach(t => t.classList.remove('active'));
+            elements.categoryTabs().forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             state.currentCategory = tab.dataset.category;
             state.carouselPosition = 0;

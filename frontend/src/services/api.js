@@ -49,6 +49,11 @@ export const authAPI = {
         return response.data;
     },
 
+    register: async (name, email, password) => {
+        const response = await api.post('/auth/register', { name, email, password });
+        return response.data;
+    },
+
     loginWithGoogle: async (googleToken) => {
         const response = await api.post('/auth/google', { token: googleToken });
         return response.data;
@@ -116,11 +121,14 @@ export const christmasAPI = {
 
         // Usar SSE para progresso
         const token = localStorage.getItem('access_token');
+        const headers = {};
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${API_BASE_URL}/api/christmas/swap-stream`, {
             method: 'POST',
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
+            headers,
             body: formData,
         });
 
@@ -132,8 +140,8 @@ export const christmasAPI = {
         // Processar SSE stream
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = '';
-        let result = null;
+        let eventType = '';
+        let eventData = '';
 
         while (true) {
             const { value, done } = await reader.read();
@@ -143,26 +151,26 @@ export const christmasAPI = {
             const lines = buffer.split('\n');
             buffer = lines.pop() || '';
 
-            let eventType = '';
-            let eventData = '';
-
             for (const line of lines) {
                 if (line.startsWith('event: ')) {
                     eventType = line.slice(7).trim();
                 } else if (line.startsWith('data: ')) {
-                    eventData = line.slice(6).trim();
-                } else if (line === '' && eventType && eventData) {
+                    eventData += line.slice(6).trim(); // Acumular data caso seja dividido
+                } else if (line === '' && eventType) {
                     try {
-                        const data = JSON.parse(eventData);
+                        if (eventData) {
+                            const data = JSON.parse(eventData);
 
-                        if (eventType === 'progress' && onProgress) {
-                            onProgress(data);
-                        } else if (eventType === 'complete') {
-                            result = data;
-                        } else if (eventType === 'error') {
-                            throw new Error(data.message);
+                            if (eventType === 'progress' && onProgress) {
+                                onProgress(data);
+                            } else if (eventType === 'complete') {
+                                result = data;
+                            } else if (eventType === 'error') {
+                                throw new Error(data.message);
+                            }
                         }
                     } catch (e) {
+                        console.error('SSE Parse Error:', e, eventData);
                         if (e.message !== 'Unexpected end of JSON input') {
                             throw e;
                         }
@@ -174,6 +182,11 @@ export const christmasAPI = {
         }
 
         return result;
+    },
+
+    getTemplates: async () => {
+        const response = await api.get('/api/christmas/templates');
+        return response.data;
     },
 };
 

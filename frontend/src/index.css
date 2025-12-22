@@ -1,11 +1,46 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --color-primary: #c41e3a;
-  --color-secondary: #1a5c3a;
-  --color-accent: #ffd700;
-  --color-bg-dark: #0d3320;
-  --color-bg-light: #1a5c3a;
+  /* Christmas Colors (matching FastAPI frontend) */
+  --christmas-green: #1a5c3a;
+  --christmas-green-dark: #0f3d26;
+  --christmas-green-light: #2d8a57;
+  --christmas-red: #c41e3a;
+  --christmas-red-dark: #8b0000;
+  --christmas-red-light: #e63946;
+  --christmas-gold: #ffd700;
+  --christmas-gold-light: #ffe066;
+
+  /* UI Colors */
+  --bg-primary: linear-gradient(135deg, var(--christmas-green-dark) 0%, var(--christmas-green) 50%, var(--christmas-red-dark) 100%);
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --card-bg-glass: rgba(255, 255, 255, 0.1);
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a5568;
+  --text-light: #ffffff;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.2);
+  --shadow-glow: 0 0 30px rgba(255, 215, 0, 0.3);
+
+  /* Spacing */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 1rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
 }
 
 #root {

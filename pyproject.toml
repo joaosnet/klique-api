@@ -75,6 +75,7 @@ back = 'sudo supervisorctl start fastapi'
 test = 'pytest -s -x --cov=app -vv'
 post_test = 'coverage html' 
 nav = 'python -c "from pathlib import Path; import webbrowser; webbrowser.open(Path(\"htmlcov/index.html\").resolve().as_uri())"'
-ngrok = 'python -m app.scripts.ngrok --port 8000'
+ngrok = 'python -m scripts.ngrok --port 80'
 # Configuração
 setup-cookies = "uv run python scripts/setup_cookies.py librewolf"
+create-admin = "python scripts/create_admin.py"

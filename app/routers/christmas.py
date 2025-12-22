@@ -21,14 +21,14 @@ from fastapi import (
     UploadFile,
     status,
 )
+from typing import Optional
 from fastapi.responses import JSONResponse, StreamingResponse
 from PIL import Image
 
-from ..dependencies import get_current_active_user
+from ..dependencies import get_current_user_optional
 from ..logger import logger
 from ..services.image_cleaner import remove_background, remove_signature
 from .credits import check_user_has_credits, use_one_credit
-from .schemas import User
 
 router = APIRouter(prefix='/api/christmas', tags=['christmas'])
 
@@ -107,11 +107,45 @@ TEMPLATE_PROMPTS = {
     ),
 }
 
+# Configuração de categorias e templates para o frontend
+TEMPLATES_CONFIG = {
+    'populares': [
+        {'id': 'papai-noel', 'name': 'Papai Noel', 'emoji': '🎅'},
+        {'id': 'duende', 'name': 'Duende', 'emoji': '🧝'},
+        {'id': 'cena-natal', 'name': 'Cena de Natal', 'emoji': '🎄'},
+        {'id': 'gorro-neve', 'name': 'Gorro de Neve', 'emoji': '⛄'},
+    ],
+    'classico': [
+        {'id': 'anjo', 'name': 'Anjo', 'emoji': '👼'},
+        {'id': 'rena', 'name': 'Rena', 'emoji': '🦌'},
+        {'id': 'boneco-neve', 'name': 'Boneco de Neve', 'emoji': '☃️'},
+        {'id': 'presente', 'name': 'Presente', 'emoji': '🎁'},
+    ],
+    'divertido': [
+        {'id': 'grinch', 'name': 'Grinch', 'emoji': '💚'},
+        {'id': 'pinguim', 'name': 'Pinguim', 'emoji': '🐧'},
+        {'id': 'urso-polar', 'name': 'Urso Polar', 'emoji': '🐻‍❄️'},
+        {'id': 'biscoito', 'name': 'Biscoito', 'emoji': '🍪'},
+    ],
+    'papai-noel': [
+        {'id': 'papai-noel-classico', 'name': 'Clássico', 'emoji': '🎅'},
+        {'id': 'papai-noel-moderno', 'name': 'Moderno', 'emoji': '🎅'},
+        {'id': 'papai-noel-tropical', 'name': 'Tropical', 'emoji': '🌴'},
+        {'id': 'papai-noel-festa', 'name': 'Festa', 'emoji': '🎉'},
+    ],
+}
+
 # Prompt padrão se o template não for encontrado
 DEFAULT_PROMPT = (
     'Transform this person into a festive Christmas character. '
     'Add holiday decorations, winter clothing, and magical Christmas.'
 )
+
+
+@router.get('/templates')
+async def get_templates():
+    """Retorna as categorias e templates disponíveis."""
+    return TEMPLATES_CONFIG
 
 
 def get_gemini_client(request: Request):
@@ -449,29 +483,43 @@ async def swap_face(
 @router.post('/swap-stream')
 async def swap_face_stream(
     request: Request,
-    current_user: User = Depends(get_current_active_user),
     image: UploadFile = File(..., description='Imagem do usuário'),
     template: str = Form(..., description='ID do template selecionado'),
     remove_bg: bool = Form(
         False, description='Remover fundo da imagem gerada'
     ),
+    current_user: Optional[dict] = Depends(get_current_user_optional),
 ) -> StreamingResponse:
     """
     Transforma a foto com streaming de progresso via SSE.
 
-    REQUER AUTENTICAÇÃO E CRÉDITOS.
+    Permite primeiro uso sem login (vincular ao IP).
+    Requer créditos se já usado.
     A imagem gerada terá a marca d'água do Gemini removida automaticamente.
 
     Args:
         request: Request do FastAPI
-        current_user: Usuário autenticado (via JWT)
         image: Arquivo de imagem enviado pelo usuário
         template: ID do template selecionado
         remove_bg: Se True, remove o fundo da imagem gerada
+        current_user: Usuário autenticado (opcional)
 
     Returns:
         StreamingResponse com eventos SSE de progresso
     """
+    # Identifica o usuário (se logado) ou o IP (se guest)
+    if current_user:
+        user_id = str(current_user.get('_id'))
+        is_guest = False
+    else:
+        # Tenta pegar o IP real do cliente (especialmente se atrás de proxy como ngrok/nginx)
+        client_ip = (
+            request.headers.get('x-forwarded-for') or request.client.host
+        )
+        user_id = f'guest_{client_ip}'
+        is_guest = True
+        logger.info(f'Processamento via guest IP: {client_ip}')
+
     # Valida o tipo de arquivo
     if not image.content_type or not image.content_type.startswith('image/'):
         raise HTTPException(
@@ -486,14 +534,19 @@ async def swap_face_stream(
         )
 
     # Valida créditos do usuário
-    user_id = str(current_user.get('_id'))
     credits_check = await check_user_has_credits(user_id)
 
     if not credits_check['has_credits']:
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail='Créditos insuficientes. Compre mais créditos.',
-        )
+        if is_guest:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Créditos iniciais usados. Faça login para ganhar mais créditos!',
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail='Créditos insuficientes. Compre mais créditos.',
+            )
 
     # Consome 1 crédito antes de processar
     credit_result = await use_one_credit(user_id)
