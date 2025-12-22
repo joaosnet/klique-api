@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CreditsPage from './pages/CreditsPage';
+import Header from './components/Layout/Header';
 import './App.css';
 
 function ProtectedRoute({ children }) {
@@ -44,6 +45,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Header />
         <ChristmasDecorations />
         <AppRoutes />
       </AuthProvider>
