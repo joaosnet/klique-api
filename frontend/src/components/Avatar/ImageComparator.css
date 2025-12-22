@@ -41,6 +41,8 @@
     object-fit: cover;
     /* Return to cover to fill the square */
     display: block;
+    object-position: top center;
+    /* Focus on top (faces) for both images when cropping occurs */
 }
 
 .comparator-overlay {
