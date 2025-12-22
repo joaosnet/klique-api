@@ -1,13 +1,8 @@
-# Docker Compose Production Override
-# Use: docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+# Docker Compose Production - Standalone
+# Use: docker compose -f docker-compose.production.yml up -d --build
 #
-# Key differences from development:
-# - Remove dev volumes (code sync)
-# - Use restart policies
-# - Add healthchecks
-# - Optimize resource limits
-# - Use production environment variables
-# - Traefik reverse proxy with Let's Encrypt SSL
+# This is a STANDALONE production file - no need to merge with docker-compose.yml
+# Includes: Traefik reverse proxy with Let's Encrypt SSL
 
 services:
   # Traefik Reverse Proxy with Let's Encrypt SSL
@@ -43,7 +38,25 @@ services:
         max-file: "3"
 
   mongodb:
+    image: mongo:latest
+    container_name: mongodb_kliqueq
     restart: always
+    volumes:
+      - mongodb_data:/data/db
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+    networks:
+      - whatsapp-network
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
     deploy:
       resources:
         limits:
@@ -55,16 +68,46 @@ services:
         max-file: "5"
 
   fastapi-app:
+    container_name: fastapi-klique
+    build: .
     restart: always
-    # Remove dev volumes - use built image only
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - whatsapp-network
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ}
+      SECRET_KEY: ${SECRET_KEY}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS}
+      GOOGLE_DRIVE_ROOT_FOLDER_ID: ${GOOGLE_DRIVE_ROOT_FOLDER_ID}
+      DB_CONNECTION: ${DB_CONNECTION}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      GMAIL_EMAIL: ${GMAIL_EMAIL}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      OPENAI_API_BASE: ${OPENAI_API_BASE}
+      PUTER_API_KEY: ${PUTER_API_KEY}
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
+      MP_PUBLIC_KEY: ${MP_PUBLIC_KEY}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
+      MIN_PAYMENT_AMOUNT: ${MIN_PAYMENT_AMOUNT}
+      CREDITS_PER_REAL: ${CREDITS_PER_REAL}
+      FREE_CREDITS_PER_USER: ${FREE_CREDITS_PER_USER}
+      DEBUG: "false"
+      ENVIRONMENT: "production"
     volumes:
       - gemini_cookies:/usr/local/lib/python3.12/site-packages/gemini_webapi/utils/temp
       - ./logs:/app/logs
-    environment:
-      # Production settings
-      DEBUG: "false"
-      ENVIRONMENT: "production"
-    # Override command for production with multiple workers
     command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4" ]
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/docs" ]
@@ -83,9 +126,13 @@ services:
         max-file: "5"
 
   frontend:
+    container_name: klique-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     restart: always
-    # Remove direct port exposure - Traefik handles it
-    ports: []
+    networks:
+      - whatsapp-network
     labels:
       - "traefik.enable=true"
       # HTTP Router (redirects to HTTPS automatically via entrypoint config)
@@ -114,14 +161,44 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-  # Disable WhatsApp and G4F in production if not needed
-  # Uncomment if you want to exclude them:
+  # WhatsApp service (optional - uncomment if needed)
   # whatsapp:
-  #   profiles:
-  #     - donotstart
+  #   image: aldinokemal2104/go-whatsapp-web-multidevice
+  #   container_name: whatsapp
+  #   restart: always
+  #   volumes:
+  #     - whatsapp:/app/storages
+  #   command:
+  #     - rest
+  #     - --basic-auth=admin:admin
+  #     - --port=3000
+  #     - --debug=false
+  #     - --os=Chrome
+  #     - --account-validation=false
+  #     - --webhook=http://fastapi-klique:8000/webhooks/whatsapp
+  #   networks:
+  #     - whatsapp-network
+
+  # G4F service (optional - uncomment if needed)
   # g4f:
-  #   profiles:
-  #     - donotstart
+  #   image: hlohaus789/g4f:latest
+  #   container_name: g4f
+  #   shm_size: "2g"
+  #   networks:
+  #     - whatsapp-network
+  #   volumes:
+  #     - ./har_and_cookies:/app/har_and_cookies
+  #     - ./generated_media:/app/generated_media
+  #   restart: always
 
 volumes:
+  mongodb_data:
+  gemini_cookies:
   letsencrypt:
+    # whatsapp:
+    # har_and_cookies:
+    # generated_media:
+
+networks:
+  whatsapp-network:
+    driver: bridge
