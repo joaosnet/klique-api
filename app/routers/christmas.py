@@ -27,7 +27,11 @@ from PIL import Image
 
 from ..dependencies import get_current_user_optional
 from ..logger import logger
-from ..services.image_cleaner import remove_background, remove_signature
+from ..services.image_cleaner import (
+    auto_detect_watermark,
+    remove_signature,
+    remove_white_background,
+)
 from .credits import check_user_has_credits, use_one_credit
 
 router = APIRouter(prefix='/api/christmas', tags=['christmas'])
@@ -258,7 +262,7 @@ async def process_image_with_progress(
     output_file = None
 
     try:
-        # Total de etapas: 4 base + 1 (watermark) + 1 (bg opcional)
+        # Total de etapas: 5 base + 1 opcional (remoção de fundo)
         total_steps = 6 if remove_bg else 5
 
         # Etapa 1: Preparando
@@ -334,31 +338,44 @@ async def process_image_with_progress(
                 },
             )
 
-            # Remove watermark usando remove_signature
-            cleaned_path, status = remove_signature(
-                str(output_file),
-                output_path=str(
-                    output_dir / f'christmas_{template}_clean.png'
-                ),
-            )
+            # Remove watermark usando auto-detecção
+            detected = auto_detect_watermark(str(output_file))
+            if detected:
+                box_w, box_h, off_x, off_y = detected
+                logger.debug(
+                    f'Watermark detectado: {box_w}x{box_h} offset:{off_x},{off_y}'
+                )
+                cleaned_path, status = remove_signature(
+                    str(output_file),
+                    output_path=str(
+                        output_dir / f'christmas_{template}_clean.png'
+                    ),
+                    box_w=box_w,
+                    box_h=box_h,
+                    off_x=off_x,
+                    off_y=off_y,
+                )
 
-            if cleaned_path:
-                output_file = Path(cleaned_path)
-                logger.debug(f"Marca d'água removida: {status}")
+                if cleaned_path:
+                    output_file = Path(cleaned_path)
+                    logger.debug(f"Marca d'água removida: {status}")
+            else:
+                logger.warning('Watermark não detectado - pulando remoção')
 
-            # Etapa 6: Remoção de fundo (opcional)
+            # Etapa 6: Remoção de fundo branco (opcional)
+            # O prompt pediu fundo branco, agora removemos com PIL
             if remove_bg:
                 yield await generate_sse_event(
                     'progress',
                     {
                         'step': 6,
                         'total': total_steps,
-                        'message': '✂️ Removendo fundo da imagem...',
+                        'message': '✂️ Removendo fundo...',
                         'percent': 85,
                     },
                 )
 
-                nobg_path, bg_status = remove_background(
+                nobg_path, bg_status = remove_white_background(
                     str(output_file),
                     output_path=str(
                         output_dir / f'christmas_{template}_nobg.png'
@@ -462,8 +479,17 @@ async def swap_face(
 
         # Obtém o prompt baseado no template
         prompt = TEMPLATE_PROMPTS.get(template, DEFAULT_PROMPT)
+
+        # Se remove_bg, pedir fundo branco diretamente ao Gemini
+        bg_instruction = (
+            'Use a completely solid white background (#FFFFFF). '
+            if remove_bg
+            else ''
+        )
+
         full_prompt = (
             f'{prompt} '
+            f'{bg_instruction}'
             "Maintain the person's facial features and identity. "
             'High quality, detailed, 4K resolution, professional.'
         )
@@ -491,23 +517,37 @@ async def swap_face(
                     verbose=False,
                 )
 
-                # Remove marca d'água do Gemini
+                # Remove marca d'água do Gemini usando auto-detecção
                 logger.debug("Removendo marca d'água...")
-                cleaned_path, status = remove_signature(
-                    str(output_file),
-                    output_path=str(
-                        output_dir / f'christmas_{template}_clean.png'
-                    ),
-                )
+                detected = auto_detect_watermark(str(output_file))
+                if detected:
+                    box_w, box_h, off_x, off_y = detected
+                    logger.debug(
+                        f'Watermark detectado: '
+                        f'{box_w}x{box_h} offset:{off_x},{off_y}'
+                    )
+                    cleaned_path, status = remove_signature(
+                        str(output_file),
+                        output_path=str(
+                            output_dir / f'christmas_{template}_clean.png'
+                        ),
+                        box_w=box_w,
+                        box_h=box_h,
+                        off_x=off_x,
+                        off_y=off_y,
+                    )
 
-                if cleaned_path:
-                    output_file = Path(cleaned_path)
-                    logger.debug(f"Marca d'água removida: {status}")
+                    if cleaned_path:
+                        output_file = Path(cleaned_path)
+                        logger.debug(f"Marca d'água removida: {status}")
+                else:
+                    logger.warning('Watermark não detectado - pulando remoção')
 
-                # Remove fundo (opcional)
+                # Remoção de fundo branco (opcional)
+                # O prompt pediu fundo branco, agora removemos com PIL
                 if remove_bg:
-                    logger.debug('Removendo fundo...')
-                    nobg_path, bg_status = remove_background(
+                    logger.debug('Removendo fundo branco...')
+                    nobg_path, bg_status = remove_white_background(
                         str(output_file),
                         output_path=str(
                             output_dir / f'christmas_{template}_nobg.png'
@@ -640,8 +680,17 @@ async def swap_face_stream(
 
     # Obtém o prompt
     prompt = TEMPLATE_PROMPTS.get(template, DEFAULT_PROMPT)
+
+    # Se remove_bg, pedir fundo branco diretamente ao Gemini
+    bg_instruction = (
+        'Use a completely solid white background (#FFFFFF). '
+        if remove_bg
+        else ''
+    )
+
     full_prompt = (
         f'{prompt} '
+        f'{bg_instruction}'
         "Maintain the person's facial features and identity. "
         'High quality, detailed, 4K resolution, professional.'
     )
