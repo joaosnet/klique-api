@@ -34,10 +34,11 @@ logger.add(
     format=file_format,
 )
 
-# 4. Adiciona handler específico para logs de DEBUG
+# 4. Adiciona handler específico para logs de DEBUG (apenas mensagens DEBUG)
 logger.add(
     'logs/debug.log',
     level='DEBUG',
+    filter=lambda record: record['level'].name == 'DEBUG',
     rotation='5 MB',
     retention='3 days',
     format=file_format,
@@ -62,7 +63,17 @@ logger.add(
     format=file_format,
 )
 
-# 7. Adiciona handler específico para logs da gemini_webapi
+# 7. Adiciona handler específico apenas para o módulo telemetry
+logger.add(
+    'logs/telemetry.log',
+    filter=lambda record: record['extra'].get('module') == 'telemetry',
+    level='DEBUG',
+    rotation='5 MB',
+    retention='7 days',
+    format=file_format,
+)
+
+# 8. Adiciona handler específico para logs da gemini_webapi
 logger.add(
     'logs/gemini.log',
     filter='gemini_webapi',
