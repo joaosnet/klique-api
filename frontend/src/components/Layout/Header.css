@@ -4,27 +4,8 @@
     padding: var(--spacing-sm) var(--spacing-lg);
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: 100;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-@media (max-width: 768px) {
-    .header {
-        padding: var(--spacing-sm) var(--spacing-sm);
-    }
-
-    .logo-text {
-        font-size: 1.1rem;
-    }
-
-    .nav {
-        gap: var(--spacing-sm);
-    }
-
-    .credits-label {
-        display: none;
-        /* Hide 'créditos' text on small mobile to save space */
-    }
 }
 
 .header-container {
@@ -33,6 +14,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
 }
 
 .logo {
@@ -41,6 +23,7 @@
     gap: var(--spacing-sm);
     text-decoration: none;
     color: var(--text-light);
+    z-index: 110;
 }
 
 .logo-icon {
@@ -72,10 +55,66 @@
     width: auto;
 }
 
+/* ========================================
+   Hamburger Menu Button
+   ======================================== */
+
+.hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 28px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 110;
+}
+
+.hamburger span {
+    width: 100%;
+    height: 3px;
+    background: var(--text-light);
+    border-radius: 2px;
+    transition: all 0.3s ease;
+    transform-origin: center;
+}
+
+.hamburger.open span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.hamburger.open span:nth-child(2) {
+    opacity: 0;
+    transform: scaleX(0);
+}
+
+.hamburger.open span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+/* ========================================
+   Navigation
+   ======================================== */
+
 .nav {
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
+}
+
+.nav-link {
+    color: var(--text-light);
+    text-decoration: none;
+    font-weight: 500;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .credits-badge {
@@ -161,4 +200,148 @@
 .btn-login:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(196, 30, 58, 0.4);
+}
+
+.btn-register {
+    background: transparent;
+    color: var(--text-light);
+    text-decoration: none;
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: var(--transition-normal);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-register:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ========================================
+   Mobile Navigation Overlay
+   ======================================== */
+
+.nav-overlay {
+    display: none;
+}
+
+/* ========================================
+   Mobile Styles
+   ======================================== */
+
+@media (max-width: 768px) {
+    .header {
+        padding: var(--spacing-sm) var(--spacing-sm);
+    }
+
+    .hamburger {
+        display: flex;
+    }
+
+    .nav {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 280px;
+        max-width: 85vw;
+        height: 100vh;
+        background: linear-gradient(180deg,
+                rgba(26, 95, 60, 0.98) 0%,
+                rgba(15, 60, 40, 0.98) 100%);
+        backdrop-filter: blur(20px);
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 80px var(--spacing-lg) var(--spacing-lg);
+        gap: var(--spacing-sm);
+        transition: right 0.3s ease;
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+        z-index: 105;
+    }
+
+    .nav.nav-open {
+        right: 0;
+    }
+
+    .nav-overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 102;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    .nav-link {
+        width: 100%;
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: 1.1rem;
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .credits-badge {
+        width: 100%;
+        justify-content: flex-start;
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .credits-label {
+        display: inline;
+    }
+
+    .user-menu {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+        margin-top: auto;
+        padding-top: var(--spacing-md);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .user-name {
+        font-size: 1rem;
+    }
+
+    .btn-logout {
+        width: 100%;
+        text-align: center;
+        padding: var(--spacing-sm);
+    }
+
+    .auth-buttons {
+        width: 100%;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .btn-login,
+    .btn-register {
+        width: 100%;
+        text-align: center;
+        padding: var(--spacing-sm);
+    }
+
+    .logo-text {
+        font-size: 1.1rem;
+    }
 }
