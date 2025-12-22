@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { christmasAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import ImageComparator from './ImageComparator';
+import OnboardingTutorial, { useOnboarding } from '../Onboarding/OnboardingTutorial';
+import PaymentModal from '../Payment/PaymentModal';
 import './AvatarGenerator.css';
 
 export default function AvatarGenerator() {
@@ -19,6 +21,13 @@ export default function AvatarGenerator() {
     const [cameraStream, setCameraStream] = useState(null);
     const [cameraActive, setCameraActive] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+
+    // Freemium states
+    const [isPaidImage, setIsPaidImage] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+    // Onboarding
+    const { showOnboarding, completeOnboarding } = useOnboarding();
 
     const fileInputRef = useRef(null);
     const videoRef = useRef(null);
@@ -244,6 +253,8 @@ export default function AvatarGenerator() {
 
             if (resultData?.processed_image) {
                 setResult(resultData.processed_image);
+                // Check if image was generated with paid credit
+                setIsPaidImage(resultData.is_paid === true);
                 if (isAuthenticated) {
                     await refreshCredits();
                 }
@@ -265,6 +276,13 @@ export default function AvatarGenerator() {
 
     const handleDownload = () => {
         if (!result) return;
+
+        // If free image (with watermark), show payment modal
+        if (!isPaidImage) {
+            setShowPaymentModal(true);
+            return;
+        }
+
         const link = document.createElement('a');
         link.download = 'avatar-natal-klique.png';
         link.href = result;
@@ -299,6 +317,12 @@ export default function AvatarGenerator() {
     };
 
     const handleShareWhatsApp = async () => {
+        // If free image, show payment modal
+        if (!isPaidImage) {
+            setShowPaymentModal(true);
+            return;
+        }
+
         const text = `Ficou incrível meu avatar de Natal! 🎅🎄\n\nFiz no Klique, cria o seu também aqui: ${window.location.href}`;
 
         // Tenta usar o Web Share API nativo (Mobile Android/iOS)
@@ -329,6 +353,12 @@ export default function AvatarGenerator() {
     };
 
     const handleShareInstagram = async () => {
+        // If free image, show payment modal
+        if (!isPaidImage) {
+            setShowPaymentModal(true);
+            return;
+        }
+
         const text = `Ficou incrível meu avatar de Natal! 🎅🎄\n\nFiz no Klique, cria o seu também aqui: ${window.location.href}`;
 
         // Tenta usar o Web Share API nativo
@@ -360,227 +390,240 @@ export default function AvatarGenerator() {
     };
 
     return (
-        <div className="generator-container">
-            <div className="generator-header">
-                <h1>Torne-se um ícone de Natal!</h1>
-                <p>Crie sua foto de perfil para Instagram ou WhatsApp.</p>
-            </div>
+        <>
+            {/* Onboarding Tutorial */}
+            {showOnboarding && (
+                <OnboardingTutorial onComplete={completeOnboarding} />
+            )}
 
-            <div className="editor-card">
-                {error && (
-                    <div className="error-banner">
-                        <span>⚠️</span> {error}
-                    </div>
-                )}
+            {/* Payment Modal */}
+            <PaymentModal
+                isOpen={showPaymentModal}
+                onClose={() => setShowPaymentModal(false)}
+            />
 
-                <div className="generator-stage">
-                    {result ? (
-                        // Result State (Comparator)
-                        <div className="result-container" style={{ position: 'relative', minHeight: '450px' }}>
-                            <ImageComparator
-                                beforeImage={imagePreview}
-                                afterImage={result}
-                            />
+            <div className="generator-container">
+                <div className="generator-header">
+                    <h1>Torne-se um ícone de Natal!</h1>
+                    <p>Crie sua foto de perfil para Instagram ou WhatsApp.</p>
+                </div>
+
+                <div className="editor-card">
+                    {error && (
+                        <div className="error-banner">
+                            <span>⚠️</span> {error}
                         </div>
-                    ) : (
-                        // Upload / Preview / Camera State
-                        <div className="upload-container">
-                            <div
-                                className={`upload-zone ${imagePreview ? 'has-image' : ''} ${cameraActive ? 'camera-active' : ''} ${isDragging ? 'dragging' : ''}`}
-                                onClick={() => !processing && !cameraActive && !imagePreview && fileInputRef.current?.click()}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
-                            >
-                                {imagePreview ? (
-                                    <img src={imagePreview} alt="Preview" className="image-preview" />
-                                ) : cameraActive ? (
-                                    <div className="camera-preview-container">
-                                        <video
-                                            ref={videoRef}
-                                            autoPlay
-                                            playsInline
-                                            className="camera-video"
-                                        />
-                                        <canvas ref={canvasRef} style={{ display: 'none' }} />
-                                        <div className="camera-overlay" style={{ gap: '15px' }}>
-                                            <button
-                                                className="btn-capture secondary-action"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    fileInputRef.current?.click();
-                                                }}
-                                                title="Fazer Upload da Galeria"
-                                                style={{ width: '50px', height: '50px', padding: 0, justifyContent: 'center', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(5px)' }}
-                                            >
-                                                <span className="capture-icon" style={{ fontSize: '1.5rem' }}>📁</span>
-                                            </button>
+                    )}
 
-                                            <button
-                                                className="btn-capture"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCapture();
-                                                }}
-                                            >
-                                                <span className="capture-icon">📸</span>
-                                                Tirar Foto
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="upload-placeholder">
-                                        <span className="upload-icon">📷</span>
-                                        <p>Clique para enviar sua foto</p>
-                                        <span className="upload-hint">ou arraste e solte aqui</span>
-                                        <div style={{ marginTop: '20px' }}>
-                                            {!cameraActive && (
+                    <div className="generator-stage">
+                        {result ? (
+                            // Result State (Comparator)
+                            <div className="result-container" style={{ position: 'relative', minHeight: '450px' }}>
+                                <ImageComparator
+                                    beforeImage={imagePreview}
+                                    afterImage={result}
+                                />
+                            </div>
+                        ) : (
+                            // Upload / Preview / Camera State
+                            <div className="upload-container">
+                                <div
+                                    className={`upload-zone ${imagePreview ? 'has-image' : ''} ${cameraActive ? 'camera-active' : ''} ${isDragging ? 'dragging' : ''}`}
+                                    onClick={() => !processing && !cameraActive && !imagePreview && fileInputRef.current?.click()}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                >
+                                    {imagePreview ? (
+                                        <img src={imagePreview} alt="Preview" className="image-preview" />
+                                    ) : cameraActive ? (
+                                        <div className="camera-preview-container">
+                                            <video
+                                                ref={videoRef}
+                                                autoPlay
+                                                playsInline
+                                                className="camera-video"
+                                            />
+                                            <canvas ref={canvasRef} style={{ display: 'none' }} />
+                                            <div className="camera-overlay" style={{ gap: '15px' }}>
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); startCamera(); }}
-                                                    className="btn-secondary"
-                                                    style={{ background: 'var(--christmas-green)', color: 'white', border: 'none' }}
+                                                    className="btn-capture secondary-action"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        fileInputRef.current?.click();
+                                                    }}
+                                                    title="Fazer Upload da Galeria"
+                                                    style={{ width: '50px', height: '50px', padding: 0, justifyContent: 'center', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(5px)' }}
                                                 >
-                                                    📷 Usar Câmera
+                                                    <span className="capture-icon" style={{ fontSize: '1.5rem' }}>📁</span>
                                                 </button>
-                                            )}
+
+                                                <button
+                                                    className="btn-capture"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCapture();
+                                                    }}
+                                                >
+                                                    <span className="capture-icon">📸</span>
+                                                    Tirar Foto
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="upload-placeholder">
+                                            <span className="upload-icon">📷</span>
+                                            <p>Clique para enviar sua foto</p>
+                                            <span className="upload-hint">ou arraste e solte aqui</span>
+                                            <div style={{ marginTop: '20px' }}>
+                                                {!cameraActive && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); startCamera(); }}
+                                                        className="btn-secondary"
+                                                        style={{ background: 'var(--christmas-green)', color: 'white', border: 'none' }}
+                                                    >
+                                                        📷 Usar Câmera
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageSelect}
+                                        hidden
+                                        disabled={processing}
+                                    />
+                                </div>
+
+                                {/* Actions overlay for preview mode (Reset button) */}
+                                {imagePreview && !processing && !result && (
+                                    <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10 }}>
+                                        <button onClick={(e) => { e.stopPropagation(); handleReset(); }} className="btn-secondary">
+                                            🔄 Trocar Foto
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* PROCESSING OVERLAY */}
+                                {processing && (
+                                    <div className="processing-overlay">
+                                        <div className="processing-content">
+                                            <span className="processing-icon">✨</span>
+                                            <p className="processing-message">{progress.message || 'Preparando magia...'}</p>
+                                            <div className="progress-bar">
+                                                <div
+                                                    className="progress-fill"
+                                                    style={{ width: `${progress.percent}%` }}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 )}
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageSelect}
-                                    hidden
-                                    disabled={processing}
-                                />
                             </div>
-
-                            {/* Actions overlay for preview mode (Reset button) */}
-                            {imagePreview && !processing && !result && (
-                                <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10 }}>
-                                    <button onClick={(e) => { e.stopPropagation(); handleReset(); }} className="btn-secondary">
-                                        🔄 Trocar Foto
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* PROCESSING OVERLAY */}
-                            {processing && (
-                                <div className="processing-overlay">
-                                    <div className="processing-content">
-                                        <span className="processing-icon">✨</span>
-                                        <p className="processing-message">{progress.message || 'Preparando magia...'}</p>
-                                        <div className="progress-bar">
-                                            <div
-                                                className="progress-fill"
-                                                style={{ width: `${progress.percent}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {result ? (
-                    <div className="result-actions-section">
-                        <div className="share-buttons-grid">
-                            <button onClick={handleDownload} className="btn-action download">
-                                <span className="icon">⬇️</span>
-                                <span className="label">Baixar Imagem</span>
-                            </button>
-
-                            <button onClick={handleShareWhatsApp} className="btn-action whatsapp">
-                                <span className="icon">💚</span>
-                                <span className="label">WhatsApp</span>
-                            </button>
-
-                            <button onClick={handleShareInstagram} className="btn-action instagram">
-                                <span className="icon">📸</span>
-                                <span className="label">Instagram</span>
-                            </button>
-                        </div>
-
-                        <button onClick={handleReset} className="btn-action reset">
-                            <span>🔄</span> Fazer Outro
-                        </button>
+                        )}
                     </div>
-                ) : (
-                    <>
-                        {/* Templates Section */}
-                        <div className="templates-section">
-                            <div className="category-tabs">
-                                {Object.keys(categories).map((cat) => (
-                                    <button
-                                        key={cat}
-                                        className={`category-tab ${currentCategory === cat ? 'active' : ''}`}
-                                        onClick={() => setCurrentCategory(cat)}
-                                        disabled={processing}
-                                    >
-                                        {categoryLabels[cat] || cat}
-                                    </button>
-                                ))}
+
+                    {result ? (
+                        <div className="result-actions-section">
+                            <div className="share-buttons-grid">
+                                <button onClick={handleDownload} className="btn-action download">
+                                    <span className="icon">⬇️</span>
+                                    <span className="label">Baixar Imagem</span>
+                                </button>
+
+                                <button onClick={handleShareWhatsApp} className="btn-action whatsapp">
+                                    <span className="icon">💚</span>
+                                    <span className="label">WhatsApp</span>
+                                </button>
+
+                                <button onClick={handleShareInstagram} className="btn-action instagram">
+                                    <span className="icon">📸</span>
+                                    <span className="label">Instagram</span>
+                                </button>
                             </div>
 
-                            <div className="templates-grid">
-                                {(categories[currentCategory] || []).map((template) => (
-                                    <button
-                                        key={template.id}
-                                        className={`template-card ${selectedTemplate === template.id ? 'selected' : ''}`}
-                                        onClick={() => setSelectedTemplate(template.id)}
-                                        disabled={processing}
-                                    >
-                                        {template.preview_url ? (
-                                            <img
-                                                src={template.preview_url}
-                                                alt={template.name}
-                                                className="template-preview-image"
-                                            />
-                                        ) : (
-                                            <span className="template-emoji">{template.emoji}</span>
-                                        )}
-                                        <span className="template-name">{template.name}</span>
-                                    </button>
-                                ))}
+                            <button onClick={handleReset} className="btn-action reset">
+                                <span>🔄</span> Fazer Outro
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Templates Section */}
+                            <div className="templates-section">
+                                <div className="category-tabs">
+                                    {Object.keys(categories).map((cat) => (
+                                        <button
+                                            key={cat}
+                                            className={`category-tab ${currentCategory === cat ? 'active' : ''}`}
+                                            onClick={() => setCurrentCategory(cat)}
+                                            disabled={processing}
+                                        >
+                                            {categoryLabels[cat] || cat}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="templates-grid">
+                                    {(categories[currentCategory] || []).map((template) => (
+                                        <button
+                                            key={template.id}
+                                            className={`template-card ${selectedTemplate === template.id ? 'selected' : ''}`}
+                                            onClick={() => setSelectedTemplate(template.id)}
+                                            disabled={processing}
+                                        >
+                                            {template.preview_url ? (
+                                                <img
+                                                    src={template.preview_url}
+                                                    alt={template.name}
+                                                    className="template-preview-image"
+                                                />
+                                            ) : (
+                                                <span className="template-emoji">{template.emoji}</span>
+                                            )}
+                                            <span className="template-name">{template.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Options */}
-                        <div className="options-section">
-                            <label className="checkbox-option">
-                                <input
-                                    type="checkbox"
-                                    checked={removeBg}
-                                    onChange={(e) => setRemoveBg(e.target.checked)}
-                                    disabled={processing}
-                                />
-                                <span className="checkbox-label">✂️ Remover fundo da imagem</span>
-                            </label>
-                        </div>
+                            {/* Options */}
+                            <div className="options-section">
+                                <label className="checkbox-option">
+                                    <input
+                                        type="checkbox"
+                                        checked={removeBg}
+                                        onChange={(e) => setRemoveBg(e.target.checked)}
+                                        disabled={processing}
+                                    />
+                                    <span className="checkbox-label">✂️ Remover fundo da imagem</span>
+                                </label>
+                            </div>
 
-                        {/* Generate Button */}
-                        <button
-                            className="btn-generate"
-                            onClick={handleGenerate}
-                            disabled={!selectedImage || !selectedTemplate || processing}
-                        >
-                            {processing ? (
-                                <>
-                                    <span className="spinner"></span>
-                                    Processando...
-                                </>
-                            ) : (
-                                <>
-                                    ✨ Gerar Avatar {isAuthenticated && `(${credits.total} créditos)`}
-                                </>
-                            )}
-                        </button>
-                    </>
-                )}
-            </div> {/* end editor-card */}
-        </div>
+                            {/* Generate Button */}
+                            <button
+                                className="btn-generate"
+                                onClick={handleGenerate}
+                                disabled={!selectedImage || !selectedTemplate || processing}
+                            >
+                                {processing ? (
+                                    <>
+                                        <span className="spinner"></span>
+                                        Processando...
+                                    </>
+                                ) : (
+                                    <>
+                                        ✨ Gerar Avatar {isAuthenticated && `(${credits.total} créditos)`}
+                                    </>
+                                )}
+                            </button>
+                        </>
+                    )}
+                </div> {/* end editor-card */}
+            </div>
+        </>
     );
 }
 

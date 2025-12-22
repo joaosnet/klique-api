@@ -67,6 +67,11 @@
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
+.logo-image {
+    height: 40px;
+    width: auto;
+}
+
 .nav {
     display: flex;
     align-items: center;

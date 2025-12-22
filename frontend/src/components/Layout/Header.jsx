@@ -1,5 +1,6 @@
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import logo from '../../assets/logo.svg';
 import './Header.css';
 
 export default function Header() {
@@ -15,7 +16,7 @@ export default function Header() {
         <header className="header">
             <div className="header-container">
                 <Link to="/" className="logo">
-                    <span className="logo-icon">🎄</span>
+                    <img src={logo} alt="Klique Natal" className="logo-image" />
                     <span className="logo-text">Klique Natal</span>
                 </Link>
 

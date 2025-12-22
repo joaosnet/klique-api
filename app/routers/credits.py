@@ -79,7 +79,7 @@ async def use_one_credit(user_id: str) -> dict:
     Prioridade: primeiro usa créditos grátis, depois pagos.
 
     Returns:
-        dict com 'success', 'message', 'remaining'
+        dict com 'success', 'message', 'remaining', 'credit_type'
     """
     db_credits = get_user_credits_collection()
     credits = await get_or_create_user_credits(user_id, db_credits)
@@ -92,10 +92,16 @@ async def use_one_credit(user_id: str) -> dict:
             'success': False,
             'message': 'Sem créditos disponíveis',
             'remaining': 0,
+            'credit_type': None,
         }
 
     # Usar crédito grátis primeiro
-    update_field = 'free_credits' if free > 0 else 'paid_credits'
+    if free > 0:
+        update_field = 'free_credits'
+        credit_type = 'free'
+    else:
+        update_field = 'paid_credits'
+        credit_type = 'paid'
 
     await db_credits.update_one(
         {'user_id': user_id},
@@ -107,13 +113,14 @@ async def use_one_credit(user_id: str) -> dict:
 
     remaining = (free + paid) - 1
     logger.info(
-        f'Crédito usado pelo usuário {user_id}. Restantes: {remaining}'
+        f'Crédito ({credit_type}) usado pelo usuário {user_id}. Restantes: {remaining}'
     )
 
     return {
         'success': True,
         'message': 'Crédito utilizado com sucesso',
         'remaining': remaining,
+        'credit_type': credit_type,
     }
 
 

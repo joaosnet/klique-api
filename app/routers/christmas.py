@@ -23,7 +23,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import JSONResponse, StreamingResponse
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from ..dependencies import get_current_user_optional
 from ..logger import logger
@@ -35,6 +35,76 @@ from ..services.image_cleaner import (
 from .credits import check_user_has_credits, use_one_credit
 
 router = APIRouter(prefix='/api/christmas', tags=['christmas'])
+
+
+def add_watermark(image_path: str, output_path: str = None) -> str:
+    """
+    Adiciona marca d'água na imagem para usuários gratuitos.
+
+    Args:
+        image_path: Caminho da imagem original
+        output_path: Caminho de saída (opcional)
+
+    Returns:
+        Caminho da imagem com marca d'água
+    """
+    img = Image.open(image_path)
+    if img.mode != 'RGBA':
+        img = img.convert('RGBA')
+
+    # Cria overlay transparente
+    overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Texto da marca d'água
+    watermark_text = 'Klique Natal • Compre para baixar'
+
+    # Tenta usar fonte do sistema, senão usa padrão
+    font_size = max(20, img.width // 25)
+    try:
+        font = ImageFont.truetype('arial.ttf', font_size)
+    except OSError, IOError:
+        try:
+            font = ImageFont.truetype(
+                '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+                font_size,
+            )
+        except OSError, IOError:
+            font = ImageFont.load_default()
+
+    # Calcula posição central
+    bbox = draw.textbbox((0, 0), watermark_text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    x = (img.width - text_width) // 2
+    y = (img.height - text_height) // 2
+
+    # Desenha fundo semi-transparente
+    padding = 20
+    draw.rectangle(
+        [
+            x - padding,
+            y - padding,
+            x + text_width + padding,
+            y + text_height + padding,
+        ],
+        fill=(0, 0, 0, 150),
+    )
+
+    # Desenha texto branco
+    draw.text((x, y), watermark_text, font=font, fill=(255, 255, 255, 230))
+
+    # Combina imagem com overlay
+    result = Image.alpha_composite(img, overlay)
+    result = result.convert('RGB')
+
+    # Salva
+    if output_path is None:
+        output_path = image_path.replace('.png', '_watermark.png')
+    result.save(output_path, 'PNG')
+
+    return output_path
+
 
 # Prompts específicos para cada template de Natal
 TEMPLATE_PROMPTS = {
@@ -252,9 +322,13 @@ async def process_image_with_progress(
     template: str,
     prompt: str,
     remove_bg: bool = False,
+    credit_type: str = 'free',
 ):
     """
     Processa imagem com Gemini e gera eventos de progresso.
+
+    Args:
+        credit_type: 'free' ou 'paid' - se 'free', aplica marca d'água
 
     Yields:
         Eventos SSE com progresso e resultado final.
@@ -386,6 +460,16 @@ async def process_image_with_progress(
                     output_file = Path(nobg_path)
                     logger.debug(f'Fundo removido: {bg_status}')
 
+            # Aplica marca d'água se for crédito gratuito
+            is_paid = credit_type == 'paid'
+            if not is_paid:
+                logger.debug("Aplicando marca d'água (crédito gratuito)")
+                watermark_path = add_watermark(
+                    str(output_file),
+                    str(output_dir / f'christmas_{template}_wm.png'),
+                )
+                output_file = Path(watermark_path)
+
             # Lê a imagem final e converte para base64
             with open(output_file, 'rb') as f:
                 processed_bytes = f.read()
@@ -401,6 +485,7 @@ async def process_image_with_progress(
                     'template': template,
                     'processed_image': f'data:image/png;base64,{img_base64}',
                     'message': '🎉 Transformação completa!',
+                    'is_paid': is_paid,
                 },
             )
         else:
@@ -704,11 +789,19 @@ async def swap_face_stream(
     # Obtém o cliente Gemini
     client = get_gemini_client(request)
 
+    # Obtém tipo de crédito usado
+    credit_type = credit_result.get('credit_type', 'free')
+
     async def cleanup_and_stream():
         """Stream com cleanup do arquivo temporário."""
         try:
             async for event in process_image_with_progress(
-                client, temp_path, template, full_prompt, remove_bg
+                client,
+                temp_path,
+                template,
+                full_prompt,
+                remove_bg,
+                credit_type,
             ):
                 yield event
         finally:
