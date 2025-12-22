@@ -32,7 +32,8 @@ export default function AvatarGenerator() {
                 const data = await christmasAPI.getTemplates();
                 setCategories(data);
                 if (Object.keys(data).length > 0) {
-                    setCurrentCategory(Object.keys(data)[0]);
+                    // Se 'todos' existir, usa como padrão, senão pega a primeira
+                    setCurrentCategory(data['todos'] ? 'todos' : Object.keys(data)[0]);
                 }
             } catch (err) {
                 console.error('Erro ao buscar templates:', err);
@@ -105,6 +106,7 @@ export default function AvatarGenerator() {
     };
 
     const categoryLabels = {
+        'todos': 'Todos',
         'populares': 'Populares',
         'classico': 'Clássico',
         'divertido': 'Divertido',

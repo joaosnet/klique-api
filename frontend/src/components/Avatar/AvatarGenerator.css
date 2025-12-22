@@ -9,6 +9,9 @@
 @media (max-width: 768px) {
     .generator-container {
         padding: var(--spacing-md) var(--spacing-sm);
+        overflow-x: hidden;
+        /* Prevent child shadows from stretching the page */
+        width: 100%;
     }
 }
 
@@ -55,6 +58,15 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 768px) {
+    .editor-card {
+        box-shadow: var(--shadow-md);
+        /* Smaller shadow on mobile to prevent overflow */
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--spacing-md);
+    }
 }
 
 /* Main Stage Layout */
@@ -459,11 +471,24 @@
 
 .category-tabs {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
+    /* Alinha à esquerda para permitir scroll natural */
     gap: var(--spacing-xs);
     margin-bottom: var(--spacing-md);
     overflow-x: auto;
-    padding-bottom: 4px;
+    padding: 4px var(--spacing-sm);
+    /* Adiciona padding lateral para não colar na borda */
+    scrollbar-width: none;
+    /* Esconde scrollbar no Firefox */
+    -ms-overflow-style: none;
+    /* Esconde scrollbar no IE/Edge */
+    -webkit-overflow-scrolling: touch;
+    /* Scroll suave no iOS */
+}
+
+.category-tabs::-webkit-scrollbar {
+    display: none;
+    /* Esconde scrollbar no Chrome/Safari */
 }
 
 .category-tab {

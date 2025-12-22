@@ -21,8 +21,8 @@ from fastapi import (
     UploadFile,
     status,
 )
-from typing import Optional
 from fastapi.responses import JSONResponse, StreamingResponse
+from typing import Optional
 from PIL import Image
 
 from ..dependencies import get_current_user_optional
@@ -205,7 +205,21 @@ DEFAULT_PROMPT = (
 @router.get('/templates')
 async def get_templates():
     """Retorna as categorias e templates disponíveis."""
-    return TEMPLATES_CONFIG
+    # Cria uma cópia para não modificar o original global (boa prática)
+    config = TEMPLATES_CONFIG.copy()
+
+    # Agrega todos os templates na categoria 'todos'
+    all_templates = []
+    seen_ids = set()
+
+    for category_templates in TEMPLATES_CONFIG.values():
+        for template in category_templates:
+            if template['id'] not in seen_ids:
+                all_templates.append(template)
+                seen_ids.add(template['id'])
+
+    # Insere 'todos' como a primeira categoria
+    return {'todos': all_templates, **config}
 
 
 def get_gemini_client(request: Request):
