@@ -18,6 +18,7 @@ export default function AvatarGenerator() {
     const [error, setError] = useState('');
     const [cameraStream, setCameraStream] = useState(null);
     const [cameraActive, setCameraActive] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     const fileInputRef = useRef(null);
     const videoRef = useRef(null);
@@ -111,15 +112,46 @@ export default function AvatarGenerator() {
 
     const handleImageSelect = (e) => {
         const file = e.target.files[0];
+        if (file) processFile(file);
+    };
+
+    const processFile = (file) => {
+        if (file.size > 10 * 1024 * 1024) {
+            setError('Imagem muito grande. Máximo 10MB.');
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+            setError('Por favor, envie apenas um arquivo de imagem.');
+            return;
+        }
+        setSelectedImage(file);
+        setImagePreview(URL.createObjectURL(file));
+        setResult(null);
+        setError('');
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+
+        if (processing) return;
+
+        const file = e.dataTransfer.files?.[0];
         if (file) {
-            if (file.size > 10 * 1024 * 1024) {
-                setError('Imagem muito grande. Máximo 10MB.');
-                return;
+            if (cameraActive) {
+                stopCamera();
             }
-            setSelectedImage(file);
-            setImagePreview(URL.createObjectURL(file));
-            setResult(null);
-            setError('');
+            processFile(file);
         }
     };
 
@@ -184,6 +216,85 @@ export default function AvatarGenerator() {
         startCamera();
     };
 
+    // Helper to convert Base64 to File for sharing
+    const dataURLtoFile = (dataurl, filename) => {
+        try {
+            const arr = dataurl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], filename, { type: mime });
+        } catch (e) {
+            console.error("Error converting file", e);
+            return null;
+        }
+    };
+
+    const handleShareWhatsApp = async () => {
+        const text = `Ficou incrível meu avatar de Natal! 🎅🎄\n\nFiz no Klique, cria o seu também aqui: ${window.location.href}`;
+
+        // Tenta usar o Web Share API nativo (Mobile Android/iOS)
+        if (navigator.share && result) {
+            try {
+                const file = dataURLtoFile(result, 'avatar-natal.png');
+                if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Meu Avatar de Natal',
+                        text: text
+                    });
+                    return; // Sucesso, não precisa do fallback
+                }
+            } catch (error) {
+                console.log('Share API cancelled or failed:', error);
+                // Continua para o fallback
+            }
+        }
+
+        // Fallback: Desktop ou navegador sem suporte a arquivos
+        // Baixa a imagem para o usuário poder anexar manualmente
+        handleDownload();
+
+        // Abre o WhatsApp com o texto
+        const urlText = encodeURIComponent(text);
+        window.open(`https://wa.me/?text=${urlText}`, '_blank');
+    };
+
+    const handleShareInstagram = async () => {
+        const text = `Ficou incrível meu avatar de Natal! 🎅🎄\n\nFiz no Klique, cria o seu também aqui: ${window.location.href}`;
+
+        // Tenta usar o Web Share API nativo
+        if (navigator.share && result) {
+            try {
+                const file = dataURLtoFile(result, 'avatar-natal.png');
+                if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Meu Avatar de Natal',
+                        text: text
+                    });
+                    return;
+                }
+            } catch (error) {
+                console.log('Share API cancelled or failed:', error);
+            }
+        }
+
+        // Fallback: Baixa a imagem + Copia Texto + Abre Instagram
+        handleDownload();
+
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Imagem baixada e texto copiado! 📸\n\nAgora é só abrir o Instagram e postar no Story ou Feed.');
+            window.open('https://instagram.com', '_blank');
+        }).catch(() => {
+            window.open('https://instagram.com', '_blank');
+        });
+    };
+
     return (
         <div className="generator-container">
             <div className="generator-header">
@@ -206,21 +317,16 @@ export default function AvatarGenerator() {
                                 beforeImage={imagePreview}
                                 afterImage={result}
                             />
-                            <div className="floating-actions">
-                                <button onClick={handleDownload} className="btn-floating-download" title="Baixar Avatar">
-                                    <span>⬇️</span>
-                                </button>
-                                <button onClick={handleReset} className="btn-floating-reset" title="Criar Outro">
-                                    <span>🔄</span>
-                                </button>
-                            </div>
                         </div>
                     ) : (
                         // Upload / Preview / Camera State
                         <div className="upload-container">
                             <div
-                                className={`upload-zone ${imagePreview ? 'has-image' : ''} ${cameraActive ? 'camera-active' : ''}`}
+                                className={`upload-zone ${imagePreview ? 'has-image' : ''} ${cameraActive ? 'camera-active' : ''} ${isDragging ? 'dragging' : ''}`}
                                 onClick={() => !processing && !cameraActive && !imagePreview && fileInputRef.current?.click()}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
                             >
                                 {imagePreview ? (
                                     <img src={imagePreview} alt="Preview" className="image-preview" />
@@ -314,74 +420,101 @@ export default function AvatarGenerator() {
                     )}
                 </div>
 
-                {/* Templates Section */}
-                <div className="templates-section">
-                    <div className="category-tabs">
-                        {Object.keys(categories).map((cat) => (
-                            <button
-                                key={cat}
-                                className={`category-tab ${currentCategory === cat ? 'active' : ''}`}
-                                onClick={() => setCurrentCategory(cat)}
-                                disabled={processing}
-                            >
-                                {categoryLabels[cat] || cat}
+                {result ? (
+                    <div className="result-actions-section">
+                        <div className="share-buttons-grid">
+                            <button onClick={handleDownload} className="btn-action download">
+                                <span className="icon">⬇️</span>
+                                <span className="label">Baixar Imagem</span>
                             </button>
-                        ))}
-                    </div>
 
-                    <div className="templates-grid">
-                        {(categories[currentCategory] || []).map((template) => (
-                            <button
-                                key={template.id}
-                                className={`template-card ${selectedTemplate === template.id ? 'selected' : ''}`}
-                                onClick={() => setSelectedTemplate(template.id)}
-                                disabled={processing}
-                            >
-                                {template.preview_url ? (
-                                    <img
-                                        src={template.preview_url}
-                                        alt={template.name}
-                                        className="template-preview-image"
-                                    />
-                                ) : (
-                                    <span className="template-emoji">{template.emoji}</span>
-                                )}
-                                <span className="template-name">{template.name}</span>
+                            <button onClick={handleShareWhatsApp} className="btn-action whatsapp">
+                                <span className="icon">💚</span>
+                                <span className="label">WhatsApp</span>
                             </button>
-                        ))}
+
+                            <button onClick={handleShareInstagram} className="btn-action instagram">
+                                <span className="icon">📸</span>
+                                <span className="label">Instagram</span>
+                            </button>
+                        </div>
+
+                        <button onClick={handleReset} className="btn-action reset">
+                            <span>🔄</span> Fazer Outro
+                        </button>
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {/* Templates Section */}
+                        <div className="templates-section">
+                            <div className="category-tabs">
+                                {Object.keys(categories).map((cat) => (
+                                    <button
+                                        key={cat}
+                                        className={`category-tab ${currentCategory === cat ? 'active' : ''}`}
+                                        onClick={() => setCurrentCategory(cat)}
+                                        disabled={processing}
+                                    >
+                                        {categoryLabels[cat] || cat}
+                                    </button>
+                                ))}
+                            </div>
 
-                {/* Options */}
-                <div className="options-section">
-                    <label className="checkbox-option">
-                        <input
-                            type="checkbox"
-                            checked={removeBg}
-                            onChange={(e) => setRemoveBg(e.target.checked)}
-                            disabled={processing}
-                        />
-                        <span className="checkbox-label">✂️ Remover fundo da imagem</span>
-                    </label>
-                </div>
+                            <div className="templates-grid">
+                                {(categories[currentCategory] || []).map((template) => (
+                                    <button
+                                        key={template.id}
+                                        className={`template-card ${selectedTemplate === template.id ? 'selected' : ''}`}
+                                        onClick={() => setSelectedTemplate(template.id)}
+                                        disabled={processing}
+                                    >
+                                        {template.preview_url ? (
+                                            <img
+                                                src={template.preview_url}
+                                                alt={template.name}
+                                                className="template-preview-image"
+                                            />
+                                        ) : (
+                                            <span className="template-emoji">{template.emoji}</span>
+                                        )}
+                                        <span className="template-name">{template.name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
-                {/* Generate Button */}
-                <button
-                    className="btn-generate"
-                    onClick={handleGenerate}
-                    disabled={!selectedImage || !selectedTemplate || processing}
-                >
-                    {processing ? (
-                        <>
-                            <span className="spinner"></span>
-                            Processando...
-                        </>
-                    ) : (
-                        <>
-                            ✨ Gerar Avatar {isAuthenticated && `(${credits.total} créditos)`}
-                        </>
-                    )}
-                </button>
+                        {/* Options */}
+                        <div className="options-section">
+                            <label className="checkbox-option">
+                                <input
+                                    type="checkbox"
+                                    checked={removeBg}
+                                    onChange={(e) => setRemoveBg(e.target.checked)}
+                                    disabled={processing}
+                                />
+                                <span className="checkbox-label">✂️ Remover fundo da imagem</span>
+                            </label>
+                        </div>
+
+                        {/* Generate Button */}
+                        <button
+                            className="btn-generate"
+                            onClick={handleGenerate}
+                            disabled={!selectedImage || !selectedTemplate || processing}
+                        >
+                            {processing ? (
+                                <>
+                                    <span className="spinner"></span>
+                                    Processando...
+                                </>
+                            ) : (
+                                <>
+                                    ✨ Gerar Avatar {isAuthenticated && `(${credits.total} créditos)`}
+                                </>
+                            )}
+                        </button>
+                    </>
+                )}
             </div> {/* end editor-card */}
         </div>
     );

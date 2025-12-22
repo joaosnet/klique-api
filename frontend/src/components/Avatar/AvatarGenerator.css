@@ -93,7 +93,8 @@
     overflow: hidden;
 }
 
-.upload-zone:hover {
+.upload-zone:hover,
+.upload-zone.dragging {
     border-color: var(--christmas-green);
     background: linear-gradient(180deg, #f0f9f4 0%, #e0f2e9 100%);
 }
@@ -341,62 +342,94 @@
     background: #000;
 }
 
-.floating-actions {
-    position: absolute;
-    bottom: 50px;
-    right: 20px;
+/* Result Actions Section */
+.result-actions-section {
+    padding: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.02);
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    z-index: 20;
+    gap: var(--spacing-md);
+    animation: slideUpFade 0.5s ease-out;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.btn-floating-download,
-.btn-floating-reset {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    border: none;
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.share-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.btn-action {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     color: white;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.btn-floating-download {
-    background: linear-gradient(135deg, var(--christmas-green), var(--christmas-green-dark));
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    filter: brightness(1.1);
 }
 
-.btn-floating-reset {
-    background: rgba(0, 0, 0, 0.5);
-    width: 44px;
-    height: 44px;
+.btn-action:active {
+    transform: scale(0.98);
 }
 
-.btn-floating-download span,
-.btn-floating-reset span {
-    font-size: 1.5rem;
+.btn-action .icon {
+    font-size: 1.25rem;
 }
 
-.btn-floating-reset span {
-    font-size: 1.1rem;
+/* Specific Button Styles */
+.btn-action.download {
+    background: linear-gradient(135deg, var(--christmas-red), #b31e3b);
 }
 
-.btn-floating-download:hover,
-.btn-floating-reset:hover {
-    transform: scale(1.15) translateY(-5px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+.btn-action.whatsapp {
+    background: linear-gradient(135deg, #25D366, #128C7E);
 }
 
-.btn-floating-download:active,
-.btn-floating-reset:active {
-    transform: scale(0.95);
+.btn-action.instagram {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+}
+
+.btn-action.reset {
+    background: transparent;
+    border: 2px dashed rgba(0, 0, 0, 0.1);
+    color: var(--text-secondary);
+    width: 100%;
+    margin-top: var(--spacing-xs);
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.btn-action.reset:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: var(--text-primary);
+    transform: none;
 }
 
 /* Templates Section */
