@@ -1,0 +1,8 @@
+.home-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0d3320 0%, #1a5c3a 50%, #0d3320 100%);
+}
+
+.main-content {
+    padding-top: 1rem;
+}

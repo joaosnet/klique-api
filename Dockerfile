@@ -5,8 +5,10 @@ FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
 ENV TZ=America/Sao_Paulo
 
 # Install system dependencies
+# curl is needed for Docker healthchecks
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install the project into `/app`

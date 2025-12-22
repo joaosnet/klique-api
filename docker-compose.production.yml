@@ -1,0 +1,75 @@
+# Docker Compose Production Override
+# Use: docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+#
+# Key differences from development:
+# - Remove dev volumes (code sync)
+# - Use restart policies
+# - Add healthchecks
+# - Optimize resource limits
+# - Use production environment variables
+
+services:
+  mongodb:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  fastapi-app:
+    restart: always
+    # Remove dev volumes - use built image only
+    volumes:
+      - gemini_cookies:/usr/local/lib/python3.12/site-packages/gemini_webapi/utils/temp
+      - ./logs:/app/logs
+    environment:
+      # Production settings
+      DEBUG: "false"
+      ENVIRONMENT: "production"
+    # Override command for production with multiple workers
+    command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4" ]
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/docs" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  frontend:
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+  # Disable WhatsApp and G4F in production if not needed
+  # Uncomment if you want to exclude them:
+  # whatsapp:
+  #   profiles:
+  #     - donotstart
+  # g4f:
+  #   profiles:
+  #     - donotstart

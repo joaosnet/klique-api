@@ -71,13 +71,22 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       GMAIL_EMAIL: ${GMAIL_EMAIL}
-      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD} # Senha de app do Gmail
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       GROQ_API_KEY: ${GROQ_API_KEY}
       OPENAI_API_BASE: ${OPENAI_API_BASE}
       PUTER_API_KEY: ${PUTER_API_KEY}
+      # Mercado Pago
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
+      MP_PUBLIC_KEY: ${MP_PUBLIC_KEY}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
+      MIN_PAYMENT_AMOUNT: ${MIN_PAYMENT_AMOUNT}
+      CREDITS_PER_REAL: ${CREDITS_PER_REAL}
+      FREE_CREDITS_PER_USER: ${FREE_CREDITS_PER_USER}
     restart: always
+    # Development: use fastapi dev for hot-reload
+    command: [ "fastapi", "dev", "--host", "0.0.0.0", "app/main.py" ]
     volumes:
       - ./app:/app/app
       - ./logs:/app/logs
@@ -115,6 +124,19 @@ services:
     volumes:
       - ./har_and_cookies:/app/har_and_cookies
       - ./generated_media:/app/generated_media
+    restart: always
+
+  frontend:
+    container_name: klique-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - fastapi-app
+    networks:
+      - whatsapp-network
     restart: always
 
 volumes:
