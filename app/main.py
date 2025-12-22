@@ -100,15 +100,15 @@ app.add_middleware(
 )
 
 # Setup templates and static files
-static_dir = Path(__file__).parent / 'static'
-templates = Jinja2Templates(directory=static_dir)
-app.mount('/static', StaticFiles(directory=static_dir), name='static')
+# static_dir = Path(__file__).parent / 'static'
+# templates = Jinja2Templates(directory=static_dir)
+# app.mount('/static', StaticFiles(directory=static_dir), name='static')
 
 
-@app.get('/', response_class=HTMLResponse)
-async def serve_frontend(request: Request):
-    """Serve the main frontend page."""
-    return templates.TemplateResponse('index.html', {'request': request})
+# @app.get('/', response_class=HTMLResponse)
+# async def serve_frontend(request: Request):
+#     """Serve the main frontend page."""
+#     return templates.TemplateResponse('index.html', {'request': request})
 
 
 # Include routers
