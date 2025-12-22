@@ -100,9 +100,10 @@ services:
           path: ./uv.lock
 
   g4f:
-    build:
-      context: ../gpt4free
-      dockerfile: docker/Dockerfile
+    # build:
+    #   context: ../gpt4free
+    #   dockerfile: docker/Dockerfile
+    image: hlohaus789/g4f:latest
     container_name: g4f
     ports:
       - "8080:8080"
