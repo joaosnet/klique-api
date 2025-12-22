@@ -19,7 +19,7 @@ dependencies = [
     "langgraph>=1.0.1",
     "loguru>=0.7.3",
     "numpy>=2.4.0",
-    "opencv-python>=4.11.0.86",
+    "opencv-python-headless>=4.11.0.86",
     "pillow>=12.0.0",
     "pwdlib[argon2]>=0.3.0",
     "pyjwt>=2.10.1",
@@ -65,7 +65,7 @@ quote-style = 'single'
 [tool.taskipy.tasks]
 lint = 'ruff check . && ruff check . --diff'
 pre_format = 'uv sync --dev'
-format = 'ruff check . --fix && ruff format .'
+format = 'ruff check --unsafe-fixes --fix .  && ruff format .'
 pre_run = 'task format'
 run = 'fastapi dev app/main.py --host 0.0.0.0'
 prod = 'uvicorn --host 0.0.0.0 app/main:app'

@@ -183,11 +183,11 @@ DRIVE_FOLDER_ID=sua_pasta_pessoal_id_aqui
 #   - Crie uma pasta no seu Google Drive pessoal
 #   - Copie o ID da pasta da URL: https://drive.google.com/drive/folders/FOLDER_ID
 """
-        env_path.write_text(template)
+        env_path.write_text(template, encoding='utf-8')
         return
 
     # Ler conteúdo atual
-    content = env_path.read_text()
+    content = env_path.read_text(encoding='utf-8')
     lines = content.split('\n')
 
     # Verificar se as credenciais já existem
@@ -223,7 +223,7 @@ DRIVE_FOLDER_ID=sua_pasta_pessoal_id_aqui
         updated_lines.append(f"SECURE_1PSIDTS='{secure_1psidts}'")
 
     # Escrever de volta
-    env_path.write_text('\n'.join(updated_lines))
+    env_path.write_text('\n'.join(updated_lines), encoding='utf-8')
 
 
 def test_cookies():
@@ -261,7 +261,7 @@ def main():
     print('🚀 Configurador de Cookies do Gemini MCP\n')
 
     # Verificar argumentos da linha de comando
-    if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h', 'help']:
+    if len(sys.argv) > 1 and sys.argv[1] in {'--help', '-h', 'help'}:
         print('Uso: python setup_cookies.py [navegador]')
         print('\nNavegadores suportados:')
         print(

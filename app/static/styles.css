@@ -673,6 +673,41 @@ body {
     margin-top: var(--spacing-md);
     font-size: 1rem;
     color: var(--text-secondary);
+    text-align: center;
+    min-height: 1.5em;
+}
+
+.progress-bar {
+    width: 80%;
+    max-width: 300px;
+    height: 8px;
+    background: rgba(26, 92, 58, 0.2);
+    border-radius: 4px;
+    margin-top: var(--spacing-md);
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--christmas-green), var(--christmas-gold), var(--christmas-red));
+    background-size: 200% 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    animation: progress-shimmer 2s ease-in-out infinite;
+}
+
+@keyframes progress-shimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 /* ========================================

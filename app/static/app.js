@@ -463,7 +463,7 @@ function updateCarouselPosition() {
 }
 
 // ========================================
-// Image Processing
+// Image Processing with SSE Streaming
 // ========================================
 
 async function processImage() {
@@ -472,7 +472,7 @@ async function processImage() {
     }
 
     state.isProcessing = true;
-    showLoading(true);
+    showLoading(true, 'Iniciando processamento...');
 
     try {
         // Prepare form data
@@ -484,8 +484,8 @@ async function processImage() {
         formData.append('image', blob, 'user-image.jpg');
         formData.append('template', state.selectedTemplate);
 
-        // Call API
-        const apiResponse = await fetch(`${API_BASE_URL}/api/christmas/swap`, {
+        // Use SSE streaming endpoint for progress updates
+        const apiResponse = await fetch(`${API_BASE_URL}/api/christmas/swap-stream`, {
             method: 'POST',
             body: formData
         });
@@ -494,26 +494,112 @@ async function processImage() {
             throw new Error('Falha ao processar imagem');
         }
 
-        const result = await apiResponse.json();
+        // Process SSE stream
+        const reader = apiResponse.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-        // Update state with processed image
-        state.processedImage = result.processed_image;
-        addToHistory(state.processedImage);
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
 
-        // Update UI
-        elements.afterImage.src = state.processedImage;
-        elements.downloadSection.hidden = false;
+            buffer += decoder.decode(value, { stream: true });
+
+            // Parse SSE events from buffer
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+            let eventType = '';
+            let eventData = '';
+
+            for (const line of lines) {
+                if (line.startsWith('event: ')) {
+                    eventType = line.slice(7).trim();
+                } else if (line.startsWith('data: ')) {
+                    eventData = line.slice(6).trim();
+                } else if (line === '' && eventType && eventData) {
+                    // Complete event received
+                    try {
+                        const data = JSON.parse(eventData);
+                        handleSSEEvent(eventType, data);
+                    } catch (e) {
+                        console.error('Error parsing SSE data:', e);
+                    }
+                    eventType = '';
+                    eventData = '';
+                }
+            }
+        }
 
     } catch (error) {
         console.error('Error processing image:', error);
 
-        // For demo purposes, use a placeholder effect
-        // In production, this would show an error message
-        await simulateProcessing();
+        // Fallback to non-streaming endpoint
+        try {
+            await processImageFallback();
+        } catch (fallbackError) {
+            console.error('Fallback also failed:', fallbackError);
+            showLoading(false);
+            alert('Erro ao processar imagem. Tente novamente.');
+        }
     } finally {
         state.isProcessing = false;
-        showLoading(false);
     }
+}
+
+function handleSSEEvent(eventType, data) {
+    switch (eventType) {
+        case 'progress':
+            // Update loading message with progress
+            const percent = data.percent || 0;
+            showLoading(true, data.message || 'Processando...', percent);
+            break;
+
+        case 'complete':
+            // Image processing complete
+            if (data.success && data.processed_image) {
+                state.processedImage = data.processed_image;
+                addToHistory(state.processedImage);
+
+                elements.afterImage.src = state.processedImage;
+                elements.downloadSection.hidden = false;
+                showLoading(false);
+            }
+            break;
+
+        case 'error':
+            // Handle error
+            console.error('SSE Error:', data.message);
+            showLoading(false);
+            alert(data.message || 'Erro ao processar imagem');
+            break;
+    }
+}
+
+// Fallback to regular endpoint when SSE fails
+async function processImageFallback() {
+    const formData = new FormData();
+    const response = await fetch(state.uploadedImage);
+    const blob = await response.blob();
+    formData.append('image', blob, 'user-image.jpg');
+    formData.append('template', state.selectedTemplate);
+
+    const apiResponse = await fetch(`${API_BASE_URL}/api/christmas/swap`, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!apiResponse.ok) {
+        throw new Error('Falha ao processar imagem');
+    }
+
+    const result = await apiResponse.json();
+    state.processedImage = result.processed_image;
+    addToHistory(state.processedImage);
+
+    elements.afterImage.src = state.processedImage;
+    elements.downloadSection.hidden = false;
+    showLoading(false);
 }
 
 // Simulated processing for demo when API not available
@@ -521,7 +607,6 @@ async function simulateProcessing() {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // For demo, just show the original image with a festive overlay effect
-    // In production, this would be replaced by actual face swap
     const canvas = document.createElement('canvas');
     const img = new Image();
 
@@ -553,10 +638,23 @@ async function simulateProcessing() {
     img.src = state.uploadedImage;
 }
 
-function showLoading(show) {
+function showLoading(show, message = 'Processando sua imagem...', percent = 0) {
     elements.loadingState.hidden = !show;
     elements.imageComparator.hidden = show;
+
+    // Update loading message if element exists
+    const loadingText = elements.loadingState.querySelector('.loading-text');
+    if (loadingText && message) {
+        loadingText.textContent = message;
+    }
+
+    // Update progress bar if exists
+    const progressBar = elements.loadingState.querySelector('.progress-bar-fill');
+    if (progressBar && percent > 0) {
+        progressBar.style.width = `${percent}%`;
+    }
 }
+
 
 // ========================================
 // History (Undo/Redo)

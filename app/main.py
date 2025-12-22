@@ -7,15 +7,14 @@ warnings.filterwarnings(
     module=r'langchain_core.*',
 )
 
-from contextlib import asynccontextmanager
-from pathlib import Path
+from contextlib import asynccontextmanager  # noqa: E402
+from pathlib import Path  # noqa: E402
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
 from gemini_webapi import GeminiClient
 
 from .config import SECURE_1PSID, SECURE_1PSIDTS

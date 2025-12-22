@@ -1,18 +1,22 @@
 """
 Router para processamento de imagens natalinas.
 Usa gemini-webapi para transformar fotos em avatares de Natal.
+Suporta Server-Sent Events (SSE) para updates de progresso.
 """
 
+import asyncio
 import base64
 import io
+import json
 import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from PIL import Image
 
 from ..logger import logger
+from ..services.image_cleaner import remove_background, remove_signature
 
 router = APIRouter(prefix='/api/christmas', tags=['christmas'])
 
@@ -20,9 +24,9 @@ router = APIRouter(prefix='/api/christmas', tags=['christmas'])
 TEMPLATE_PROMPTS = {
     # Populares
     'papai-noel': (
-        'Transform this person into Santa Claus with a red suit, white beard, '
-        'and red hat with white trim. Keep their face recognizable but add '
-        'rosy cheeks and a jolly expression. Christmas background with snow.'
+        'Transform this person into Santa Claus with a red suit, white '
+        'beard, and red hat with white trim. Keep their face recognizable '
+        'but add rosy cheeks and a jolly expression. Christmas background.'
     ),
     'duende': (
         'Transform this person into a Christmas elf with pointed ears, '
@@ -36,7 +40,7 @@ TEMPLATE_PROMPTS = {
     ),
     'gorro-neve': (
         'Add a cute winter beanie/snow hat with a pom-pom to this person. '
-        'Add falling snowflakes around them and a winter wonderland background.'
+        'Add falling snowflakes around them and a winter wonderland.'
     ),
     # Clássico
     'anjo': (
@@ -75,7 +79,7 @@ TEMPLATE_PROMPTS = {
     # Papai Noel variações
     'papai-noel-classico': (
         'Transform into the classic traditional Santa Claus from vintage '
-        'Christmas cards. Red suit, round glasses, long white beard, warm smile.'
+        'Christmas cards. Red suit, round glasses, long white beard.'
     ),
     'papai-noel-moderno': (
         'Transform into a modern, stylish Santa with a trimmed beard, '
@@ -94,7 +98,7 @@ TEMPLATE_PROMPTS = {
 # Prompt padrão se o template não for encontrado
 DEFAULT_PROMPT = (
     'Transform this person into a festive Christmas character. '
-    'Add holiday decorations, winter clothing, and a magical Christmas atmosphere.'
+    'Add holiday decorations, winter clothing, and magical Christmas.'
 )
 
 
@@ -113,19 +117,200 @@ def get_gemini_client(request: Request):
     return client
 
 
+async def generate_sse_event(event: str, data: dict) -> str:
+    """Formata um evento SSE para streaming."""
+    return f'event: {event}\ndata: {json.dumps(data)}\n\n'
+
+
+async def process_image_with_progress(
+    client,
+    temp_path: str,
+    template: str,
+    prompt: str,
+    remove_bg: bool = False,
+):
+    """
+    Processa imagem com Gemini e gera eventos de progresso.
+
+    Yields:
+        Eventos SSE com progresso e resultado final.
+    """
+    output_file = None
+
+    try:
+        # Total de etapas: 4 base + 1 (watermark) + 1 (bg opcional)
+        total_steps = 6 if remove_bg else 5
+
+        # Etapa 1: Preparando
+        yield await generate_sse_event(
+            'progress',
+            {
+                'step': 1,
+                'total': total_steps,
+                'message': '🎄 Preparando sua foto...',
+                'percent': 10,
+            },
+        )
+        await asyncio.sleep(0.5)
+
+        # Etapa 2: Enviando para o Gemini
+        yield await generate_sse_event(
+            'progress',
+            {
+                'step': 2,
+                'total': total_steps,
+                'message': '✨ Enviando para a magia do Natal...',
+                'percent': 20,
+            },
+        )
+
+        # Etapa 3: Gerando (pode demorar)
+        yield await generate_sse_event(
+            'progress',
+            {
+                'step': 3,
+                'total': total_steps,
+                'message': '🎅 Transformando você em personagem natalino...',
+                'percent': 40,
+            },
+        )
+
+        # Chama o Gemini
+        response = await client.generate_content(
+            prompt,
+            files=[temp_path],
+        )
+
+        # Etapa 4: Salvando imagem
+        yield await generate_sse_event(
+            'progress',
+            {
+                'step': 4,
+                'total': total_steps,
+                'message': '💾 Salvando imagem gerada...',
+                'percent': 60,
+            },
+        )
+
+        # Verifica se há imagens na resposta
+        if response.images and len(response.images) > 0:
+            output_dir = Path(tempfile.gettempdir())
+            output_file = output_dir / f'christmas_{template}.png'
+
+            await response.images[0].save(
+                path=str(output_dir),
+                filename=f'christmas_{template}.png',
+                verbose=False,
+            )
+
+            # Etapa 5: Removendo marca d'água do Gemini
+            yield await generate_sse_event(
+                'progress',
+                {
+                    'step': 5,
+                    'total': total_steps,
+                    'message': "🧹 Removendo marca d'água...",
+                    'percent': 75,
+                },
+            )
+
+            # Remove watermark usando remove_signature
+            cleaned_path, status = remove_signature(
+                str(output_file),
+                output_path=str(
+                    output_dir / f'christmas_{template}_clean.png'
+                ),
+            )
+
+            if cleaned_path:
+                output_file = Path(cleaned_path)
+                logger.debug(f"Marca d'água removida: {status}")
+
+            # Etapa 6: Remoção de fundo (opcional)
+            if remove_bg:
+                yield await generate_sse_event(
+                    'progress',
+                    {
+                        'step': 6,
+                        'total': total_steps,
+                        'message': '✂️ Removendo fundo da imagem...',
+                        'percent': 85,
+                    },
+                )
+
+                nobg_path, bg_status = remove_background(
+                    str(output_file),
+                    output_path=str(
+                        output_dir / f'christmas_{template}_nobg.png'
+                    ),
+                )
+
+                if nobg_path:
+                    output_file = Path(nobg_path)
+                    logger.debug(f'Fundo removido: {bg_status}')
+
+            # Lê a imagem final e converte para base64
+            with open(output_file, 'rb') as f:
+                processed_bytes = f.read()
+
+            img_base64 = base64.b64encode(processed_bytes).decode('utf-8')
+
+            logger.success(f'Imagem processada com sucesso: {template}')
+
+            yield await generate_sse_event(
+                'complete',
+                {
+                    'success': True,
+                    'template': template,
+                    'processed_image': f'data:image/png;base64,{img_base64}',
+                    'message': '🎉 Transformação completa!',
+                },
+            )
+        else:
+            logger.warning('Nenhuma imagem gerada pelo Gemini')
+            yield await generate_sse_event(
+                'error',
+                {
+                    'success': False,
+                    'message': 'Não foi possível gerar a imagem transformada',
+                },
+            )
+
+    except Exception as e:
+        logger.error(f'Erro ao processar imagem: {e}')
+        yield await generate_sse_event(
+            'error',
+            {
+                'success': False,
+                'message': f'Erro ao processar: {e!s}',
+            },
+        )
+
+    finally:
+        # Limpa arquivos temporários
+        if output_file and output_file.exists():
+            output_file.unlink(missing_ok=True)
+
+
 @router.post('/swap')
 async def swap_face(
     request: Request,
     image: UploadFile = File(..., description='Imagem do usuário'),
     template: str = Form(..., description='ID do template selecionado'),
+    remove_bg: bool = Form(
+        False, description='Remover fundo da imagem gerada'
+    ),
 ) -> JSONResponse:
     """
     Transforma a foto do usuário em um avatar natalino usando Gemini.
+
+    A imagem gerada terá a marca d'água do Gemini removida automaticamente.
 
     Args:
         request: Request do FastAPI (para acessar app.state)
         image: Arquivo de imagem enviado pelo usuário
         template: ID do template (ex: 'papai-noel', 'duende', etc.)
+        remove_bg: Se True, remove o fundo da imagem gerada
 
     Returns:
         JSON com a imagem processada em base64
@@ -160,11 +345,10 @@ async def swap_face(
         full_prompt = (
             f'{prompt} '
             "Maintain the person's facial features and identity. "
-            'High quality, detailed, 4K resolution, professional photography.'
+            'High quality, detailed, 4K resolution, professional.'
         )
 
         logger.info(f'Processando imagem com template: {template}')
-        logger.debug(f'Prompt: {full_prompt}')
 
         # Obtém o cliente Gemini singleton
         client = get_gemini_client(request)
@@ -178,7 +362,6 @@ async def swap_face(
 
             # Verifica se há imagens na resposta
             if response.images and len(response.images) > 0:
-                # Salva a primeira imagem gerada
                 output_dir = Path(tempfile.gettempdir())
                 output_file = output_dir / f'christmas_{template}.png'
 
@@ -188,33 +371,58 @@ async def swap_face(
                     verbose=False,
                 )
 
-                # Lê a imagem salva e converte para base64
+                # Remove marca d'água do Gemini
+                logger.debug("Removendo marca d'água...")
+                cleaned_path, status = remove_signature(
+                    str(output_file),
+                    output_path=str(
+                        output_dir / f'christmas_{template}_clean.png'
+                    ),
+                )
+
+                if cleaned_path:
+                    output_file = Path(cleaned_path)
+                    logger.debug(f"Marca d'água removida: {status}")
+
+                # Remove fundo (opcional)
+                if remove_bg:
+                    logger.debug('Removendo fundo...')
+                    nobg_path, bg_status = remove_background(
+                        str(output_file),
+                        output_path=str(
+                            output_dir / f'christmas_{template}_nobg.png'
+                        ),
+                    )
+
+                    if nobg_path:
+                        output_file = Path(nobg_path)
+                        logger.debug(f'Fundo removido: {bg_status}')
+
+                # Lê a imagem final e converte para base64
                 with open(output_file, 'rb') as f:
                     processed_bytes = f.read()
 
                 img_base64 = base64.b64encode(processed_bytes).decode('utf-8')
 
-                logger.success(f'Imagem processada com sucesso: {template}')
+                logger.success(f'Imagem processada: {template}')
 
                 return JSONResponse(
                     content={
                         'success': True,
                         'template': template,
-                        'processed_image': f'data:image/png;base64,{img_base64}',
+                        'processed_image': (
+                            f'data:image/png;base64,{img_base64}'
+                        ),
                     }
                 )
             else:
-                # Se não houver imagem, tenta usar o texto da resposta
-                logger.warning(
-                    'Nenhuma imagem gerada pelo Gemini, retornando original'
-                )
+                logger.warning('Nenhuma imagem gerada pelo Gemini')
                 raise HTTPException(
                     status_code=500,
-                    detail='Não foi possível gerar a imagem transformada',
+                    detail='Não foi possível gerar a imagem',
                 )
 
         finally:
-            # Limpa arquivo temporário
             Path(temp_path).unlink(missing_ok=True)
 
     except HTTPException:
@@ -224,3 +432,81 @@ async def swap_face(
         raise HTTPException(
             status_code=500, detail=f'Erro ao processar imagem: {e!s}'
         )
+
+
+@router.post('/swap-stream')
+async def swap_face_stream(
+    request: Request,
+    image: UploadFile = File(..., description='Imagem do usuário'),
+    template: str = Form(..., description='ID do template selecionado'),
+    remove_bg: bool = Form(
+        False, description='Remover fundo da imagem gerada'
+    ),
+) -> StreamingResponse:
+    """
+    Transforma a foto com streaming de progresso via SSE.
+
+    A imagem gerada terá a marca d'água do Gemini removida automaticamente.
+
+    Args:
+        request: Request do FastAPI
+        image: Arquivo de imagem enviado pelo usuário
+        template: ID do template selecionado
+        remove_bg: Se True, remove o fundo da imagem gerada
+
+    Returns:
+        StreamingResponse com eventos SSE de progresso
+    """
+    # Valida o tipo de arquivo
+    if not image.content_type or not image.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=400, detail='Arquivo deve ser uma imagem'
+        )
+
+    # Valida tamanho (max 10MB)
+    contents = await image.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=400, detail='Imagem deve ter no máximo 10MB'
+        )
+
+    # Salva a imagem temporariamente
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+        img = Image.open(io.BytesIO(contents))
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+        img.save(temp_file, format='PNG')
+        temp_path = temp_file.name
+
+    # Obtém o prompt
+    prompt = TEMPLATE_PROMPTS.get(template, DEFAULT_PROMPT)
+    full_prompt = (
+        f'{prompt} '
+        "Maintain the person's facial features and identity. "
+        'High quality, detailed, 4K resolution, professional.'
+    )
+
+    logger.info(f'Processando imagem (SSE) com template: {template}')
+
+    # Obtém o cliente Gemini
+    client = get_gemini_client(request)
+
+    async def cleanup_and_stream():
+        """Stream com cleanup do arquivo temporário."""
+        try:
+            async for event in process_image_with_progress(
+                client, temp_path, template, full_prompt, remove_bg
+            ):
+                yield event
+        finally:
+            Path(temp_path).unlink(missing_ok=True)
+
+    return StreamingResponse(
+        cleanup_and_stream(),
+        media_type='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no',
+        },
+    )

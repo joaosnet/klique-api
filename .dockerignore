@@ -1,0 +1,15 @@
+.venv
+.git
+.pytest_cache
+.ruff_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.ngrok.env
+logs/
+generated_media/
+har_and_cookies/
+htmlcov/
+.coverage

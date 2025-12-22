@@ -2,7 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Gemini API Settings (Official Google API)
 SECRET_KEY = os.getenv('SECRET_KEY')

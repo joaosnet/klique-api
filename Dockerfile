@@ -4,6 +4,11 @@ FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
 # Set timezone to Brazil
 ENV TZ=America/Sao_Paulo
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install the project into `/app`
 WORKDIR /app
 
