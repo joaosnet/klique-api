@@ -10,6 +10,7 @@ import io
 import json
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 from fastapi import (
     APIRouter,
@@ -22,8 +23,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import JSONResponse, StreamingResponse
-from typing import Optional
-from PIL import Image
+from PIL import Image, ImageOps
 
 from ..dependencies import get_current_user_optional
 from ..logger import logger
@@ -472,6 +472,8 @@ async def swap_face(
         ) as temp_file:
             # Converte para PNG se necessário
             img = Image.open(io.BytesIO(contents))
+            # Corrige orientação EXIF (imagens de smartphone)
+            img = ImageOps.exif_transpose(img)
             if img.mode == 'RGBA':
                 img = img.convert('RGB')
             img.save(temp_file, format='PNG')
@@ -673,6 +675,8 @@ async def swap_face_stream(
     # Salva a imagem temporariamente
     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
         img = Image.open(io.BytesIO(contents))
+        # Corrige orientação EXIF (imagens de smartphone)
+        img = ImageOps.exif_transpose(img)
         if img.mode == 'RGBA':
             img = img.convert('RGB')
         img.save(temp_file, format='PNG')

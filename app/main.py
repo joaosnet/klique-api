@@ -8,13 +8,9 @@ warnings.filterwarnings(
 )
 
 from contextlib import asynccontextmanager  # noqa: E402
-from pathlib import Path  # noqa: E402
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from gemini_webapi import GeminiClient
 
 from .config import SECURE_1PSID, SECURE_1PSIDTS
@@ -84,11 +80,13 @@ app = FastAPI(title='Klique AI API', version='1.0.0', lifespan=lifespan)
 
 
 origins = [
-    'http://localhost.tiangolo.com',
-    'https://localhost.tiangolo.com',
+    'https://fotodenatal.me',
+    'http://fotodenatal.me',
     'http://localhost',
     'http://localhost:8080',
     'http://localhost:8000',
+    'http://localhost:3000',
+    'http://localhost:5173',
 ]
 
 app.add_middleware(

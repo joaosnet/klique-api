@@ -113,12 +113,56 @@ export default function AvatarGenerator() {
         'papai-noel': 'Papai Noel'
     };
 
+
     const handleImageSelect = (e) => {
         const file = e.target.files[0];
         if (file) processFile(file);
     };
 
-    const processFile = (file) => {
+    // Comprime e redimensiona imagem para evitar timeout em uploads grandes
+    const compressImage = (file, maxWidth = 1920, quality = 0.85) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const canvas = document.createElement('canvas');
+
+            img.onload = () => {
+                let { width, height } = img;
+
+                // Redimensiona se maior que maxWidth
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob) {
+                            const compressedFile = new File([blob], file.name, {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            resolve(compressedFile);
+                        } else {
+                            reject(new Error('Falha ao comprimir imagem'));
+                        }
+                    },
+                    'image/jpeg',
+                    quality
+                );
+            };
+
+            img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+            img.src = URL.createObjectURL(file);
+        });
+    };
+
+    const processFile = async (file) => {
         if (file.size > 10 * 1024 * 1024) {
             setError('Imagem muito grande. Máximo 10MB.');
             return;
@@ -127,11 +171,28 @@ export default function AvatarGenerator() {
             setError('Por favor, envie apenas um arquivo de imagem.');
             return;
         }
-        setSelectedImage(file);
-        setImagePreview(URL.createObjectURL(file));
-        setResult(null);
-        setError('');
+
+        try {
+            // Comprime imagens maiores que 2MB para evitar timeout
+            let processedFile = file;
+            if (file.size > 2 * 1024 * 1024) {
+                processedFile = await compressImage(file);
+            }
+
+            setSelectedImage(processedFile);
+            setImagePreview(URL.createObjectURL(processedFile));
+            setResult(null);
+            setError('');
+        } catch (err) {
+            console.error('Erro ao processar imagem:', err);
+            // Fallback: usa arquivo original se compressão falhar
+            setSelectedImage(file);
+            setImagePreview(URL.createObjectURL(file));
+            setResult(null);
+            setError('');
+        }
     };
+
 
     const handleDragOver = (e) => {
         e.preventDefault();
