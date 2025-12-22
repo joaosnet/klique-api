@@ -7,8 +7,41 @@
 # - Add healthchecks
 # - Optimize resource limits
 # - Use production environment variables
+# - Traefik reverse proxy with Let's Encrypt SSL
 
 services:
+  # Traefik Reverse Proxy with Let's Encrypt SSL
+  traefik:
+    image: traefik:v3.2
+    container_name: traefik
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik-dynamic.yml:/etc/traefik/traefik-dynamic.yml:ro
+      - letsencrypt:/letsencrypt
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL}
+    networks:
+      - whatsapp-network
+    healthcheck:
+      test: [ "CMD", "traefik", "healthcheck" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   mongodb:
     restart: always
     deploy:
@@ -51,6 +84,22 @@ services:
 
   frontend:
     restart: always
+    # Remove direct port exposure - Traefik handles it
+    ports: []
+    labels:
+      - "traefik.enable=true"
+      # HTTP Router (redirects to HTTPS automatically via entrypoint config)
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      # HTTPS Router
+      - "traefik.http.routers.frontend-secure.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.frontend-secure.entrypoints=websecure"
+      - "traefik.http.routers.frontend-secure.tls=true"
+      - "traefik.http.routers.frontend-secure.tls.certResolver=letsencrypt"
+      # Apply middlewares
+      - "traefik.http.routers.frontend-secure.middlewares=secure-headers@file,compress@file"
+      # Service configuration
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:80" ]
       interval: 30s
@@ -73,3 +122,6 @@ services:
   # g4f:
   #   profiles:
   #     - donotstart
+
+volumes:
+  letsencrypt:

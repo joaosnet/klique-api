@@ -1,0 +1,29 @@
+# Traefik Dynamic Configuration
+# Middlewares and additional routing configuration
+
+http:
+  middlewares:
+    # Security headers
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        customFrameOptionsValue: "SAMEORIGIN"
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
+
+    # Gzip compression
+    compress:
+      compress: {}
+
+    # Rate limiting - 100 requests per second per IP
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1s
