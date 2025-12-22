@@ -1,20 +1,27 @@
 import warnings
 
-# Suprime o aviso específico do langchain_core sobre compatibilidade do Pydantic V1
 warnings.filterwarnings(
-    "ignore",
+    'ignore',
     category=UserWarning,
-    message=r".*Pydantic V1.*",
-    module=r"langchain_core.*",
+    message=r'.*Pydantic V1.*',
+    module=r'langchain_core.*',
 )
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
+from gemini_webapi import GeminiClient
+
+from .config import SECURE_1PSID, SECURE_1PSIDTS
 from .database import close_db_connection, get_client
-from .routers import auth, register, scheduler, whatsapp, telemetry
+from .logger import logger
+from .routers import auth, christmas, register, scheduler, telemetry, whatsapp
 from .scheduler import setup_scheduler, start_scheduler, stop_scheduler
 from .services.whatsapp import WhatsAppService
 
@@ -32,10 +39,24 @@ async def lifespan(app: FastAPI):
     whatsapp_service = WhatsAppService()
     app.state.whatsapp_service = whatsapp_service
 
-    # Inicializa o serviço Gemini WebAPI
-    # gemini_web_api_service = GeminiWebApiService()
-    # await gemini_web_api_service._initialize_client()  # noqa: SLF001
-    # app.state.gemini_web_api_service = gemini_web_api_service
+    # Inicializa o cliente Gemini WebAPI (singleton)
+    gemini_client = None
+    if SECURE_1PSID:
+        try:
+            gemini_client = GeminiClient(SECURE_1PSID, SECURE_1PSIDTS or '')
+            await gemini_client.init(
+                timeout=60, auto_close=False, auto_refresh=True
+            )
+            app.state.gemini_webapi_client = gemini_client
+            logger.success('Cliente Gemini WebAPI inicializado com sucesso')
+        except Exception as e:
+            logger.warning(f'Falha ao inicializar Gemini WebAPI: {e}')
+            app.state.gemini_webapi_client = None
+    else:
+        logger.warning(
+            'SECURE_1PSID não configurado - Gemini WebAPI desabilitado'
+        )
+        app.state.gemini_webapi_client = None
 
     # Configura e inicia o scheduler de tarefas agendadas
     await setup_scheduler()
@@ -46,7 +67,8 @@ async def lifespan(app: FastAPI):
     # Encerra os serviços ao finalizar a aplicação
     await stop_scheduler()
     await whatsapp_service.close()
-    # await gemini_web_api_service.close()
+    if gemini_client:
+        await gemini_client.close()
     await close_db_connection()
 
 
@@ -58,6 +80,7 @@ origins = [
     'https://localhost.tiangolo.com',
     'http://localhost',
     'http://localhost:8080',
+    'http://localhost:8000',
 ]
 
 app.add_middleware(
@@ -68,11 +91,25 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+# Setup templates and static files
+static_dir = Path(__file__).parent / 'static'
+templates = Jinja2Templates(directory=static_dir)
+app.mount('/static', StaticFiles(directory=static_dir), name='static')
+
+
+@app.get('/', response_class=HTMLResponse)
+async def serve_frontend(request: Request):
+    """Serve the main frontend page."""
+    return templates.TemplateResponse('index.html', {'request': request})
+
+
+# Include routers
 app.include_router(auth.router)
 app.include_router(register.router)
 app.include_router(scheduler.router)
 app.include_router(whatsapp.router)
 app.include_router(telemetry.router)
+app.include_router(christmas.router)
 
 if __name__ == '__main__':
     import uvicorn

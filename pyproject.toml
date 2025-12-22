@@ -8,6 +8,7 @@ dependencies = [
     "apscheduler>=3.11.0",
     "fastapi[standard]>=0.120.0",
     "firebase-admin>=7.1.0",
+    "gemini-webapi>=1.17.3",
     "google-auth>=2.41.1",
     "google-genai>=1.46.0",
     "httpx>=0.28.1",
@@ -17,6 +18,8 @@ dependencies = [
     "langchain-openai>=1.0.1",
     "langgraph>=1.0.1",
     "loguru>=0.7.3",
+    "numpy>=2.4.0",
+    "opencv-python>=4.11.0.86",
     "pillow>=12.0.0",
     "pwdlib[argon2]>=0.3.0",
     "pyjwt>=2.10.1",
@@ -29,6 +32,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "browser-cookie3>=0.20.1",
     "pyngrok>=7.5.0",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
@@ -72,3 +76,5 @@ test = 'pytest -s -x --cov=app -vv'
 post_test = 'coverage html' 
 nav = 'python -c "from pathlib import Path; import webbrowser; webbrowser.open(Path(\"htmlcov/index.html\").resolve().as_uri())"'
 ngrok = 'python -m app.scripts.ngrok --port 8000'
+# Configuração
+setup-cookies = "uv run python scripts/setup_cookies.py librewolf"

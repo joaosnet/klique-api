@@ -1,0 +1,1056 @@
+/* ========================================
+   Klique Natal - CSS Premium
+   ======================================== */
+
+/* CSS Variables */
+:root {
+    /* Christmas Colors */
+    --christmas-green: #1a5c3a;
+    --christmas-green-dark: #0f3d26;
+    --christmas-green-light: #2d8a57;
+    --christmas-red: #c41e3a;
+    --christmas-red-dark: #8b0000;
+    --christmas-red-light: #e63946;
+    --christmas-gold: #ffd700;
+    --christmas-gold-light: #ffe066;
+
+    /* UI Colors */
+    --bg-primary: linear-gradient(135deg, var(--christmas-green-dark) 0%, var(--christmas-green) 50%, var(--christmas-red-dark) 100%);
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --card-bg-glass: rgba(255, 255, 255, 0.1);
+    --text-primary: #1a1a2e;
+    --text-secondary: #4a5568;
+    --text-light: #ffffff;
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.2);
+    --shadow-glow: 0 0 30px rgba(255, 215, 0, 0.3);
+
+    /* Spacing */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+    --transition-slow: 0.5s ease;
+}
+
+/* Reset & Base */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    min-height: 100vh;
+    color: var(--text-primary);
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* ========================================
+   Christmas Decorations
+   ======================================== */
+
+.christmas-decorations {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.ornament {
+    position: absolute;
+    width: 50px;
+    height: 60px;
+    background: radial-gradient(circle at 30% 30%, var(--christmas-red-light), var(--christmas-red-dark));
+    border-radius: 50%;
+    box-shadow: inset -5px -5px 15px rgba(0, 0, 0, 0.3), 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.ornament::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 15px;
+    background: var(--christmas-gold);
+    border-radius: 3px 3px 0 0;
+}
+
+.ornament::after {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 20%;
+    width: 30%;
+    height: 20%;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    transform: rotate(-30deg);
+}
+
+.ornament-1 {
+    top: -5px;
+    right: 15%;
+    animation: swing 3s ease-in-out infinite;
+}
+
+.ornament-2 {
+    top: -10px;
+    right: 5%;
+    width: 40px;
+    height: 48px;
+    background: radial-gradient(circle at 30% 30%, var(--christmas-gold-light), #b8860b);
+    animation: swing 3.5s ease-in-out infinite 0.5s;
+}
+
+.ornament-3 {
+    top: -5px;
+    right: 25%;
+    width: 35px;
+    height: 42px;
+    background: radial-gradient(circle at 30% 30%, #87ceeb, #4169e1);
+    animation: swing 4s ease-in-out infinite 1s;
+}
+
+@keyframes swing {
+
+    0%,
+    100% {
+        transform: rotate(-5deg);
+    }
+
+    50% {
+        transform: rotate(5deg);
+    }
+}
+
+.lights {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: repeating-linear-gradient(90deg,
+            transparent 0px,
+            transparent 40px,
+            var(--christmas-red) 40px,
+            var(--christmas-red) 50px,
+            transparent 50px,
+            transparent 90px,
+            var(--christmas-green-light) 90px,
+            var(--christmas-green-light) 100px,
+            transparent 100px,
+            transparent 140px,
+            var(--christmas-gold) 140px,
+            var(--christmas-gold) 150px);
+    animation: lights-blink 2s infinite;
+}
+
+@keyframes lights-blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* ========================================
+   Snowflakes Animation
+   ======================================== */
+
+.snowflakes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 99;
+    overflow: hidden;
+}
+
+.snowflake {
+    position: absolute;
+    top: -20px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.5rem;
+    animation: snowfall linear infinite;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+.snowflake:nth-child(1) {
+    left: 5%;
+    animation-duration: 10s;
+    animation-delay: 0s;
+    font-size: 1rem;
+}
+
+.snowflake:nth-child(2) {
+    left: 15%;
+    animation-duration: 12s;
+    animation-delay: 1s;
+    font-size: 1.2rem;
+}
+
+.snowflake:nth-child(3) {
+    left: 25%;
+    animation-duration: 8s;
+    animation-delay: 2s;
+    font-size: 0.8rem;
+}
+
+.snowflake:nth-child(4) {
+    left: 35%;
+    animation-duration: 14s;
+    animation-delay: 0.5s;
+    font-size: 1.4rem;
+}
+
+.snowflake:nth-child(5) {
+    left: 45%;
+    animation-duration: 11s;
+    animation-delay: 3s;
+    font-size: 1rem;
+}
+
+.snowflake:nth-child(6) {
+    left: 55%;
+    animation-duration: 9s;
+    animation-delay: 1.5s;
+    font-size: 1.3rem;
+}
+
+.snowflake:nth-child(7) {
+    left: 65%;
+    animation-duration: 13s;
+    animation-delay: 2.5s;
+    font-size: 0.9rem;
+}
+
+.snowflake:nth-child(8) {
+    left: 75%;
+    animation-duration: 10s;
+    animation-delay: 4s;
+    font-size: 1.1rem;
+}
+
+.snowflake:nth-child(9) {
+    left: 85%;
+    animation-duration: 15s;
+    animation-delay: 0.8s;
+    font-size: 1.5rem;
+}
+
+.snowflake:nth-child(10) {
+    left: 95%;
+    animation-duration: 7s;
+    animation-delay: 3.5s;
+    font-size: 0.7rem;
+}
+
+@keyframes snowfall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0.3;
+    }
+}
+
+/* ========================================
+   App Container
+   ======================================== */
+
+.app-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--spacing-lg) var(--spacing-md);
+    padding-top: 60px;
+    position: relative;
+    z-index: 10;
+}
+
+/* ========================================
+   Header
+   ======================================== */
+
+.app-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.title {
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 800;
+    color: var(--text-light);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3), 0 0 30px rgba(255, 215, 0, 0.3);
+    margin-bottom: var(--spacing-xs);
+    letter-spacing: -0.02em;
+}
+
+.subtitle {
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 400;
+}
+
+/* ========================================
+   Editor Section
+   ======================================== */
+
+.editor-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.editor-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    position: relative;
+}
+
+.editor-toolbar {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.toolbar-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+.toolbar-btn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--text-primary);
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* ========================================
+   Preview Area / Upload Zone
+   ======================================== */
+
+.preview-area {
+    min-height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: var(--spacing-sm);
+}
+
+.upload-zone {
+    width: 100%;
+    height: 500px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 3px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 32px;
+    transition: var(--transition-normal);
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.upload-zone:hover {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: linear-gradient(180deg, #1f1f3a 0%, #1b264a 100%);
+}
+
+.upload-zone.drag-over {
+    border-color: var(--christmas-gold);
+    background: linear-gradient(180deg, #252548 0%, #1f2a50 100%);
+    transform: scale(1.01);
+}
+
+.upload-content {
+    text-align: center;
+    padding: var(--spacing-lg);
+}
+
+.upload-icon {
+    font-size: 4rem;
+    margin-bottom: var(--spacing-sm);
+    animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.upload-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: var(--spacing-xs);
+}
+
+.upload-hint {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* ========================================
+   Camera Zone
+   ======================================== */
+
+.camera-zone {
+    width: 100%;
+    height: 500px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.camera-zone video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    /* Mirror effect for selfie camera */
+}
+
+.capture-btn {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70px;
+    height: 70px;
+    border: 4px solid white;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: var(--transition-fast);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.capture-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateX(-50%) scale(1.05);
+}
+
+.capture-btn:active {
+    transform: translateX(-50%) scale(0.95);
+    background: var(--christmas-red);
+}
+
+.switch-camera-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+    backdrop-filter: blur(10px);
+}
+
+.switch-camera-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+.gallery-btn {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 50px;
+    height: 50px;
+    border: none;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+    backdrop-filter: blur(10px);
+}
+
+.gallery-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.1);
+}
+
+.camera-zone[hidden] {
+    display: none;
+}
+
+/* ========================================
+   Image Comparator
+   ======================================== */
+
+.image-comparator {
+    width: 100%;
+    height: 500px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 32px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.comparator-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.comparator-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.comparator-image.before {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.comparator-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.comparator-overlay .comparator-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* Width is set dynamically via JS to match the comparator container width */
+    height: 100%;
+    max-width: none;
+}
+
+.comparator-slider {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 100%;
+    background: white;
+    cursor: ew-resize;
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.slider-handle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-md);
+    color: var(--christmas-green);
+    transition: var(--transition-fast);
+}
+
+.slider-handle:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ========================================
+   Loading State
+   ======================================== */
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(26, 92, 58, 0.2);
+    border-top-color: var(--christmas-green);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-text {
+    margin-top: var(--spacing-md);
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+/* ========================================
+   Action Buttons
+   ======================================== */
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.03);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-normal);
+}
+
+.action-btn.primary {
+    background: var(--christmas-red);
+    color: white;
+    box-shadow: 0 4px 15px rgba(196, 30, 58, 0.3);
+}
+
+.action-btn.primary:hover {
+    background: var(--christmas-red-light);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(196, 30, 58, 0.4);
+}
+
+.action-btn.secondary {
+    background: rgba(26, 92, 58, 0.1);
+    color: var(--christmas-green);
+    border: 2px solid rgba(26, 92, 58, 0.2);
+}
+
+.action-btn.secondary:hover {
+    background: rgba(26, 92, 58, 0.15);
+    border-color: var(--christmas-green);
+}
+
+.btn-icon {
+    font-size: 1.1rem;
+}
+
+/* ========================================
+   Templates Section
+   ======================================== */
+
+.templates-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.templates-carousel {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.carousel-nav {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-fast);
+}
+
+.carousel-nav:hover {
+    background: white;
+    box-shadow: var(--shadow-md);
+    transform: scale(1.1);
+}
+
+.carousel-container {
+    flex: 1;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+}
+
+.carousel-track {
+    display: flex;
+    gap: var(--spacing-sm);
+    transition: transform var(--transition-normal);
+}
+
+.template-card {
+    flex-shrink: 0;
+    width: 100px;
+    height: 120px;
+    background: var(--card-bg);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-normal);
+    border: 3px solid transparent;
+}
+
+.template-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+}
+
+.template-card.selected {
+    border-color: var(--christmas-gold);
+    box-shadow: var(--shadow-glow);
+}
+
+.template-card img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+}
+
+.template-card .template-name {
+    padding: var(--spacing-xs);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--text-primary);
+    background: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Placeholder for templates without images */
+.template-card .template-placeholder {
+    width: 100%;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, rgba(26, 92, 58, 0.1), rgba(196, 30, 58, 0.1));
+}
+
+/* ========================================
+   Category Tabs
+   ======================================== */
+
+.category-tabs {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
+}
+
+.category-tab {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--text-light);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    backdrop-filter: blur(10px);
+}
+
+.category-tab:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.category-tab.active {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ========================================
+   Download Section
+   ======================================== */
+
+.download-section {
+    text-align: center;
+    padding: var(--spacing-lg);
+    background: var(--card-bg);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+}
+
+.download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 1rem 2.5rem;
+    border: none;
+    background: linear-gradient(135deg, var(--christmas-green), var(--christmas-green-light));
+    color: white;
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    box-shadow: 0 4px 20px rgba(26, 92, 58, 0.4);
+}
+
+.download-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(26, 92, 58, 0.5);
+}
+
+.share-buttons {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+}
+
+.share-btn {
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-normal);
+}
+
+.share-btn.whatsapp {
+    background: #25D366;
+    color: white;
+}
+
+.share-btn.whatsapp:hover {
+    background: #22c55e;
+    transform: translateY(-2px);
+}
+
+.share-btn.instagram {
+    background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+    color: white;
+}
+
+.share-btn.instagram:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   Responsive Design
+   ======================================== */
+
+@media (max-width: 768px) {
+    .app-container {
+        padding: var(--spacing-sm);
+        padding-top: 50px;
+    }
+
+    .ornament {
+        display: none;
+    }
+
+    .editor-card {
+        border-radius: var(--radius-lg);
+    }
+
+    .preview-area {
+        min-height: 280px;
+    }
+
+    .upload-zone {
+        height: 280px;
+        margin: var(--spacing-sm);
+    }
+
+    .image-comparator {
+        height: 300px;
+    }
+
+    .action-buttons {
+        gap: var(--spacing-xs);
+        padding: var(--spacing-sm);
+    }
+
+    .action-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .template-card {
+        width: 90px;
+        height: 110px;
+    }
+
+    .template-card img,
+    .template-card .template-placeholder {
+        height: 70px;
+    }
+
+    .template-card .template-placeholder {
+        font-size: 2rem;
+    }
+
+    .template-card .template-name {
+        font-size: 0.65rem;
+        padding: 0.25rem;
+    }
+
+    .category-tab {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .title {
+        font-size: 1.5rem;
+    }
+
+    .subtitle {
+        font-size: 0.85rem;
+    }
+
+    .carousel-nav {
+        width: 32px;
+        height: 32px;
+    }
+
+    .template-card {
+        width: 70px;
+        height: 90px;
+    }
+
+    .template-card img,
+    .template-card .template-placeholder {
+        height: 55px;
+    }
+
+    .template-card .template-name {
+        font-size: 0.65rem;
+    }
+
+    .download-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .share-buttons {
+        flex-direction: column;
+    }
+
+    .share-btn {
+        width: 100%;
+    }
+}
+
+/* ========================================
+   Utilities
+   ======================================== */
+
+[hidden] {
+    display: none !important;
+}

