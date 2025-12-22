@@ -58,3 +58,17 @@ LOG_RETENTION = os.getenv('LOG_RETENTION', '7 days')
 LOG_CONSOLE_ENABLED = (
     os.getenv('LOG_CONSOLE_ENABLED', 'true').lower() == 'true'
 )
+
+# Mercado Pago Settings
+MP_ACCESS_TOKEN = os.getenv('MP_ACCESS_TOKEN')
+MP_PUBLIC_KEY = os.getenv('MP_PUBLIC_KEY')
+MP_WEBHOOK_SECRET = os.getenv('MP_WEBHOOK_SECRET')
+
+# Pricing Settings
+MIN_PAYMENT_AMOUNT = float(os.getenv('MIN_PAYMENT_AMOUNT', '1.0'))  # R$ 1,00
+CREDITS_PER_REAL = int(
+    os.getenv('CREDITS_PER_REAL', '1')
+)  # 1 crédito = R$ 1,00
+FREE_CREDITS_PER_USER = int(
+    os.getenv('FREE_CREDITS_PER_USER', '1')
+)  # 1 grátis

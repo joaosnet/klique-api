@@ -82,6 +82,7 @@ const elements = {
     replaceBtn: document.getElementById('replaceBtn'),
     redoProcessBtn: document.getElementById('redoProcessBtn'),
     compareBtn: document.getElementById('compareBtn'),
+    removeBgToggle: document.getElementById('removeBgToggle'),
 
     // Templates
     templatesSection: document.getElementById('templatesSection'),
@@ -483,6 +484,7 @@ async function processImage() {
         const blob = await response.blob();
         formData.append('image', blob, 'user-image.jpg');
         formData.append('template', state.selectedTemplate);
+        formData.append('remove_bg', elements.removeBgToggle.checked);
 
         // Use SSE streaming endpoint for progress updates
         const apiResponse = await fetch(`${API_BASE_URL}/api/christmas/swap-stream`, {
@@ -498,37 +500,39 @@ async function processImage() {
         const reader = apiResponse.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        let eventType = '';
+        let eventData = '';
 
         while (true) {
             const { value, done } = await reader.read();
-            if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
+            if (value) {
+                buffer += decoder.decode(value, { stream: true });
 
-            // Parse SSE events from buffer
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || ''; // Keep incomplete line in buffer
+                // Parse SSE events from buffer
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
-            let eventType = '';
-            let eventData = '';
-
-            for (const line of lines) {
-                if (line.startsWith('event: ')) {
-                    eventType = line.slice(7).trim();
-                } else if (line.startsWith('data: ')) {
-                    eventData = line.slice(6).trim();
-                } else if (line === '' && eventType && eventData) {
-                    // Complete event received
-                    try {
-                        const data = JSON.parse(eventData);
-                        handleSSEEvent(eventType, data);
-                    } catch (e) {
-                        console.error('Error parsing SSE data:', e);
+                for (const line of lines) {
+                    if (line.startsWith('event: ')) {
+                        eventType = line.slice(7).trim();
+                    } else if (line.startsWith('data: ')) {
+                        eventData += line.slice(6).trim();
+                    } else if (line === '' && eventType && eventData) {
+                        // Complete event received
+                        try {
+                            const data = JSON.parse(eventData);
+                            handleSSEEvent(eventType, data);
+                        } catch (e) {
+                            console.error('Error parsing SSE data:', e);
+                        }
+                        eventType = '';
+                        eventData = '';
                     }
-                    eventType = '';
-                    eventData = '';
                 }
             }
+
+            if (done) break;
         }
 
     } catch (error) {
@@ -583,6 +587,7 @@ async function processImageFallback() {
     const blob = await response.blob();
     formData.append('image', blob, 'user-image.jpg');
     formData.append('template', state.selectedTemplate);
+    formData.append('remove_bg', elements.removeBgToggle.checked);
 
     const apiResponse = await fetch(`${API_BASE_URL}/api/christmas/swap`, {
         method: 'POST',

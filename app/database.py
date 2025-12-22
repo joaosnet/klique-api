@@ -78,3 +78,13 @@ def get_status_generation_rate_limit_collection():
 
 def get_status_recent_viewers_collection():
     return get_db().get_collection('status_recent_viewers')
+
+
+def get_user_credits_collection():
+    """Collection para armazenar saldo de créditos dos usuários."""
+    return get_db().get_collection('user_credits')
+
+
+def get_payment_transactions_collection():
+    """Collection para armazenar transações de pagamento PIX."""
+    return get_db().get_collection('payment_transactions')

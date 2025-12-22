@@ -20,7 +20,16 @@ from gemini_webapi import GeminiClient
 from .config import SECURE_1PSID, SECURE_1PSIDTS
 from .database import close_db_connection, get_client
 from .logger import logger
-from .routers import auth, christmas, register, scheduler, telemetry, whatsapp
+from .routers import (
+    auth,
+    christmas,
+    credits,
+    payments,
+    register,
+    scheduler,
+    telemetry,
+    whatsapp,
+)
 from .scheduler import setup_scheduler, start_scheduler, stop_scheduler
 from .services.whatsapp import WhatsAppService
 
@@ -109,6 +118,8 @@ app.include_router(scheduler.router)
 app.include_router(whatsapp.router)
 app.include_router(telemetry.router)
 app.include_router(christmas.router)
+app.include_router(credits.router)
+app.include_router(payments.router)
 
 if __name__ == '__main__':
     import uvicorn

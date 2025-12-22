@@ -11,12 +11,24 @@ import json
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import JSONResponse, StreamingResponse
 from PIL import Image
 
+from ..dependencies import get_current_active_user
 from ..logger import logger
 from ..services.image_cleaner import remove_background, remove_signature
+from .credits import check_user_has_credits, use_one_credit
+from .schemas import User
 
 router = APIRouter(prefix='/api/christmas', tags=['christmas'])
 
@@ -437,6 +449,7 @@ async def swap_face(
 @router.post('/swap-stream')
 async def swap_face_stream(
     request: Request,
+    current_user: User = Depends(get_current_active_user),
     image: UploadFile = File(..., description='Imagem do usuário'),
     template: str = Form(..., description='ID do template selecionado'),
     remove_bg: bool = Form(
@@ -446,10 +459,12 @@ async def swap_face_stream(
     """
     Transforma a foto com streaming de progresso via SSE.
 
+    REQUER AUTENTICAÇÃO E CRÉDITOS.
     A imagem gerada terá a marca d'água do Gemini removida automaticamente.
 
     Args:
         request: Request do FastAPI
+        current_user: Usuário autenticado (via JWT)
         image: Arquivo de imagem enviado pelo usuário
         template: ID do template selecionado
         remove_bg: Se True, remove o fundo da imagem gerada
@@ -468,6 +483,24 @@ async def swap_face_stream(
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(
             status_code=400, detail='Imagem deve ter no máximo 10MB'
+        )
+
+    # Valida créditos do usuário
+    user_id = str(current_user.get('_id'))
+    credits_check = await check_user_has_credits(user_id)
+
+    if not credits_check['has_credits']:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail='Créditos insuficientes. Compre mais créditos.',
+        )
+
+    # Consome 1 crédito antes de processar
+    credit_result = await use_one_credit(user_id)
+    if not credit_result['success']:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=credit_result['message'],
         )
 
     # Salva a imagem temporariamente
