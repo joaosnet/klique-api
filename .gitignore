@@ -139,6 +139,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Local ngrok auth token file (should never be committed)
+.ngrok.env
+
 # Spyder project settings
 .spyderproject
 .spyproject

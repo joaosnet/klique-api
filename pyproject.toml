@@ -3,7 +3,7 @@ name = "klique-api"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14.0"
 dependencies = [
     "apscheduler>=3.11.0",
     "fastapi[standard]>=0.120.0",
@@ -29,6 +29,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pyngrok>=7.5.0",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "ruff>=0.14.2",
@@ -70,3 +71,4 @@ back = 'sudo supervisorctl start fastapi'
 test = 'pytest -s -x --cov=app -vv'
 post_test = 'coverage html' 
 nav = 'python -c "from pathlib import Path; import webbrowser; webbrowser.open(Path(\"htmlcov/index.html\").resolve().as_uri())"'
+ngrok = 'python -m app.scripts.ngrok --port 8000'

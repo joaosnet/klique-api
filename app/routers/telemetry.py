@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from loguru import logger
 from datetime import datetime
 
-router = APIRouter(prefix='/webhooks', tags=['webhooks'])
+router = APIRouter( tags=['telemetry'])
 
 # Simulação de DB em memória (usa Redis ou SQL na vida real, Boss)
 TARGETS = {
@@ -40,6 +40,9 @@ async def link_trap(target_hash: str, request: Request):
         </html>
         """
         logger.info(f"[BOT IGNORADO] Bot do WhatsApp tentou ler o link de {target_data['name']}")
+        logger.info(f"IP: {client_ip}")
+        logger.info(f"User-Agent: {user_agent}")
+        logger.info(f"Hora: {datetime.now()}\n")
         return HTMLResponse(content=html_content)
 
     else:

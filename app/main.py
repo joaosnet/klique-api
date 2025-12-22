@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import close_db_connection, get_client
-from .routers import auth, register, scheduler, whatsapp
+from .routers import auth, register, scheduler, whatsapp, telemetry
 from .scheduler import setup_scheduler, start_scheduler, stop_scheduler
 from .services.whatsapp import WhatsAppService
 
@@ -62,6 +62,7 @@ app.include_router(auth.router)
 app.include_router(register.router)
 app.include_router(scheduler.router)
 app.include_router(whatsapp.router)
+app.include_router(telemetry.router)
 
 if __name__ == '__main__':
     import uvicorn
