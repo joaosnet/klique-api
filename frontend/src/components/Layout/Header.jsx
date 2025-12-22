@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.svg';
 import './Header.css';
 
 export default function Header() {
     const { user, credits, isAuthenticated, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const handleLogout = async () => {
@@ -16,6 +17,8 @@ export default function Header() {
     };
 
     const closeMobileMenu = () => setMobileMenuOpen(false);
+
+    const isActive = (path) => location.pathname === path;
 
     return (
         <header className="header">
@@ -37,16 +40,25 @@ export default function Header() {
                 </button>
 
                 <nav className={`nav ${mobileMenuOpen ? 'nav-open' : ''}`}>
+                    {/* Links de navegação principais - sempre visíveis */}
+                    <Link
+                        to="/"
+                        className={`nav-link ${isActive('/') ? 'active' : ''}`}
+                        onClick={closeMobileMenu}
+                    >
+                        🎄 Criar Avatar
+                    </Link>
+
                     {isAuthenticated ? (
                         <>
-                            <Link to="/credits" className="credits-badge" onClick={closeMobileMenu}>
+                            <Link
+                                to="/credits"
+                                className={`credits-badge ${isActive('/credits') ? 'active' : ''}`}
+                                onClick={closeMobileMenu}
+                            >
                                 <span className="credits-icon">🎟️</span>
                                 <span className="credits-count">{credits.total}</span>
                                 <span className="credits-label">créditos</span>
-                            </Link>
-
-                            <Link to="/" className="nav-link" onClick={closeMobileMenu}>
-                                🎄 Criar Avatar
                             </Link>
 
                             <div className="user-menu">
@@ -76,3 +88,4 @@ export default function Header() {
         </header>
     );
 }
+

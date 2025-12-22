@@ -17,6 +17,7 @@ from .config import SECURE_1PSID, SECURE_1PSIDTS
 from .database import close_db_connection, get_client
 from .logger import logger
 from .routers import (
+    analytics,
     auth,
     christmas,
     credits,
@@ -110,6 +111,7 @@ app.add_middleware(
 
 
 # Include routers
+app.include_router(analytics.router)
 app.include_router(auth.router)
 app.include_router(register.router)
 app.include_router(scheduler.router)

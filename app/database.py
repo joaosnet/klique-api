@@ -88,3 +88,8 @@ def get_user_credits_collection():
 def get_payment_transactions_collection():
     """Collection para armazenar transações de pagamento PIX."""
     return get_db().get_collection('payment_transactions')
+
+
+def get_link_analytics_collection():
+    """Collection para rastrear views de preview (OG) e cliques em links."""
+    return get_db().get_collection('link_analytics')
