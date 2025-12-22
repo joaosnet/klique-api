@@ -1,3 +1,13 @@
+import warnings
+
+# Suprime o aviso específico do langchain_core sobre compatibilidade do Pydantic V1
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message=r".*Pydantic V1.*",
+    module=r"langchain_core.*",
+)
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
