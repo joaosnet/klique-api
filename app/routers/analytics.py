@@ -16,7 +16,7 @@ from app.logger import logger
 router = APIRouter(prefix='/api/analytics', tags=['analytics'])
 
 # Path para a imagem OG (dentro do app/static)
-OG_IMAGE_PATH = Path(__file__).parent.parent / 'static' / 'og-preview.png'
+OG_IMAGE_PATH = Path(__file__).parent.parent / 'static' / 'og-preview.jpg'
 
 
 def _hash_ip(ip: str) -> str:
@@ -96,7 +96,7 @@ async def serve_og_image(request: Request):
     if OG_IMAGE_PATH.exists():
         return FileResponse(
             OG_IMAGE_PATH,
-            media_type='image/png',
+            media_type='image/jpeg',
             headers={
                 'Cache-Control': 'public, max-age=3600',  # Cache por 1 hora
             },
