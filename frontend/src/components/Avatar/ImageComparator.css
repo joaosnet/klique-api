@@ -1,21 +1,24 @@
 .image-comparator {
     width: 100%;
-    aspect-ratio: 1 / 1;
-    min-height: 350px;
+    /* aspect-ratio: 1 / 1; REMOVED */
+    height: auto;
+    /* Let content dictate height */
+    min-height: 300px;
     position: relative;
     overflow: hidden;
     border-radius: var(--radius-xl);
     background: #000;
     box-shadow: var(--shadow-lg);
     cursor: ew-resize;
+    /* display: flex;  Removed, block flow is fine with the new internal structure */
 }
 
 .comparator-wrapper {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
+    /* Changed from absolute to relative */
     width: 100%;
-    height: 100%;
+    height: auto;
+    /* Allow growth */
 }
 
 .comparator-before,
@@ -29,10 +32,14 @@
 
 .comparator-background {
     width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
+    height: auto;
+    /* Changed from 100% to auto so image drives height */
+    position: relative;
+    /* Changed from absolute so it takes up space */
+    display: block;
+    /* Removes bottom spacing from inline images */
+    top: auto;
+    left: auto;
 }
 
 .comparator-image {
