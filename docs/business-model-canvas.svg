@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1a472a"/>
+      <stop offset="100%" style="stop-color:#2d5a3f"/>
+    </linearGradient>
+    <linearGradient id="costGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#c41e3a"/>
+      <stop offset="100%" style="stop-color:#8b0000"/>
+    </linearGradient>
+    <linearGradient id="revenueGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#228b22"/>
+      <stop offset="100%" style="stop-color:#006400"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+    <style>
+      .title { font: bold 28px 'Segoe UI', Arial; fill: white; }
+      .subtitle { font: 14px 'Segoe UI', Arial; fill: #e8e8e8; }
+      .box-header { font: bold 14px 'Segoe UI', Arial; fill: white; }
+      .box-content { font: 12px 'Segoe UI', Arial; fill: #333; }
+      .box-emoji { font: 16px 'Segoe UI Emoji', Arial; }
+      .highlight { font: bold 12px 'Segoe UI', Arial; fill: #1a472a; }
+      .cost-text { font: 12px 'Segoe UI', Arial; fill: #333; }
+      .revenue-text { font: 12px 'Segoe UI', Arial; fill: #333; }
+    </style>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#f5f5f5"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="1200" height="70" fill="url(#headerGradient)"/>
+  <text x="50" y="42" class="title">🎄 Foto de Natal - Business Model Canvas</text>
+  <text x="50" y="58" class="subtitle">Plataforma de geração de avatares natalinos com IA</text>
+  <text x="1150" y="42" class="subtitle" text-anchor="end">fotodenatal.me</text>
+  
+  <!-- Main Grid -->
+  <!-- Row 1: Partners, Activities, Value Prop, Relationships, Segments -->
+  
+  <!-- Key Partners -->
+  <g filter="url(#shadow)">
+    <rect x="20" y="90" width="180" height="280" rx="8" fill="white" stroke="#1a472a" stroke-width="2"/>
+    <rect x="20" y="90" width="180" height="35" rx="8" fill="#1a472a"/>
+    <path d="M20,125 L20,98 Q20,90 28,90 L192,90 Q200,90 200,98 L200,125 Z" fill="#1a472a"/>
+    <text x="30" y="113" class="box-header">🤝 Parcerias-Chave</text>
+    
+    <text x="30" y="145" class="box-content">
+      <tspan x="30" dy="0">• Google Gemini</tspan>
+      <tspan x="35" dy="16" style="font-size:10px;fill:#666">IA Generativa</tspan>
+      <tspan x="30" dy="22">• Mercado Pago</tspan>
+      <tspan x="35" dy="16" style="font-size:10px;fill:#666">Pagamentos PIX</tspan>
+      <tspan x="30" dy="22">• Firebase</tspan>
+      <tspan x="35" dy="16" style="font-size:10px;fill:#666">Autenticação</tspan>
+      <tspan x="30" dy="22">• Traefik</tspan>
+      <tspan x="35" dy="16" style="font-size:10px;fill:#666">SSL/Proxy reverso</tspan>
+    </text>
+  </g>
+  
+  <!-- Key Activities -->
+  <g filter="url(#shadow)">
+    <rect x="210" y="90" width="180" height="135" rx="8" fill="white" stroke="#1a472a" stroke-width="2"/>
+    <rect x="210" y="90" width="180" height="35" rx="8" fill="#1a472a"/>
+    <path d="M210,125 L210,98 Q210,90 218,90 L382,90 Q390,90 390,98 L390,125 Z" fill="#1a472a"/>
+    <text x="220" y="113" class="box-header">🎯 Atividades-Chave</text>
+    
+    <text x="220" y="145" class="box-content">
+      <tspan x="220" dy="0">• Geração de imagens IA</tspan>
+      <tspan x="220" dy="18">• Processamento imagens</tspan>
+      <tspan x="220" dy="18">• Remoção background</tspan>
+      <tspan x="220" dy="18">• Composição cenários</tspan>
+      <tspan x="220" dy="18">• Aplicação watermarks</tspan>
+    </text>
+  </g>
+  
+  <!-- Key Resources -->
+  <g filter="url(#shadow)">
+    <rect x="210" y="235" width="180" height="135" rx="8" fill="white" stroke="#1a472a" stroke-width="2"/>
+    <rect x="210" y="235" width="180" height="35" rx="8" fill="#1a472a"/>
+    <path d="M210,270 L210,243 Q210,235 218,235 L382,235 Q390,235 390,243 L390,270 Z" fill="#1a472a"/>
+    <text x="220" y="258" class="box-header">🧰 Recursos-Chave</text>
+    
+    <text x="220" y="290" class="box-content">
+      <tspan x="220" dy="0">• API FastAPI Python</tspan>
+      <tspan x="220" dy="18">• Modelos Gemini</tspan>
+      <tspan x="220" dy="18">• MongoDB (dados)</tspan>
+      <tspan x="220" dy="18">• Infra Docker</tspan>
+      <tspan x="220" dy="18">• LangChain/LangGraph</tspan>
+    </text>
+  </g>
+  
+  <!-- Value Proposition -->
+  <g filter="url(#shadow)">
+    <rect x="400" y="90" width="220" height="280" rx="8" fill="white" stroke="#c41e3a" stroke-width="3"/>
+    <rect x="400" y="90" width="220" height="40" rx="8" fill="#c41e3a"/>
+    <path d="M400,130 L400,98 Q400,90 408,90 L612,90 Q620,90 620,98 L620,130 Z" fill="#c41e3a"/>
+    <text x="415" y="117" class="box-header" style="font-size:15px">💡 Proposta de Valor</text>
+    
+    <text x="510" y="165" text-anchor="middle" style="font:bold 14px 'Segoe UI';fill:#1a472a">
+      Transforme suas fotos em
+    </text>
+    <text x="510" y="185" text-anchor="middle" style="font:bold 14px 'Segoe UI';fill:#1a472a">
+      avatares natalinos únicos!
+    </text>
+    
+    <text x="510" y="220" text-anchor="middle" style="font:24px 'Segoe UI Emoji'">✨🎅🎄</text>
+    
+    <text x="510" y="255" text-anchor="middle" style="font:italic 13px 'Segoe UI';fill:#666">
+      Rápido, fácil e mágico
+    </text>
+    
+    <rect x="425" y="275" width="170" height="35" rx="17" fill="#228b22"/>
+    <text x="510" y="298" text-anchor="middle" style="font:bold 13px 'Segoe UI';fill:white">
+      🎁 1 imagem GRÁTIS!
+    </text>
+    
+    <text x="510" y="345" text-anchor="middle" style="font:11px 'Segoe UI';fill:#666">
+      Pagamento só se gostar
+    </text>
+  </g>
+  
+  <!-- Customer Relationships -->
+  <g filter="url(#shadow)">
+    <rect x="630" y="90" width="180" height="135" rx="8" fill="white" stroke="#1a472a" stroke-width="2"/>
+    <rect x="630" y="90" width="180" height="35" rx="8" fill="#1a472a"/>
+    <path d="M630,125 L630,98 Q630,90 638,90 L802,90 Q810,90 810,98 L810,125 Z" fill="#1a472a"/>
+    <text x="640" y="113" class="box-header">💝 Relacionamento</text>
+    
+    <text x="640" y="145" class="box-content">
+      <tspan x="640" dy="0">• Onboarding interativo</tspan>
+      <tspan x="640" dy="18">• Suporte WhatsApp</tspan>
+      <tspan x="640" dy="18">• Tutorial first-time</tspan>
+      <tspan x="640" dy="18">• Compartilhamento</tspan>
+      <tspan x="645" dy="14" style="font-size:10px;fill:#666">social integrado</tspan>
+    </text>
+  </g>
+  
+  <!-- Channels -->
+  <g filter="url(#shadow)">
+    <rect x="630" y="235" width="180" height="135" rx="8" fill="white" stroke="#1a472a" stroke-width="2"/>
+    <rect x="630" y="235" width="180" height="35" rx="8" fill="#1a472a"/>
+    <path d="M630,270 L630,243 Q630,235 638,235 L802,235 Q810,235 810,243 L810,270 Z" fill="#1a472a"/>
+    <text x="640" y="258" class="box-header">📢 Canais</text>
+    
+    <text x="640" y="290" class="box-content">
+      <tspan x="640" dy="0">• Site: fotodenatal.me</tspan>
+      <tspan x="640" dy="18">• WhatsApp Share</tspan>
+      <tspan x="640" dy="18">• Instagram Share</tspan>
+      <tspan x="640" dy="18">• Indicações (viral)</tspan>
+    </text>
+  </g>
+  
+  <!-- Customer Segments -->
+  <g filter="url(#shadow)">
+    <rect x="820" y="90" width="180" height="280" rx="8" fill="white" stroke="#1a472a" stroke-width="2"/>
+    <rect x="820" y="90" width="180" height="35" rx="8" fill="#1a472a"/>
+    <path d="M820,125 L820,98 Q820,90 828,90 L992,90 Q1000,90 1000,98 L1000,125 Z" fill="#1a472a"/>
+    <text x="830" y="113" class="box-header">👥 Segmentos</text>
+    
+    <text x="830" y="150" class="box-content">
+      <tspan x="830" dy="0" style="font-weight:bold;fill:#1a472a">Famílias</tspan>
+      <tspan x="835" dy="16" style="font-size:10px;fill:#666">Fotos criativas de Natal</tspan>
+      <tspan x="830" dy="28" style="font-weight:bold;fill:#1a472a">Influenciadores</tspan>
+      <tspan x="835" dy="16" style="font-size:10px;fill:#666">Conteúdo sazonal</tspan>
+      <tspan x="830" dy="28" style="font-weight:bold;fill:#1a472a">Empresas</tspan>
+      <tspan x="835" dy="16" style="font-size:10px;fill:#666">Campanhas natalinas</tspan>
+      <tspan x="830" dy="28" style="font-weight:bold;fill:#1a472a">Jovens Adultos</tspan>
+      <tspan x="835" dy="16" style="font-size:10px;fill:#666">25-45 anos, tech-savvy</tspan>
+    </text>
+  </g>
+  
+  <!-- Cost Structure -->
+  <g filter="url(#shadow)">
+    <rect x="20" y="390" width="570" height="140" rx="8" fill="white" stroke="#c41e3a" stroke-width="2"/>
+    <rect x="20" y="390" width="570" height="35" rx="8" fill="url(#costGradient)"/>
+    <path d="M20,425 L20,398 Q20,390 28,390 L582,390 Q590,390 590,398 L590,425 Z" fill="url(#costGradient)"/>
+    <text x="30" y="413" class="box-header">💰 Estrutura de Custos</text>
+    
+    <text x="40" y="450" class="cost-text">
+      <tspan x="40" dy="0">• API Gemini - Custo por token/imagem gerada</tspan>
+      <tspan x="40" dy="22">• Servidor - VPS/Cloud hosting (infra)</tspan>
+      <tspan x="40" dy="22">• Domínio + SSL - fotodenatal.me</tspan>
+    </text>
+    <text x="340" y="450" class="cost-text">
+      <tspan x="340" dy="0">• Dev time - Manutenção e novas features</tspan>
+      <tspan x="340" dy="22">• MongoDB Atlas - Banco de dados</tspan>
+      <tspan x="340" dy="22">• Taxas Mercado Pago - ~3% por transação</tspan>
+    </text>
+  </g>
+  
+  <!-- Revenue Streams -->
+  <g filter="url(#shadow)">
+    <rect x="610" y="390" width="570" height="140" rx="8" fill="white" stroke="#228b22" stroke-width="2"/>
+    <rect x="610" y="390" width="570" height="35" rx="8" fill="url(#revenueGradient)"/>
+    <path d="M610,425 L610,398 Q610,390 618,390 L1172,390 Q1180,390 1180,398 L1180,425 Z" fill="url(#revenueGradient)"/>
+    <text x="620" y="413" class="box-header">💵 Fontes de Receita</text>
+    
+    <text x="630" y="450" class="revenue-text">
+      <tspan x="630" dy="0">• Venda de créditos via PIX (Mercado Pago)</tspan>
+      <tspan x="630" dy="22">• Modelo Freemium: 1 grátis → conversão paga</tspan>
+      <tspan x="630" dy="22">• Upsell: Imagem sem watermark</tspan>
+    </text>
+    <text x="920" y="450" class="revenue-text">
+      <tspan x="920" dy="0">• Pacotes de créditos (desconto volume)</tspan>
+      <tspan x="920" dy="22">• Conversão guest → usuário pagante</tspan>
+      <tspan x="920" dy="22">• Viral loop (indicações)</tspan>
+    </text>
+  </g>
+  
+  <!-- Footer -->
+  <rect x="0" y="550" width="1200" height="50" fill="url(#headerGradient)"/>
+  <text x="600" y="580" text-anchor="middle" style="font:13px 'Segoe UI';fill:white">
+    Desenvolvido com ❤️ por @joaosnet | github.com/joaosnet/klique-api | © 2024
+  </text>
+  
+  <!-- Decorations -->
+  <circle cx="1140" cy="30" r="15" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+  <text x="1140" y="36" text-anchor="middle" style="font:18px 'Segoe UI Emoji'">🎅</text>
+  
+  <circle cx="1100" cy="45" r="12" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  <text x="1100" y="50" text-anchor="middle" style="font:14px 'Segoe UI Emoji'">⭐</text>
+</svg>
