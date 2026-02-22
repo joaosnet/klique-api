@@ -20,16 +20,16 @@
 
 | 🤝 Parcerias-Chave | 🎯 Atividades-Chave | 💡 Proposta de Valor | 💝 Relacionamento | 👥 Segmentos de Clientes |
 |:-------------------|:--------------------|:---------------------|:------------------|:------------------------|
-| • **Google Gemini** - IA generativa | • Geração de imagens com IA | **Transforme suas fotos em avatares natalinos únicos!** | • Onboarding interativo | • **Famílias** que querem fotos criativas de Natal |
-| • **Mercado Pago** - Pagamentos PIX | • Processamento de imagens | | • Suporte via WhatsApp | • **Influenciadores** criando conteúdo sazonal |
-| • **Firebase** - Autenticação | • Remoção de background | ✨ *Rápido, fácil e mágico* | • Tutorial first-time user | • **Empresas** em campanhas natalinas |
+| • **Google Gemini/Flux** - IA generativa | • Fine-tuning de modelos | **Realismo fotorealista superior & Personalização Hiperlocal** | • Chat IA em Português | • **Famílias** (Fotos criativas de Natal) |
+| • **Mercado Pago** - Pagamentos PIX | • Geração de imagens & GIFs | **Mapa dos Sonhos 2026** (Vision Board IA) | • Suporte via WhatsApp | • **Público "Lei da Atração"** (Coaching/Metas) |
+| • **Firebase** - Autenticação | • Remoção de background | ✨ *Interface 100% PT-BR e Prompts Locais* | • Tutorial first-time user | • **Influenciadores** & Empresas |
 | • **Traefik** - SSL/Proxy | • Composição de cenários | | • Compartilhamento social | • **Jovens adultos** (25-45) tech-savvy |
 
 | 💰 Estrutura de Custos | 💵 Fontes de Receita |
 |:-----------------------|:---------------------|
-| • API Gemini - Custo por token | • Venda de créditos via PIX |
-| • Servidor VPS/Cloud | • Modelo Freemium: 1 grátis → conversão |
-| • Domínio + SSL | • Upsell: Imagem sem watermark |
+| • API IA (Gemini/Flux) - Custo por geração | • Venda de créditos via PIX |
+| • Servidor VPS/Cloud (GPU inference se self-hosted) | • **Mapa dos Sonhos**: R$ 9,90 por mapa HD |
+| • Marketing (TikTok/LinkedIn) | • Upsell: Refinamento extra (R$ 2,00) |
 
 </details>
 
@@ -56,6 +56,46 @@
 - **Dawn AI** — Transformação de fotos
 - **Remini** — Melhorias de foto com IA
 - **MyHeritage Deep Nostalgia** — Animação de fotos antigas
+
+---
+
+## 🚀 Diferenciação Competitiva
+
+Para superar concorrentes como Canva, Fotor e Musely, focamos em **realismo fotorealista superior**, **personalizações hiperlocais** (nomes brasileiros, trajes regionais) e **integrações exclusivas**. Priorizamos **velocidade**, **acessibilidade móvel** e **monetização híbrida**; evitamos prompts genéricos — usamos **IA conversacional** para refinar resultados em tempo real.
+
+| Concorrente | Fraqueza Principal | 🏆 Nosso Diferencial |
+|:------------|:-------------------|:---------------------|
+| **Canva** | Templates prontos, menos realismo em fotos humanas | **Geração 100% personalizada** com selfie + prompt (ex.: "Papai Noel com camisa do Paysandu"). Realismo extremo via fine-tuning (ex.: Flux Pro). |
+| **Fotor/Musely** | Estilos limitados (anime/vintage), detecção fácil como IA | **50+ estilos hiper-realistas** (não detectáveis), vídeos curtos (5s GIFs natalinos) e **AR preview** no celular. |
+| **YouCam/Leonardo** | Foco global, prompts em inglês | **Interface 100% PT-BR**, prompts locais ("foto natal Belém com mangueira"), **chat IA em português** para iterações ("torne mais quente, adicione família paraense"). |
+
+### ⚡ Implementação Rápida (1-2 semanas)
+- **Fine-tune**: Ajuste rápido de modelo com dataset brasileiro/natalino (ex.: Stable Diffusion, DALL·E ou Flux Pro) para realismo extremo.
+- **IA Conversacional**: Chat interativo em Português para refinar resultados em tempo real — evita prompts genéricos e aumenta satisfação.
+- **Monetização Híbrida**: B2C (freemium + upsell), B2B (API para agências/empresas) e **produtos físicos** (parcerias de impressão, brindes corporativos).
+- **Upsell**: R$ 2,00 por refinamento extra; oferecer pacotes e opções empresariais.
+- **Impacto estimado**: Aumenta retenção ~3x e conversão 20–30%.
+
+---
+
+## ✨ Gerador de Mapa dos Sonhos 2026 (Expansão)
+
+Um "vision board" IA que gera colagens de imagens baseadas em objetivos (carreira, saúde, viagens), integrando a selfie do usuário em cenas futuras.
+
+> **Por que adiciona valor?** Expande além do Natal, gerando renda o ano todo (pico em jan/fev).
+
+### 🛠️ Como Funciona (MVP 7-10 dias)
+1. **Input**: Usuário lista 5-10 sonhos + foto opcional.
+2. **Geração**: Prompt dinâmico — ex.: "Colagem vision board: [sonho1] realista, [sonho2] motivacional, layout grid 3x3"; IA incorpora selfie do usuário nas cenas.
+3. **Entrega**: Colagem automática exportável (PNG/PDF) + texto afirmativo personalizado.
+
+**Stack MVP**: Backend FastAPI + modelos via Hugging Face (Flux.1 ou Playground v2.5) para imagens realistas; frontend: nova aba no site com input de texto e upload de foto.
+
+### 💰 Modelo de Negócio
+- **Freemium**: 3 imagens grátis para experimentar.
+- **Premium**: **R$ 9,90** por Mapa HD + texto afirmativo personalizado.
+- **Upsell**: Refinamentos adicionais (R$ 2 cada) e pacotes HD.
+- **Promoção**: Lançar como **"Mapa dos Sonhos 2026"** no LinkedIn, TikTok e campanhas virais.
 
 ---
 

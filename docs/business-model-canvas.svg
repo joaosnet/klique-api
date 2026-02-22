@@ -98,26 +98,33 @@
     <path d="M400,130 L400,98 Q400,90 408,90 L612,90 Q620,90 620,98 L620,130 Z" fill="#c41e3a"/>
     <text x="415" y="117" class="box-header" style="font-size:15px">💡 Proposta de Valor</text>
     
-    <text x="510" y="165" text-anchor="middle" style="font:bold 14px 'Segoe UI';fill:#1a472a">
+    <text x="510" y="145" text-anchor="middle" style="font:bold 14px 'Segoe UI';fill:#1a472a">
       Transforme suas fotos em
     </text>
-    <text x="510" y="185" text-anchor="middle" style="font:bold 14px 'Segoe UI';fill:#1a472a">
+    <text x="510" y="160" text-anchor="middle" style="font:bold 14px 'Segoe UI';fill:#1a472a">
       avatares natalinos únicos!
     </text>
     
-    <text x="510" y="220" text-anchor="middle" style="font:24px 'Segoe UI Emoji'">✨🎅🎄</text>
+    <text x="510" y="190" text-anchor="middle" style="font:24px 'Segoe UI Emoji'">✨🎅🎄</text>
     
-    <text x="510" y="255" text-anchor="middle" style="font:italic 13px 'Segoe UI';fill:#666">
+    <text x="510" y="215" text-anchor="middle" style="font:italic 13px 'Segoe UI';fill:#666">
       Rápido, fácil e mágico
     </text>
     
-    <rect x="425" y="275" width="170" height="35" rx="17" fill="#228b22"/>
-    <text x="510" y="298" text-anchor="middle" style="font:bold 13px 'Segoe UI';fill:white">
+    <rect x="425" y="230" width="170" height="35" rx="17" fill="#228b22"/>
+    <text x="510" y="253" text-anchor="middle" style="font:bold 13px 'Segoe UI';fill:white">
       🎁 1 imagem GRÁTIS!
     </text>
     
-    <text x="510" y="345" text-anchor="middle" style="font:11px 'Segoe UI';fill:#666">
+    <text x="510" y="285" text-anchor="middle" style="font:11px 'Segoe UI';fill:#666">
       Pagamento só se gostar
+    </text>
+    
+    <text x="510" y="305" text-anchor="middle" style="font:11px 'Segoe UI';fill:#333">
+      <tspan x="510" dy="0">• Realismo extremo (fine-tune)</tspan>
+      <tspan x="510" dy="14">• Personalização hiperlocal</tspan>
+      <tspan x="510" dy="14">• Chat IA PT-BR refinado</tspan>
+      <tspan x="510" dy="14">• Integrações B2B &amp; produtos</tspan>
     </text>
   </g>
   
@@ -173,45 +180,59 @@
   
   <!-- Cost Structure -->
   <g filter="url(#shadow)">
-    <rect x="20" y="390" width="570" height="140" rx="8" fill="white" stroke="#c41e3a" stroke-width="2"/>
-    <rect x="20" y="390" width="570" height="35" rx="8" fill="url(#costGradient)"/>
-    <path d="M20,425 L20,398 Q20,390 28,390 L582,390 Q590,390 590,398 L590,425 Z" fill="url(#costGradient)"/>
-    <text x="30" y="413" class="box-header">💰 Estrutura de Custos</text>
+    <rect x="20" y="460" width="570" height="140" rx="8" fill="white" stroke="#c41e3a" stroke-width="2"/>
+    <rect x="20" y="460" width="570" height="35" rx="8" fill="url(#costGradient)"/>
+    <path d="M20,495 L20,468 Q20,460 28,460 L582,460 Q590,460 590,468 L590,495 Z" fill="url(#costGradient)"/>
+    <text x="30" y="483" class="box-header">💰 Estrutura de Custos</text>
     
-    <text x="40" y="450" class="cost-text">
+    <text x="40" y="520" class="cost-text">
       <tspan x="40" dy="0">• API Gemini - Custo por token/imagem gerada</tspan>
       <tspan x="40" dy="22">• Servidor - VPS/Cloud hosting (infra)</tspan>
       <tspan x="40" dy="22">• Domínio + SSL - fotodenatal.me</tspan>
     </text>
-    <text x="340" y="450" class="cost-text">
+    <text x="340" y="520" class="cost-text">
       <tspan x="340" dy="0">• Dev time - Manutenção e novas features</tspan>
       <tspan x="340" dy="22">• MongoDB Atlas - Banco de dados</tspan>
       <tspan x="340" dy="22">• Taxas Mercado Pago - ~3% por transação</tspan>
     </text>
-  </g>
+  </g> 
   
   <!-- Revenue Streams -->
   <g filter="url(#shadow)">
-    <rect x="610" y="390" width="570" height="140" rx="8" fill="white" stroke="#228b22" stroke-width="2"/>
-    <rect x="610" y="390" width="570" height="35" rx="8" fill="url(#revenueGradient)"/>
-    <path d="M610,425 L610,398 Q610,390 618,390 L1172,390 Q1180,390 1180,398 L1180,425 Z" fill="url(#revenueGradient)"/>
-    <text x="620" y="413" class="box-header">💵 Fontes de Receita</text>
+    <rect x="610" y="460" width="570" height="140" rx="8" fill="white" stroke="#228b22" stroke-width="2"/>
+    <rect x="610" y="460" width="570" height="35" rx="8" fill="url(#revenueGradient)"/>
+    <path d="M610,495 L610,468 Q610,460 618,460 L1172,460 Q1180,460 1180,468 L1180,495 Z" fill="url(#revenueGradient)"/>
+    <text x="620" y="483" class="box-header">💵 Fontes de Receita</text>
     
-    <text x="630" y="450" class="revenue-text">
+    <text x="630" y="520" class="revenue-text">
       <tspan x="630" dy="0">• Venda de créditos via PIX (Mercado Pago)</tspan>
       <tspan x="630" dy="22">• Modelo Freemium: 1 grátis → conversão paga</tspan>
-      <tspan x="630" dy="22">• Upsell: Imagem sem watermark</tspan>
+      <tspan x="630" dy="22">• Upsell: Imagem sem watermark; R$2 por refinamento extra</tspan>
+      <tspan x="630" dy="22">• Produtos físicos (impressão) e B2B (APIs para agências)</tspan>
     </text>
-    <text x="920" y="450" class="revenue-text">
+    <text x="920" y="520" class="revenue-text">
       <tspan x="920" dy="0">• Pacotes de créditos (desconto volume)</tspan>
       <tspan x="920" dy="22">• Conversão guest → usuário pagante</tspan>
       <tspan x="920" dy="22">• Viral loop (indicações)</tspan>
     </text>
-  </g>
+  </g> 
+  
+  <!-- Mapa dos Sonhos -->
+  <g filter="url(#shadow)">
+    <rect x="20" y="620" width="1160" height="110" rx="8" fill="white" stroke="#228b22" stroke-width="2"/>
+    <rect x="20" y="620" width="1160" height="30" rx="8" fill="#228b22"/>
+    <text x="30" y="650" class="box-header" style="font-size:13px">✨ Mapa dos Sonhos</text>
+    <text x="40" y="670" class="box-content" style="font-size:12px;fill:#333">
+      <tspan x="40" dy="0">• Freemium: 3 imagens grátis • Premium: R$ 9,90 por Mapa HD + texto afirmativo</tspan>
+      <tspan x="40" dy="18">• MVP 7-10 dias: Backend FastAPI + Hugging Face (Flux.1 / Playground v2.5)</tspan>
+      <tspan x="40" dy="18">• Prompt dinâmico e integração de selfie em cenas</tspan>
+      <tspan x="40" dy="18">• Lançamento: "Mapa dos Sonhos 2026" (LinkedIn / TikTok)</tspan>
+    </text>
+  </g> 
   
   <!-- Footer -->
-  <rect x="0" y="550" width="1200" height="50" fill="url(#headerGradient)"/>
-  <text x="600" y="580" text-anchor="middle" style="font:13px 'Segoe UI';fill:white">
+  <rect x="0" y="740" width="1200" height="50" fill="url(#headerGradient)"/>
+  <text x="600" y="770" text-anchor="middle" style="font:13px 'Segoe UI';fill:white">
     Desenvolvido com ❤️ por @joaosnet | github.com/joaosnet/klique-api | © 2024
   </text>
   
