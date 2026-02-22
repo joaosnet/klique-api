@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galeria de Polaroids SVG</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@600&display=swap');
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #eaddd5;
+      background-image: radial-gradient(#d3c1b5 1px, transparent 1px);
+      background-size: 20px 20px;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #4a3f35;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 5px;
+      font-family: 'Caveat', cursive;
+      font-size: 3.5rem;
+    }
+
+    header p {
+      font-size: 1.1rem;
+      opacity: 0.8;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 40px;
+      width: 100%;
+      max-width: 1200px;
+      padding-bottom: 50px;
+    }
+
+    /* Container 3D */
+    .scene {
+      width: 250px;
+      height: 300px;
+      perspective: 1000px;
+      margin: 0 auto;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      transform-style: preserve-3d;
+      cursor: pointer;
+    }
+
+    .card.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card__face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 8px;
+    }
+
+    /* Frente (A Polaroid desenhada em SVG) */
+    .card__face--front {
+      /* Fundo transparente: a forma da polaroid vem do SVG! */
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Dica visual flutuante */
+    .flip-hint {
+      position: absolute;
+      bottom: 0px;
+      right: 15px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .card:hover .flip-hint {
+      opacity: 1;
+    }
+
+    /* Verso (O Código) */
+    .card__face--back {
+      background: #282c34;
+      color: #abb2bf;
+      transform: rotateY(180deg);
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      box-sizing: border-box;
+      border: 2px solid #fff;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .back-title {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #61afef;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .code-area {
+      flex-grow: 1;
+      resize: none;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.65rem;
+      background: #1e2227;
+      color: #98c379;
+      border: 1px solid #4b5263;
+      border-radius: 4px;
+      padding: 8px;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .code-area::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .code-area::-webkit-scrollbar-track {
+      background: #1e2227;
+    }
+
+    .code-area::-webkit-scrollbar-thumb {
+      background: #4b5263;
+      border-radius: 3px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+
+    .copy-btn {
+      background: #98c379;
+      color: #282c34;
+    }
+
+    .copy-btn:hover {
+      background: #7cb059;
+    }
+
+    .back-btn {
+      background: #e06c75;
+      color: #fff;
+    }
+
+    .back-btn:hover {
+      background: #d05b64;
+    }
+  </style>
+</head>
+
+<body>
+
+  <a href="index.html"
+    style="position: absolute; top: 20px; left: 20px; padding: 10px 15px; background: #ea8a8a; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: sans-serif;">&larr;
+    Voltar para o Globo 3D</a>
+
+  <header>
+    <h1>Molduras Polaroid em SVG</h1>
+    <p>Agora o próprio papel, alfinetes, fitas adesivas e formatos (Classic, Mini, Wide) são nativos da tag
+      `&lt;svg&gt;`. O CSS serve apenas para girar as cartas 3D! (11 Formatos)</p>
+  </header>
+
+  <div class="grid" id="polaroid-grid">
+    <!-- O conteúdo será gerado pelo JavaScript -->
+  </div>
+
+  <script type="module">
+    import { polaroidTemplates } from './polaroidTemplates.js';
+
+    const grid = document.getElementById('polaroid-grid');
+
+    // Um placeholder cinza ou transparente
+    const dummyImg = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+    polaroidTemplates.forEach((item, index) => {
+      const scene = document.createElement('div');
+      scene.className = 'scene';
+
+      const rawSvg = item.render(dummyImg, item.title);
+      const safeCode = rawSvg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      scene.innerHTML = `
+                <div class="card" onclick="flipCard(this)">
+                    <div class="card__face card__face--front">
+                        ${rawSvg}
+                        <div class="flip-hint">↺ Girar/Opções</div>
+                    </div>
+                    <div class="card__face card__face--back" onclick="event.stopPropagation()">
+                        <div class="back-title">${item.title}</div>
+                        <textarea class="code-area" id="code-${index}" readonly>${safeCode}</textarea>
+                        <div class="btn-group">
+                            <button class="copy-btn" style="background:#4CAF50; color:#fff" onclick="useModel(${index})">Usar Modelo</button>
+                            <button class="copy-btn" onclick="copyCode(this, 'code-${index}')">Copiar SVG</button>
+                            <button class="back-btn" onclick="flipBack(this)">Voltar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+      grid.appendChild(scene);
+    });
+
+    window.flipCard = function (card) {
+      card.classList.toggle('is-flipped');
+    };
+
+    window.flipBack = function (btn) {
+      const card = btn.closest('.card');
+      card.classList.remove('is-flipped');
+    };
+
+    window.useModel = function (index) {
+      localStorage.setItem('selectedPolaroidModel', index);
+      alert('Modelo ativado! O mural principal será atualizado automaticamente.');
+    };
+
+    window.copyCode = function (btn, textareaId) {
+      const textarea = document.getElementById(textareaId);
+      textarea.select();
+      textarea.setSelectionRange(0, 99999);
+
+      try {
+        document.execCommand('copy');
+        const originalText = btn.innerText;
+        btn.innerText = 'Copiado! ✓';
+        btn.style.background = '#61afef';
+        btn.style.color = '#fff';
+
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.style.background = '';
+          btn.style.color = '';
+        }, 2000);
+      } catch (err) {
+        alert('Erro ao copiar código.');
+      }
+      window.getSelection().removeAllRanges();
+    };
+  </script>
+</body>
+
+</html>

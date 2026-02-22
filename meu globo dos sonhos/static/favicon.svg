@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <radialGradient id="oceanGrad" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </radialGradient>
+
+    <linearGradient id="landGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80" />
+      <stop offset="100%" stop-color="#166534" />
+    </linearGradient>
+
+    <radialGradient id="goalGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </radialGradient>
+
+    <clipPath id="earthClip">
+      <circle cx="50" cy="50" r="34" />
+    </clipPath>
+  </defs>
+
+  <g>
+    <circle cx="50" cy="50" r="34" fill="url(#oceanGrad)" />
+
+    <g clip-path="url(#earthClip)" fill="url(#landGrad)">
+      <path d="M 15 15 Q 40 10, 35 35 T 45 65 Q 50 85, 35 90 Q 20 80, 15 50 Q 10 30, 15 15 Z" />
+      <path d="M 10 70 Q 25 75, 20 95 Q 5 90, 10 70 Z" />
+      <path d="M 60 5 Q 90 0, 85 30 Q 95 40, 80 60 Q 75 85, 60 85 Q 50 50, 60 30 Q 50 15, 60 5 Z" />
+      <path d="M 90 10 Q 105 30, 95 50 Q 85 45, 90 10 Z" />
+      <animateTransform attributeName="transform" type="translate" values="0,0; -8,0; 0,0" dur="20s" repeatCount="indefinite" />
+    </g>
+    
+    <circle cx="50" cy="50" r="34" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="4" />
+  </g>
+
+  <g>
+    <g>
+      <circle cx="50" cy="10" r="7.5" fill="url(#goalGrad)">
+        <animate attributeName="r" values="7;8.5;7" dur="2s" begin="0s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="50" cy="10" r="4" fill="none" stroke="#451a03" stroke-width="1.2" />
+      <circle cx="50" cy="10" r="1.5" fill="#451a03" />
+    </g>
+
+    <g>
+      <circle cx="90" cy="50" r="7.5" fill="url(#goalGrad)">
+        <animate attributeName="r" values="7;8.5;7" dur="2s" begin="0.5s" repeatCount="indefinite" />
+      </circle>
+      <path d="M 90 45.5 L 91.5 48.5 L 95 48.5 L 92.5 50.5 L 93.5 54 L 90 52 L 86.5 54 L 87.5 50.5 L 85 48.5 L 88.5 48.5 Z" fill="#451a03" />
+    </g>
+
+    <g>
+      <circle cx="50" cy="90" r="7.5" fill="url(#goalGrad)">
+        <animate attributeName="r" values="7;8.5;7" dur="2s" begin="1s" repeatCount="indefinite" />
+      </circle>
+      <path d="M 50 94 L 50 86 M 47 89 L 50 86 L 53 89" stroke="#451a03" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <g>
+      <circle cx="10" cy="50" r="7.5" fill="url(#goalGrad)">
+        <animate attributeName="r" values="7;8.5;7" dur="2s" begin="1.5s" repeatCount="indefinite" />
+      </circle>
+      <path d="M 7 50 L 9 53 L 14 47" stroke="#451a03" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+    
+    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="24s" repeatCount="indefinite" />
+  </g>
+</svg>

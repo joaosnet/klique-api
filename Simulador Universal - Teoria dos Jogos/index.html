@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulador Universal: Teoria dos Jogos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Roboto+Condensed:wght@400;700&display=swap');
+
+        body {
+            background-color: #12121a;
+            font-family: 'Roboto Condensed', sans-serif;
+            overflow-x: hidden;
+            touch-action: manipulation;
+            color: #e2e8f0;
+        }
+
+        .font-title { font-family: 'Anton', sans-serif; }
+
+        /* Estilo Exato das Cartas Unmatched */
+        .unmatched-card {
+            aspect-ratio: 2.5 / 3.5;
+            background-color: #f4ebd8;
+            border-radius: 0.75rem;
+            padding: 0.35rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
+            position: relative;
+        }
+        
+        .card-inner-bg {
+            background-color: #1a1a24;
+            border-radius: 0.375rem;
+        }
+
+        .vertical-text {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            letter-spacing: 2px;
+        }
+
+        /* Animações */
+        .fade-in { animation: fadeIn 0.4s ease-in forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Range Slider Customizado */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+            background: #a855f7; cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px rgba(168,85,247,0.8);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #4b5563; border-radius: 2px;
+        }
+        
+        /* Modal BG e Upload de Imagem */
+        .modal-bg { background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px); }
+        
+        .image-upload-wrapper {
+            position: relative;
+            width: 100%;
+            height: 120px;
+            border: 2px dashed #6b7280;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #111827;
+            background-size: cover;
+            background-position: center;
+            transition: border-color 0.3s;
+        }
+        .image-upload-wrapper:hover { border-color: #a855f7; }
+        .image-upload-wrapper input[type="file"] {
+            position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col h-[100dvh]">
+
+    <!-- Header -->
+    <header class="text-center py-3 bg-gray-900 border-b-2 border-purple-800 shadow-md z-10 flex-shrink-0">
+        <h1 class="font-title text-2xl tracking-widest text-purple-400">SIMULADOR UNIVERSAL</h1>
+        <p class="text-[10px] text-gray-500 uppercase tracking-widest">Negócios, Política & Sociedade</p>
+    </header>
+
+    <!-- TELA 1: LABORATÓRIO (MÃO DE CARTAS / POPULAÇÃO) -->
+    <main id="screen-roster" class="flex-grow flex flex-col p-4 overflow-hidden fade-in max-w-4xl mx-auto w-full relative">
+        
+        <div class="flex justify-between items-end mb-4 flex-shrink-0 border-b border-gray-700 pb-2">
+            <div>
+                <h2 class="font-title text-xl text-yellow-500 tracking-wider">ENTIDADES PARTICIPANTES</h2>
+                <p class="text-xs text-gray-400 uppercase tracking-widest">Cartas no Deck: <span id="pop-count" class="text-white font-bold">0</span></p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="loadPreset('corporativo')" class="px-3 py-1 bg-blue-900/50 hover:bg-blue-800 text-blue-400 border border-blue-700 rounded text-[10px] uppercase font-bold transition-colors shadow-sm">Mercado</button>
+                <button onclick="loadPreset('guerra')" class="px-3 py-1 bg-red-900/50 hover:bg-red-800 text-red-400 border border-red-700 rounded text-[10px] uppercase font-bold transition-colors shadow-sm">Guerra</button>
+            </div>
+        </div>
+
+        <!-- População (Scroll Horizontal) -->
+        <div class="flex-grow flex items-center justify-start overflow-x-auto gap-4 pb-4 px-2 snap-x no-scrollbar relative" id="players-hand">
+            <!-- Vazio Inicial -->
+            <div class="w-full h-full flex flex-col items-center justify-center text-gray-600 absolute inset-0 pointer-events-none" id="empty-state">
+                <svg class="w-16 h-16 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <p class="text-sm uppercase tracking-widest text-center">Nenhuma entidade registrada.<br>Adicione com foto ou use um Preset.</p>
+            </div>
+        </div>
+
+        <!-- Controles Inferiores -->
+        <div class="flex gap-3 mt-auto pt-4 border-t border-gray-800 flex-shrink-0 z-10">
+            <button onclick="openAddModal()" class="w-1/3 py-3 bg-gray-800 border-2 border-dashed border-gray-600 hover:border-purple-500 rounded-lg text-gray-400 hover:text-purple-400 font-title tracking-widest text-lg uppercase transition-colors flex items-center justify-center gap-2">
+                + Add
+            </button>
+            <button id="btn-simulate" onclick="runSimulation()" disabled class="w-2/3 py-3 bg-purple-700 text-white rounded-lg font-title tracking-widest text-xl uppercase shadow-[0_0_15px_rgba(168,85,247,0.5)] transition-colors disabled:opacity-50 disabled:shadow-none disabled:bg-gray-700">
+                Simular Interações
+            </button>
+        </div>
+    </main>
+
+    <!-- TELA 2: RESULTADOS DA SIMULAÇÃO -->
+    <main id="screen-results" class="hidden flex-grow flex flex-col p-2 overflow-hidden fade-in max-w-4xl mx-auto w-full">
+        
+        <div id="demographic-hud" class="bg-black/60 border border-gray-700 p-3 rounded-lg mb-3 flex justify-between items-center shadow-md flex-shrink-0 backdrop-blur-sm">
+            <div>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest">Sinergia Global do Sistema</p>
+                <p id="synergy-rate" class="font-title text-3xl leading-none mt-1"></p>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest">Diagnóstico</p>
+                <p id="society-status" class="font-bold text-sm uppercase tracking-wider mt-1"></p>
+            </div>
+        </div>
+
+        <div id="matches-grid" class="flex-grow overflow-y-auto space-y-6 pb-20 no-scrollbar px-1">
+            <!-- Resultados injetados via JS -->
+        </div>
+
+        <div class="fixed bottom-0 left-0 w-full p-4 bg-gradient-to-t from-[#12121a] via-[#12121a] to-transparent z-20">
+            <button onclick="resetToRoster()" class="w-full max-w-4xl mx-auto block py-3 bg-gray-800 border border-gray-600 hover:bg-gray-700 rounded-lg text-white font-title tracking-widest text-lg uppercase transition-colors shadow-xl">
+                Voltar ao Laboratório
+            </button>
+        </div>
+    </main>
+
+    <!-- MODAL: CRIAR CARTA (ADICIONAR JOGADOR) -->
+    <div id="modal-add" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 fade-in">
+        <div class="bg-gray-900 border-2 border-purple-800 rounded-xl w-full max-w-md p-5 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h2 class="font-title text-2xl text-purple-400 mb-4 border-b border-gray-700 pb-2">NOVA ENTIDADE</h2>
+            
+            <div class="space-y-4">
+                <!-- Upload de Imagem -->
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-gray-400 mb-1">Imagem / Foto Real</label>
+                    <div class="image-upload-wrapper" id="img-preview-container">
+                        <div class="text-center pointer-events-none" id="img-placeholder-text">
+                            <svg class="mx-auto h-8 w-8 text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            <span class="text-xs text-gray-500 uppercase tracking-widest">Toque para enviar foto</span>
+                        </div>
+                        <input type="file" id="input-image" accept="image/*">
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <div class="flex-grow">
+                        <label class="block text-[10px] uppercase tracking-widest text-gray-400 mb-1">Nome / Título</label>
+                        <input type="text" id="input-name" class="w-full bg-black border border-gray-600 rounded p-2 text-white font-bold outline-none focus:border-purple-500" placeholder="Ex: Empresa X, João, País Y">
+                    </div>
+                </div>
+
+                <!-- Atributos Universais -->
+                <div class="bg-black/50 p-3 rounded border border-gray-800 space-y-3">
+                    <p class="text-xs text-yellow-500 uppercase tracking-widest mb-1 font-bold flex justify-between">
+                        <span>Atributos da Entidade</span>
+                        <span id="preview-rank" class="text-white font-title text-lg leading-none">RANK: 3</span>
+                    </p>
+                    <div>
+                        <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Poder (Força/Tamanho)</span> <span id="val-power" class="text-white font-bold">3</span></div>
+                        <input type="range" id="input-power" min="1" max="5" value="3" oninput="updateRankPreview()">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Recursos (Dinheiro)</span> <span id="val-resources" class="text-white font-bold">3</span></div>
+                        <input type="range" id="input-resources" min="1" max="5" value="3" oninput="updateRankPreview()">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Influência (Social/Mídia)</span> <span id="val-influence" class="text-white font-bold">3</span></div>
+                        <input type="range" id="input-influence" min="1" max="5" value="3" oninput="updateRankPreview()">
+                    </div>
+                </div>
+
+                <!-- Estratégias Universais -->
+                <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-gray-400 mb-1">Estratégia (Teoria dos Jogos)</label>
+                    <select id="input-strategy" class="w-full bg-black border border-purple-700 rounded p-2 text-white text-sm outline-none focus:ring-1 focus:ring-purple-500">
+                        <option value="cooperate">🤝 COLABORAR (Defesa) - Busca ganho mútuo e alianças.</option>
+                        <option value="defect">⚔️ EXPLORAR/ATACAR (Ataque) - Tenta ganhar à custa dos outros.</option>
+                        <option value="withdraw">🛡️ ISOLAR-SE (Versátil) - Fica na sua, evita riscos e interações.</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeAddModal()" class="w-1/3 py-2 bg-gray-800 rounded text-gray-400 uppercase text-sm font-bold tracking-wider hover:bg-gray-700">Cancelar</button>
+                <button onclick="savePlayer()" class="w-2/3 py-2 bg-purple-600 hover:bg-purple-500 rounded text-white uppercase text-sm font-bold tracking-wider shadow-[0_0_10px_rgba(168,85,247,0.4)]">Gerar Carta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SVGs REUTILIZÁVEIS -->
+    <svg width="0" height="0" class="hidden">
+        <defs>
+            <g id="icon-defense"><path d="M12 2L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-3z" fill="white"/></g>
+            <g id="icon-attack"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="white"/><circle cx="12" cy="12" r="3" fill="#e53e3e"/></g>
+            <g id="icon-versatile"><circle cx="12" cy="12" r="10" fill="white"/><path d="M12 6v12M6 12h12" stroke="#805ad5" stroke-width="3"/></g>
+            <polygon id="tag-bg" points="0,0 40,0 40,90 20,105 0,90" />
+            
+            <!-- Artes Genéricas (Caso não tenha foto) -->
+            <g id="art-colab">
+                <rect width="100" height="100" fill="#2b6cb0" />
+                <circle cx="50" cy="50" r="30" fill="none" stroke="#63b3ed" stroke-width="5" />
+                <path d="M30 50 L70 50 M50 30 L50 70" stroke="#ebf8ff" stroke-width="8"/>
+            </g>
+            <g id="art-atk">
+                <rect width="100" height="100" fill="#c53030" />
+                <path d="M20 20 L80 80 M80 20 L20 80" stroke="#fed7d7" stroke-width="12"/>
+                <circle cx="50" cy="50" r="15" fill="#742a2a"/>
+            </g>
+            <g id="art-iso">
+                <rect width="100" height="100" fill="#1a202c" />
+                <circle cx="50" cy="50" r="30" fill="#2d3748" />
+                <circle cx="50" cy="50" r="10" fill="#4a5568"/>
+            </g>
+        </defs>
+    </svg>
+
+    <script>
+        // --- CONFIGURAÇÃO UNIVERSAL ---
+        const strategies = {
+            'cooperate': { name: 'COLABORAR', desc: 'Joga limpo. Se o outro colaborar, ambos prosperam.', type: 'defense', color: '#2b6cb0', artRef: '#art-colab' },
+            'defect': { name: 'EXPLORAR', desc: 'Agressivo. Tenta trair ou dominar o oponente para ganho máximo.', type: 'attack', color: '#c53030', artRef: '#art-atk' },
+            'withdraw': { name: 'ISOLAR-SE', desc: 'Não interage. Mantém seus recursos a salvo, mas não cresce.', type: 'versatile', color: '#805ad5', artRef: '#art-iso' }
+        };
+
+        let population = [];
+        let nextId = 1;
+        let tempImageBase64 = null; // Guarda a imagem carregada
+
+        // --- SISTEMA DE UPLOAD DE IMAGEM ---
+        document.getElementById('input-image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    tempImageBase64 = event.target.result;
+                    document.getElementById('img-preview-container').style.backgroundImage = `url(${tempImageBase64})`;
+                    document.getElementById('img-placeholder-text').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // --- RENDERIZAÇÃO DA CARTA (COM SUPORTE A FOTO) ---
+        function renderCardHTML(p, showDelete = true, small = false) {
+            const strat = strategies[p.strategy];
+            const iconUse = strat.type === 'attack' ? '#icon-attack' : (strat.type === 'versatile' ? '#icon-versatile' : '#icon-defense');
+            const textSize = small ? 'text-[8px]' : 'text-[10px]';
+            const titleSize = small ? 'text-sm' : 'text-lg';
+            const valueSize = small ? '20' : '28';
+
+            const deleteBtn = showDelete ? `
+                <button onclick="removePlayer(${p.id}); event.stopPropagation();" class="absolute top-2 right-2 bg-red-600 hover:bg-red-500 rounded-full w-6 h-6 flex items-center justify-center text-white z-50 shadow-md">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            ` : '';
+
+            // Se tiver imagem real, usa <img>, senão usa <svg> genérico
+            const artVisual = p.image 
+                ? `<img src="${p.image}" class="w-full h-full object-cover absolute inset-0 z-0 opacity-90" />` 
+                : `<svg viewBox="0 0 100 100" class="w-full h-full preserveAspectRatio="xMidYMid slice" absolute inset-0 z-0"><use href="${strat.artRef}"/></svg>`;
+
+            return `
+                <div class="unmatched-card flex-shrink-0 snap-center transition-transform hover:-translate-y-1 ${small ? 'w-32' : 'w-48 sm:w-56'} relative" id="card-${p.id}">
+                    ${deleteBtn}
+                    <div class="relative w-full h-full card-inner-bg overflow-hidden flex flex-col">
+                        
+                        <!-- Topo: Arte (Foto ou SVG) e Hexágono -->
+                        <div class="w-full h-[55%] relative overflow-hidden bg-gray-900 border-b-2 border-white">
+                            ${artVisual}
+                            
+                            <!-- Gradiente suave para o Hexágono ficar legível sobre qualquer foto -->
+                            <div class="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent z-0"></div>
+
+                            <!-- Tag Superior Esquerda (Rank) -->
+                            <div class="absolute top-0 left-0 w-10 h-28 z-10 ${small ? 'w-8 h-20' : 'sm:w-12 sm:h-32'}">
+                                <svg viewBox="0 0 40 105" class="w-full h-full drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)]">
+                                    <use href="#tag-bg" fill="${strat.color}" />
+                                    <use href="${iconUse}" x="8" y="5" width="24" height="24" />
+                                    <text x="20" y="50" font-family="'Anton', sans-serif" font-size="${valueSize}" fill="white" text-anchor="middle">${p.rank}</text>
+                                </svg>
+                            </div>
+                            <!-- Boost Marker -->
+                            <div class="absolute bottom-[-10px] right-2 z-20 w-7 h-7 rounded-full bg-black border-2 border-white flex items-center justify-center shadow-lg">
+                                <span class="font-title text-white text-sm mt-0.5">${p.power + p.resources + p.influence}</span>
+                            </div>
+                        </div>
+
+                        <!-- Texto da Carta -->
+                        <div class="w-full h-[45%] text-white p-2 flex flex-col relative z-10 bg-black">
+                            <h2 class="font-title ${titleSize} tracking-wider leading-none mb-1 uppercase truncate text-[${strat.color}]" style="color:${strat.color}">${strat.name}</h2>
+                            <svg class="w-full h-[1px] mb-1"><line x1="0" y1="0" x2="100%" y2="0" stroke="#333" stroke-width="1"/></svg>
+                            
+                            <div class="flex-grow flex flex-col justify-start space-y-1">
+                                <p class="${textSize} font-bold text-gray-200 truncate uppercase">► ${p.name}</p>
+                                <p class="${textSize} leading-tight text-gray-400">Pod:${p.power} | Rec:${p.resources} | Inf:${p.influence}</p>
+                                <p class="${textSize} leading-tight text-gray-400 mt-1 italic">${strat.desc}</p>
+                            </div>
+                            
+                            <div class="absolute bottom-1 right-2 text-[8px] text-gray-600 font-bold uppercase tracking-wider">
+                                RANK ${p.rank}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- UI E MODAL ---
+        function updateRankPreview() {
+            const p = parseInt(document.getElementById('input-power').value);
+            const r = parseInt(document.getElementById('input-resources').value);
+            const i = parseInt(document.getElementById('input-influence').value);
+            document.getElementById('val-power').innerText = p;
+            document.getElementById('val-resources').innerText = r;
+            document.getElementById('val-influence').innerText = i;
+            document.getElementById('preview-rank').innerText = `RANK: ${Math.round((p + r + i) / 3)}`;
+        }
+
+        function openAddModal() {
+            // Reseta form
+            document.getElementById('input-name').value = '';
+            document.getElementById('input-power').value = '3';
+            document.getElementById('input-resources').value = '3';
+            document.getElementById('input-influence').value = '3';
+            document.getElementById('input-strategy').value = 'cooperate';
+            
+            // Reseta imagem
+            tempImageBase64 = null;
+            document.getElementById('img-preview-container').style.backgroundImage = 'none';
+            document.getElementById('img-placeholder-text').style.display = 'block';
+            document.getElementById('input-image').value = '';
+
+            updateRankPreview();
+            document.getElementById('modal-add').classList.remove('hidden');
+        }
+
+        function closeAddModal() { document.getElementById('modal-add').classList.add('hidden'); }
+
+        // --- GERENCIAMENTO DE POPULAÇÃO ---
+        function savePlayer() {
+            const name = document.getElementById('input-name').value || `Entidade ${nextId}`;
+            const p = parseInt(document.getElementById('input-power').value);
+            const r = parseInt(document.getElementById('input-resources').value);
+            const i = parseInt(document.getElementById('input-influence').value);
+            const strategy = document.getElementById('input-strategy').value;
+            const rank = Math.round((p + r + i) / 3);
+
+            population.push({ 
+                id: nextId++, 
+                name, power: p, resources: r, influence: i, rank, strategy,
+                image: tempImageBase64 // Salva a string da foto real
+            });
+            
+            closeAddModal();
+            renderRoster();
+        }
+
+        function removePlayer(id) {
+            population = population.filter(p => p.id !== id);
+            renderRoster();
+        }
+
+        function renderRoster() {
+            const container = document.getElementById('players-hand');
+            const emptyState = document.getElementById('empty-state');
+            document.getElementById('pop-count').innerText = population.length;
+            document.getElementById('btn-simulate').disabled = population.length < 2;
+
+            container.innerHTML = ''; 
+
+            if (population.length === 0) {
+                container.appendChild(emptyState);
+                emptyState.style.display = 'flex';
+                return;
+            }
+            emptyState.style.display = 'none';
+            container.appendChild(emptyState); 
+
+            // Exibe as cartas
+            const sorted = [...population].sort((a,b) => b.rank - a.rank);
+            sorted.forEach(p => { container.innerHTML += renderCardHTML(p, true, false); });
+        }
+
+        // --- PRESETS ---
+        function loadPreset(type) {
+            population = []; nextId = 1;
+            if (type === 'corporativo') {
+                population.push({ id: nextId++, name: `Startup Inovadora`, power:2, resources:2, influence:4, rank: 3, strategy: 'cooperate', image: null });
+                population.push({ id: nextId++, name: `Monopólio Tech`, power:5, resources:5, influence:5, rank: 5, strategy: 'defect', image: null });
+                population.push({ id: nextId++, name: `Pequena Empresa`, power:1, resources:2, influence:1, rank: 1, strategy: 'cooperate', image: null });
+                population.push({ id: nextId++, name: `Empresa Conservadora`, power:3, resources:4, influence:2, rank: 3, strategy: 'withdraw', image: null });
+            } else if (type === 'guerra') {
+                population.push({ id: nextId++, name: `Potência Nuclear`, power:5, resources:5, influence:4, rank: 5, strategy: 'defect', image: null });
+                population.push({ id: nextId++, name: `Aliança Pacífica`, power:3, resources:4, influence:5, rank: 4, strategy: 'cooperate', image: null });
+                population.push({ id: nextId++, name: `Nação Neutra`, power:2, resources:3, influence:2, rank: 2, strategy: 'withdraw', image: null });
+            }
+            renderRoster();
+        }
+
+        // --- SIMULAÇÃO DE PAREAMENTO (ROUND ROBIN ALEATÓRIO) ---
+        function runSimulation() {
+            document.getElementById('screen-roster').classList.add('hidden');
+            document.getElementById('screen-results').classList.remove('hidden');
+
+            // Embaralha população para pareamento aleatório
+            let pool = [...population].sort(() => Math.random() - 0.5);
+            let results = [];
+            let totalSynergy = 0; // Pontuação global de prosperidade
+            let matchesCount = 0;
+
+            // Forma duplas
+            while (pool.length >= 2) {
+                const p1 = pool.pop();
+                const p2 = pool.pop();
+                let type, msg, synergyDelta;
+
+                // LÓGICA DO DILEMA DO PRISIONEIRO GERAL
+                if (p1.strategy === 'withdraw' || p2.strategy === 'withdraw') {
+                    type = 'neutral';
+                    msg = "Nenhuma interação. Um lado se isolou.";
+                    synergyDelta = 0;
+                } 
+                else if (p1.strategy === 'cooperate' && p2.strategy === 'cooperate') {
+                    type = 'win';
+                    msg = "Sinergia! Ambos colaboraram e o sistema prosperou.";
+                    synergyDelta = 2; // Ganho mútuo
+                }
+                else if (p1.strategy === 'defect' && p2.strategy === 'defect') {
+                    type = 'lose';
+                    msg = "Guerra de Atrito! Ambos tentaram se explorar e perderam recursos.";
+                    synergyDelta = -2; // Destruição mútua
+                }
+                else {
+                    // Um explora, o outro colabora
+                    const explainer = p1.strategy === 'defect' ? p1.name : p2.name;
+                    const victim = p1.strategy === 'cooperate' ? p1.name : p2.name;
+                    type = 'exploit';
+                    msg = `${explainer} explorou a colaboração de ${victim}. O traidor lucra sozinho.`;
+                    synergyDelta = -1; // Socialmente negativo (A confiança é destruída)
+                }
+
+                totalSynergy += synergyDelta;
+                matchesCount++;
+                results.push({ p1, p2, type, msg });
+            }
+
+            // Se sobrou 1 sozinho
+            if (pool.length === 1) {
+                results.push({ p1: pool[0], p2: null, type: 'neutral', msg: "Ficou sem par nesta rodada." });
+            }
+
+            // HUD
+            let avgSynergy = matchesCount > 0 ? (totalSynergy / matchesCount) : 0; // Vai de -2 a +2
+            
+            // Converte para uma nota "amigável" (0 a 100)
+            let synergyScore = Math.round(((avgSynergy + 2) / 4) * 100); 
+
+            const hudVal = document.getElementById('synergy-rate');
+            const hudStatus = document.getElementById('society-status');
+            hudVal.innerText = synergyScore + "%";
+
+            if (synergyScore >= 70) {
+                hudVal.className = "font-title text-4xl text-blue-400 mt-1";
+                hudStatus.innerHTML = "<span class='text-blue-400'>Ecossistema Próspero</span>";
+            } else if (synergyScore >= 40) {
+                hudVal.className = "font-title text-4xl text-yellow-400 mt-1";
+                hudStatus.innerHTML = "<span class='text-yellow-400'>Ambiente Instável</span>";
+            } else {
+                hudVal.className = "font-title text-4xl text-red-500 mt-1";
+                hudStatus.innerHTML = "<span class='text-red-500'>Colapso do Sistema (Tóxico)</span>";
+            }
+
+            // Render Matches
+            const grid = document.getElementById('matches-grid');
+            grid.innerHTML = '';
+
+            results.forEach((res, index) => {
+                const card1 = res.p1 ? renderCardHTML(res.p1, false, true) : `<div class="w-32 aspect-[2.5/3.5] border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center text-gray-500 font-bold uppercase text-xs">Vazio</div>`;
+                const card2 = res.p2 ? renderCardHTML(res.p2, false, true) : `<div class="w-32 aspect-[2.5/3.5] border-2 border-dashed border-gray-600 rounded-lg flex items-center justify-center text-gray-500 font-bold uppercase text-xs">Vazio</div>`;
+                
+                let borderColor = 'border-gray-700';
+                let tagColor = 'bg-gray-800 text-gray-400 border-gray-600';
+                let tagText = 'Isolamento';
+
+                if (res.type === 'win') {
+                    borderColor = 'border-blue-800';
+                    tagColor = 'bg-blue-900 text-blue-400 border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]';
+                    tagText = 'Ganho Mútuo';
+                } else if (res.type === 'lose') {
+                    borderColor = 'border-red-800';
+                    tagColor = 'bg-red-900 text-red-400 border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]';
+                    tagText = 'Destruição Mútuo';
+                } else if (res.type === 'exploit') {
+                    borderColor = 'border-orange-800';
+                    tagColor = 'bg-orange-900 text-orange-400 border-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]';
+                    tagText = 'Exploração';
+                }
+
+                grid.innerHTML += `
+                    <div class="bg-gray-900/50 border ${borderColor} rounded-xl p-3 relative shadow-lg">
+                        <div class="absolute top-[-10px] left-1/2 transform -translate-x-1/2 ${tagColor} text-[10px] px-3 py-0.5 rounded-full border uppercase tracking-widest z-10 font-bold">
+                            Match #${index + 1}: ${tagText}
+                        </div>
+                        <div class="flex justify-center items-center gap-2 mt-2">
+                            ${card1}
+                            <div class="flex flex-col items-center">
+                                <div class="bg-black border-2 border-purple-500 rounded-full w-8 h-8 flex items-center justify-center shadow-[0_0_10px_rgba(168,85,247,0.5)] z-10">
+                                    <span class="font-title text-xs text-purple-400">VS</span>
+                                </div>
+                            </div>
+                            ${card2}
+                        </div>
+                        <p class="text-center text-xs text-gray-300 mt-3 px-4 font-bold">${res.msg}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function resetToRoster() {
+            document.getElementById('screen-results').classList.add('hidden');
+            document.getElementById('screen-roster').classList.remove('hidden');
+        }
+
+        renderRoster();
+    </script>
+</body>
+</html>

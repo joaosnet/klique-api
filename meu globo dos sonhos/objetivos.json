@@ -1,0 +1,62 @@
+[
+  {
+    "title": "Reserva de Emergência: R$ 4k até dezembro",
+    "image": "./images/reservaemergencia.png",
+    "position": {
+      "x": 3.4978357632521035,
+      "y": -0.9727118769398857
+    },
+    "x": 3.4978357632521035,
+    "y": -0.9727118769398857,
+    "z": 3.509533210247455,
+    "tilt": -0.04,
+    "tiltX": -0.017248549931415703,
+    "scale": 0.3,
+    "rotation": -0.04
+  },
+  {
+    "title": "Projeto Grana: Validar e faturar R$ 22k/mês",
+    "image": "./images/Projeto Grana.png",
+    "position": {
+      "x": 3.503442987582668,
+      "y": -0.3457793732349521
+    },
+    "x": 3.503442987582668,
+    "y": -0.3457793732349521,
+    "z": 3.619483321973259,
+    "tilt": 0.16,
+    "tiltX": -0.059772123804827215,
+    "scale": 0.3,
+    "rotation": 0.16
+  },
+  {
+    "title": "Faculdade 2025.4: Aprovação nas 5 disciplinas",
+    "image": "./images/resultadosacademicos.png",
+    "position": {
+      "x": 3.0448185772201413,
+      "y": -0.9562087830373909
+    },
+    "x": 3.0448185772201413,
+    "y": -0.9562087830373909,
+    "z": 3.91801152655407,
+    "tilt": -0.18,
+    "tiltX": -0.06315574776718329,
+    "scale": 0.34999999999999976,
+    "rotation": -0.18
+  },
+  {
+    "title": "Projeto Coração: Convidar a Iria para um encontro",
+    "image": "./images/iria_e_eu.png",
+    "position": {
+      "x": 3.099407590160677,
+      "y": -0.3755577776968683
+    },
+    "x": 3.099407590160677,
+    "y": -0.3755577776968683,
+    "z": 3.9714915650449343,
+    "tilt": 0.08,
+    "tiltX": -0.03347652849167912,
+    "scale": 0.3,
+    "rotation": 0.08
+  }
+]

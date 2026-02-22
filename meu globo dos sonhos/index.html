@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mural de Viagens 3D</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="./static/favicon.svg" type="image/svg+xml">
+</head>
+
+<body>
+    <button id="help-toggle" class="help-toggle" aria-label="Mostrar/ocultar informações">?</button>
+    <a href="polaroids.html"
+        style="position: absolute; top: 20px; left: 20px; z-index: 100; padding: 10px 15px; background: rgba(0,0,0,0.5); color: #fff; text-decoration: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 600;">Ver
+        Galeria SVG</a>
+
+    <div id="help-panel" class="help-panel">
+        <div class="help-content">
+            <button class="help-close" aria-label="Fechar ajuda">&times;</button>
+            <h1>Mural dos Sonhos</h1>
+            <p class="help-subtitle">Cada Polaroid celebra um objetivo realizado — clique para reviver o momento.</p>
+            <h3>Atalhos de Teclado</h3>
+            <ul>
+                <li><kbd>V</kbd> exporta layout e câmera para o console.</li>
+                <li><kbd>WASD</kbd> ou setas movem a câmera no quadro.</li>
+                <li><kbd>+</kbd> / <kbd>-</kbd> ajustam o zoom; <kbd>R</kbd> ou <kbd>0</kbd> reinicia.</li>
+                <li><kbd>[</kbd> e <kbd>]</kbd> diminuem/aumentam o tamanho da Polaroid em foco.</li>
+                <li><kbd>,</kbd> e <kbd>.</kbd> giram a Polaroid ativa.</li>
+                <li><kbd>E</kbd> aumenta a exposição (torna a cena mais clara), <kbd>T</kbd> diminui a exposição.</li>
+                <li>Arraste <strong>bordas</strong> para redimensionar e <strong>cantos</strong> para girar com o mouse.
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="main.js"></script>
+    <script>
+        // Toggle help panel
+        const helpToggle = document.getElementById('help-toggle');
+        const helpPanel = document.getElementById('help-panel');
+        const helpClose = document.querySelector('.help-close');
+
+        helpToggle.addEventListener('click', () => {
+            helpPanel.classList.toggle('visible');
+        });
+
+        helpClose.addEventListener('click', () => {
+            helpPanel.classList.remove('visible');
+        });
+
+        helpPanel.addEventListener('click', (e) => {
+            if (e.target === helpPanel) {
+                helpPanel.classList.remove('visible');
+            }
+        });
+
+        // Close with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && helpPanel.classList.contains('visible')) {
+                helpPanel.classList.remove('visible');
+            }
+        });
+    </script>
+
+</body>
+
+</html>
