@@ -1,0 +1,39 @@
+{
+  "name": "Game Theory Platform",
+  "short_name": "GameTheory",
+  "description": "Simulador Universal de Teoria dos Jogos — Geopolítica, Negócios & Estratégia",
+  "theme_color": "#12121a",
+  "background_color": "#12121a",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "orientation": "portrait",
+  "categories": ["education", "games", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Simulador",
+      "short_name": "Simulador",
+      "description": "Abrir o Simulador de Teoria dos Jogos",
+      "url": "/simulador",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

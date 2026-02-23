@@ -131,6 +131,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: always
+    depends_on:
+      - fastapi-app
     networks:
       - whatsapp-network
     labels:

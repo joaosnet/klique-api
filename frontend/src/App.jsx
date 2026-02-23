@@ -1,12 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import ChristmasDecorations from './components/Layout/ChristmasDecorations';
-import HomePage from './pages/HomePage';
+import Navbar from './components/Layout/Navbar';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import CreditsPage from './pages/CreditsPage';
-import Header from './components/Layout/Header';
-import './App.css';
+import SimulatorPage from './pages/SimulatorPage';
+import MuralPage from './pages/MuralPage';
+import DashboardPage from './pages/DashboardPage';
+import PortfolioPage from './pages/PortfolioPage';
+import './index.css';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -14,29 +16,26 @@ function ProtectedRoute({ children }) {
   if (loading) {
     return (
       <div className="loading-screen">
-        <div className="loading-spinner">🎄</div>
-        <p>Carregando...</p>
+        <div className="loading-spinner">⚡</div>
+        <p className="mt-4 text-gray-400 text-sm uppercase tracking-widest">Carregando...</p>
       </div>
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route
-        path="/credits"
-        element={
-          <ProtectedRoute>
-            <CreditsPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/portfolio" element={<PortfolioPage />} />
+      <Route path="/simulador" element={<ProtectedRoute><SimulatorPage /></ProtectedRoute>} />
+      <Route path="/mural" element={<ProtectedRoute><MuralPage /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
@@ -45,9 +44,12 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Header />
-        <ChristmasDecorations />
-        <AppRoutes />
+        <div className="min-h-screen flex flex-col" style={{ background: '#12121a' }}>
+          <Navbar />
+          <main className="flex-1">
+            <AppRoutes />
+          </main>
+        </div>
       </AuthProvider>
     </BrowserRouter>
   );

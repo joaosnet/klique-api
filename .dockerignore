@@ -13,3 +13,8 @@ generated_media/
 har_and_cookies/
 htmlcov/
 .coverage
+
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/.vite
