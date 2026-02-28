@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { srsAPI } from '../services/api';
 import GameTheoryCard from '../components/Cards/GameTheoryCard';
+import DeckPileDisplay from '../components/Cards/DeckPileDisplay';
 
 const RATING_LABELS = [
   { rating: 0, label: 'Sem ideia', color: '#ef4444' },
@@ -19,6 +20,7 @@ export default function TrainingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [stats, setStats] = useState(null);
   const [done, setDone] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     loadDue();
@@ -100,55 +102,64 @@ export default function TrainingPage() {
   }
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ minHeight: 'calc(100vh - 56px)', background: 'var(--bg-app)', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ maxWidth: 520, width: '100%' }}>
         {/* Header */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <h1 style={{ color: '#e9d5ff', fontSize: 20, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
+          <h1 style={{ color: 'var(--text-highlight)', fontSize: 20, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
             Simulação Diária
           </h1>
-          <p style={{ color: '#6b7280', fontSize: 12, marginTop: 4 }}>
-            {currentIndex + 1} de {dueCards.length} cenários
-          </p>
+          {started && (
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
+              {currentIndex + 1} de {dueCards.length} cenários
+            </p>
+          )}
         </div>
 
-        {/* Progress bar */}
-        <div style={{ background: '#1f2937', borderRadius: 4, height: 4, marginBottom: 24, overflow: 'hidden' }}>
-          <div style={{ width: `${progress}%`, background: '#7c3aed', height: '100%', borderRadius: 4, transition: 'width 0.4s ease' }} />
-        </div>
-
-        {current && (
+        {!started ? (
+          /* Deck pile intro screen */
+          <DeckPileDisplay count={dueCards.length} onStart={() => setStarted(true)} />
+        ) : (
           <>
-            <GameTheoryCard
-              card={current.card}
-              revealed={revealed}
-              onReveal={() => setRevealed(true)}
-            />
+            {/* Progress bar */}
+            <div style={{ background: 'var(--border-color)', borderRadius: 4, height: 4, marginBottom: 24, overflow: 'hidden' }}>
+              <div style={{ width: `${progress}%`, background: 'var(--accent)', height: '100%', borderRadius: 4, transition: 'width 0.4s ease' }} />
+            </div>
 
-            {/* SRS rating — shown after reveal */}
-            {revealed && (
-              <div style={{ marginTop: 16 }}>
-                <p style={{ color: '#9ca3af', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, textAlign: 'center' }}>
-                  Como acertaste na tua previsão?
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {RATING_LABELS.map(({ rating, label, color }) => (
-                    <button
-                      key={rating}
-                      onClick={() => handleRate(rating)}
-                      disabled={submitting}
-                      style={{
-                        padding: '8px 4px', borderRadius: 6, border: `1px solid ${color}44`,
-                        background: color + '11', color, cursor: submitting ? 'default' : 'pointer',
-                        fontSize: 11, fontWeight: 600, lineHeight: 1.3,
-                      }}
-                    >
-                      <div style={{ fontSize: 16, marginBottom: 2 }}>{rating}</div>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {current && (
+              <>
+                <GameTheoryCard
+                  card={current.card}
+                  revealed={revealed}
+                  onReveal={() => setRevealed(r => !r)}
+                />
+
+                {/* SRS rating — shown after reveal */}
+                {revealed && (
+                  <div style={{ marginTop: 16 }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, textAlign: 'center' }}>
+                      Como acertaste na tua previsão?
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                      {RATING_LABELS.map(({ rating, label, color }) => (
+                        <button
+                          key={rating}
+                          onClick={() => handleRate(rating)}
+                          disabled={submitting}
+                          style={{
+                            padding: '8px 4px', borderRadius: 6, border: `1px solid ${color}44`,
+                            background: color + '11', color, cursor: submitting ? 'default' : 'pointer',
+                            fontSize: 11, fontWeight: 600, lineHeight: 1.3,
+                          }}
+                        >
+                          <div style={{ fontSize: 16, marginBottom: 2 }}>{rating}</div>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}

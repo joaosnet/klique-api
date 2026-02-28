@@ -108,10 +108,12 @@ def main() -> None:
     time.sleep(5)
 
     try:
-        # 3. run the Android app with Capacitor's live reload flags.  the
-        # ``--external`` option tells Capacitor to use the machine's
-        # network address rather than ``localhost`` so a real device can
-        # reach it; ``-l`` is shorthand for ``--livereload``.
+        # 3. run the Android app with Capacitor's live reload flags.
+        # ``-l`` enables live reload; ``--host`` sets the network address
+        # so a real device can reach the Vite dev server.
+        # Note: ``--external`` was removed in Capacitor 6 – ``--host``
+        # already covers that role.  ``--forwardPorts`` runs adb reverse
+        # automatically for improved live-reload support.
         #
         # If adb can see a device/emulator we pass ``--target`` so the
         # CLI does not prompt interactively (the prompt doesn't accept
@@ -133,7 +135,10 @@ def main() -> None:
 
         target = find_adb_device()
         ip = get_local_ip()
-        cmd = f'npx cap run android -l --external --host={ip}'
+        cmd = (
+            f'npx cap run android -l --host={ip}'
+            ' --port=3000 --forwardPorts=3000:3000'
+        )
         console.print(f'[cyan]Using host address {ip} for livereload[/cyan]')
         if target:
             console.print(

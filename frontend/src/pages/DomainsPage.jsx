@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { domainsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { DEMO_DOMAINS } from '../utils/demoData';
+import DomainSVGCard from '../components/Cards/DomainSVGCard';
 const THEMES = [
   { value: 'dating', label: 'Dinâmicas de Encontros' },
   { value: 'office', label: 'Política do Escritório' },
@@ -222,52 +223,14 @@ export default function DomainsPage() {
             <p style={{ color: 'var(--border-color)', fontSize: 13 }}>Cria o teu primeiro domínio para começar a treinar.</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
             {domains.map(({ domain, stats }) => (
-              <div
+              <DomainSVGCard
                 key={domain.id}
+                domain={domain}
+                stats={stats}
                 onClick={() => navigate(`/criar/${domain.id}`)}
-                style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12,
-                  padding: '1.25rem', cursor: 'pointer', transition: 'border-color 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <h3 style={{ color: 'var(--text-highlight)', fontSize: 16, fontWeight: 700, margin: 0, flex: 1, marginRight: 8 }}>
-                    {domain.name}
-                  </h3>
-                  <span style={{
-                    background: 'var(--bg-card-inner)', color: 'var(--accent)', border: '1px solid var(--accent-dark)',
-                    borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 600,
-                    letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap',
-                  }}>
-                    {domain.theme}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Cards</div>
-                    <div style={{ color: 'var(--text-highlight)', fontSize: 22, fontWeight: 800 }}>{stats.cards_count}</div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Hoje</div>
-                    <div style={{ color: stats.due_today > 0 ? '#f59e0b' : 'var(--text-muted)', fontSize: 22, fontWeight: 800 }}>
-                      {stats.due_today}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Precisão</div>
-                    <div style={{ color: '#22c55e', fontSize: 22, fontWeight: 800 }}>
-                      {stats.accuracy > 0 ? `${Math.round(stats.accuracy * 100)}%` : '—'}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ marginTop: 14, textAlign: 'right' }}>
-                  <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>Gerar Cards →</span>
-                </div>
-              </div>
+              />
             ))}
           </div>
         )}

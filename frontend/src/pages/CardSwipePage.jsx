@@ -211,7 +211,7 @@ export default function CardSwipePage() {
           <GameTheoryCard
             card={card}
             revealed={revealed}
-            onReveal={() => setRevealed(true)}
+            onReveal={() => setRevealed(r => !r)}
             onSave={() => handleSwipe('save')}
             onDiscard={() => handleSwipe('discard')}
             swiping={swiping}
