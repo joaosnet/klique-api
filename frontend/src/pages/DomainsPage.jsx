@@ -172,7 +172,7 @@ export default function DomainsPage() {
     }
   };
 
-  useEffect(() => { loadDomains(); }, []);
+  useEffect(() => { if (!loading) loadDomains(); }, [isAuthenticated, loading]);
 
   const handleCreate = async (name, theme) => {
     await domainsAPI.create(name, theme);
