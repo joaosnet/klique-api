@@ -32,6 +32,9 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
+    watch: {
+      usePolling: true,
+    },
     // Allow HMR to work inside Docker — the browser connects to the host machine
     hmr: {
       clientPort: 3000,

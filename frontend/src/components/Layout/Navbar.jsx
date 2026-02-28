@@ -108,34 +108,32 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Hamburger */}
-        <button
-          className="md:hidden flex flex-col gap-1.5 p-2 rounded transition-colors"
-          style={{ background: menuOpen ? 'var(--bg-card-inner)' : 'transparent' }}
-          onClick={() => setMenuOpen((o) => !o)}
-          aria-label="Menu"
-        >
-          <span
-            className={`block w-6 h-0.5 transition-transform duration-200 ${menuOpen ? 'translate-y-2 rotate-45' : ''}`}
-            style={{ background: 'var(--text-main)' }}
-          />
-          <span
-            className={`block w-6 h-0.5 transition-opacity duration-200 ${menuOpen ? 'opacity-0' : ''}`}
-            style={{ background: 'var(--text-main)' }}
-          />
-          <span
-            className={`block w-6 h-0.5 transition-transform duration-200 ${menuOpen ? '-translate-y-2 -rotate-45' : ''}`}
-            style={{ background: 'var(--text-main)' }}
-          />
-        </button>
       </div>
 
-      {/* Mobile drawer */}
-      {menuOpen && (
+      {/* Mobile Floating Menu (Replaces Hamburger) */}
+
+      {/* Backdrop overlay */}
+      <div
+        className={`md:hidden fixed inset-0 z-40 transition-opacity duration-300 ${menuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        style={{ background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(3px)' }}
+        onClick={() => setMenuOpen(false)}
+      />
+
+      <div className="md:hidden fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4 pointer-events-none">
+
+        {/* Menu Items */}
         <div
-          className="md:hidden border-t px-4 py-3 flex flex-col gap-2"
-          style={{ background: 'var(--bg-card-inner)', borderColor: 'var(--border-color)' }}
+          className={`flex flex-col items-end gap-3 transition-all duration-300 origin-bottom ${menuOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-8 pointer-events-none'
+            }`}
         >
+          {/* Profile / User info */}
+          {isAuthenticated && user && (
+            <div className="px-5 py-2.5 rounded-full text-xs font-medium shadow-md mb-2" style={{ background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
+              {user.name || user.email}
+            </div>
+          )}
+
+          {/* Links */}
           {NAV_LINKS.map(({ to, label, public: pub, guestOnly = false }) => {
             if (!pub && !isAuthenticated) return null;
             if (guestOnly && isAuthenticated) return null;
@@ -144,10 +142,11 @@ export default function Navbar() {
                 key={to}
                 to={to}
                 onClick={() => setMenuOpen(false)}
-                className={`px-3 py-2 rounded text-sm uppercase tracking-wider transition-colors`}
+                className="px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
                 style={{
-                  color: isActive(to) ? 'var(--accent-light)' : 'var(--text-muted)',
-                  background: isActive(to) ? 'var(--bg-app)' : 'transparent',
+                  color: isActive(to) ? '#fff' : 'var(--text-main)',
+                  background: isActive(to) ? 'var(--accent)' : 'var(--bg-card)',
+                  border: isActive(to) ? 'none' : '1px solid var(--border-color)',
                 }}
               >
                 {label}
@@ -155,43 +154,39 @@ export default function Navbar() {
             );
           })}
 
-          <div className="border-t mt-2 pt-2 flex flex-col gap-2" style={{ borderColor: 'var(--border-color)' }}>
+          {/* Auth / Settings Actions */}
+          <div className="flex flex-col items-end gap-3 w-full mt-2">
             <button
               onClick={() => { setShowThemeModal(true); setMenuOpen(false); }}
-              className="px-3 py-2 text-sm uppercase tracking-wider rounded text-left transition-colors"
-              style={{ color: 'var(--text-main)' }}
+              className="px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+              style={{ background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
             >
               ⚙️ Ajustes Visuais
             </button>
 
             {isAuthenticated ? (
-              <>
-                <span className="text-xs px-3" style={{ color: 'var(--text-muted)' }}>
-                  {user?.name || user?.email}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="px-3 py-2 text-sm uppercase tracking-wider rounded border text-left transition-colors"
-                  style={{ borderColor: 'var(--accent-dark)', color: 'var(--accent-light)' }}
-                >
-                  Sair
-                </button>
-              </>
+              <button
+                onClick={handleLogout}
+                className="px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+                style={{ background: 'var(--bg-card)', color: 'var(--accent)', border: '1px solid var(--accent-dark)' }}
+              >
+                Sair
+              </button>
             ) : (
               <>
                 <Link
                   to="/login"
                   onClick={() => setMenuOpen(false)}
-                  className="px-3 py-2 text-sm uppercase tracking-wider rounded transition-colors"
-                  style={{ color: 'var(--text-main)' }}
+                  className="px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+                  style={{ background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
                 >
                   Entrar
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setMenuOpen(false)}
-                  className="px-3 py-2 text-sm uppercase tracking-wider rounded text-center transition-colors"
-                  style={{ background: 'var(--accent)', color: '#fff' }}
+                  className="px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+                  style={{ background: 'var(--accent)', color: '#fff', border: 'none' }}
                 >
                   Cadastrar
                 </Link>
@@ -199,7 +194,30 @@ export default function Navbar() {
             )}
           </div>
         </div>
-      )}
+
+        {/* FAB Button */}
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          className="w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300 hover:scale-105 active:scale-95 pointer-events-auto relative"
+          style={{
+            background: 'var(--accent)',
+            color: '#fff',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          }}
+          aria-label="Menu"
+        >
+          <span
+            className={`w-7 h-1 rounded-full bg-white absolute transition-transform duration-300 ${menuOpen ? 'rotate-45' : 'translate-y-[-8px]'}`}
+          />
+          <span
+            className={`w-7 h-1 rounded-full bg-white absolute transition-opacity duration-300 ${menuOpen ? 'opacity-0' : 'opacity-100'}`}
+          />
+          <span
+            className={`w-7 h-1 rounded-full bg-white absolute transition-transform duration-300 ${menuOpen ? '-rotate-45' : 'translate-y-[8px]'}`}
+          />
+        </button>
+
+      </div>
 
       {showThemeModal && <ThemeSettingsModal onClose={() => setShowThemeModal(false)} />}
     </nav>
