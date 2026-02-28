@@ -21,7 +21,7 @@ from langchain_core.messages.utils import (
     count_tokens_approximately,
     trim_messages,
 )
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph
@@ -109,7 +109,11 @@ class AgentCache:
         #     model='moonshotai/kimi-k2-instruct-0905',
         # )
 
-        llm = ChatGoogleGenerativeAI(model='gemini-2.5-flash')
+        llm = ChatOpenAI(
+            api_key='g4f',
+            base_url='http://g4f:8080/v1',
+            model='gemini-2.5-flash',
+        )
 
         # Criar o prompt como mensagem do sistema
         system_message = open(

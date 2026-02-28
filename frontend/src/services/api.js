@@ -183,8 +183,37 @@ export const domainsAPI = {
         return response.data;
     },
 
+    update: async (domainId, data) => {
+        const response = await api.put(`/api/domains/${domainId}`, data);
+        return response.data;
+    },
+
     remove: async (domainId) => {
         const response = await api.delete(`/api/domains/${domainId}`);
+        return response.data;
+    },
+
+    regenerateImage: async (domainId) => {
+        const response = await api.post(`/api/domains/${domainId}/regenerate-image`);
+        return response.data;
+    },
+
+    improveImage: async (domainId, stylePrompt) => {
+        const response = await api.post(`/api/domains/${domainId}/improve-image`, { style_prompt: stylePrompt });
+        return response.data;
+    },
+
+    uploadImage: async (domainId, file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await api.post(`/api/domains/${domainId}/upload-image`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+
+    removeImage: async (domainId) => {
+        const response = await api.delete(`/api/domains/${domainId}/image`);
         return response.data;
     },
 };
@@ -266,11 +295,12 @@ export const cardsAPI = {
         return _readSSEStream(response, onProgress);
     },
 
-    swipe: async (cardData, domainId, action) => {
+    swipe: async (cardData, domainId, action, generateImage = true) => {
         const response = await api.post('/api/cards/swipe', {
             card_data: cardData,
             domain_id: domainId,
             action,
+            generate_image: generateImage,
         });
         return response.data;
     },
@@ -280,8 +310,78 @@ export const cardsAPI = {
         return response.data;
     },
 
+    update: async (cardId, data) => {
+        const response = await api.put(`/api/cards/${cardId}`, data);
+        return response.data;
+    },
+
     remove: async (cardId) => {
         const response = await api.delete(`/api/cards/${cardId}`);
+        return response.data;
+    },
+
+    regenerateImage: async (cardId) => {
+        const response = await api.post(`/api/cards/${cardId}/regenerate-image`);
+        return response.data;
+    },
+
+    improveImage: async (cardId, stylePrompt) => {
+        const response = await api.post(`/api/cards/${cardId}/improve-image`, { style_prompt: stylePrompt });
+        return response.data;
+    },
+
+    uploadImage: async (cardId, file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await api.post(`/api/cards/${cardId}/upload-image`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+
+    removeImage: async (cardId) => {
+        const response = await api.delete(`/api/cards/${cardId}/image`);
+        return response.data;
+    },
+};
+
+// ========================================
+// OmniFlash — Profile API
+// ========================================
+
+export const profileAPI = {
+    getMe: async () => {
+        const response = await api.get('/api/profile/me');
+        return response.data;
+    },
+
+    updateMe: async (data) => {
+        const response = await api.put('/api/profile/me', data);
+        return response.data;
+    },
+
+    generateAvatar: async (prompt) => {
+        const formData = new FormData();
+        formData.append('prompt', prompt);
+        const response = await api.post('/api/profile/me/avatar/generate', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+
+    uploadAvatar: async (file, improve = false, stylePrompt = '') => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('improve', improve);
+        if (stylePrompt) formData.append('style_prompt', stylePrompt);
+        const response = await api.post('/api/profile/me/avatar/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+
+    removeAvatar: async () => {
+        const response = await api.delete('/api/profile/me/avatar');
         return response.data;
     },
 };

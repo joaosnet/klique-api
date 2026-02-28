@@ -24,6 +24,9 @@ class MongoBaseModel(BaseModel):
         if isinstance(values, dict) and '_id' in values:
             if isinstance(values['_id'], ObjectId):
                 values['_id'] = str(values['_id'])
+            # Map _id → id so models without alias serialize as 'id' in JSON
+            if 'id' not in values:
+                values['id'] = values['_id']
         return values
 
 
@@ -239,6 +242,16 @@ class StatusView(BaseModel):
     viewed_at: datetime
 
 
+class ProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    nickname: Optional[str] = None
+    country: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+    district: Optional[str] = None
+    deficiency: Optional[str] = None
+
+
 # ========================================
 # Credits & Payments Schemas
 # ========================================
@@ -391,7 +404,7 @@ class DomainUpdate(BaseModel):
 
 
 class Domain(MongoBaseModel):
-    id: Optional[str] = Field(None, alias='_id')
+    id: Optional[str] = None
     user_id: str
     name: str
     theme: str
@@ -448,10 +461,25 @@ class GenerateCardRequest(BaseModel):
     context: Optional[str] = None
 
 
+class ScenarioCardUpdate(BaseModel):
+    template_type: Optional[str] = None
+    scenario_context: Optional[str] = None
+    question: Optional[str] = None
+    predicted_outcome: Optional[str] = None
+    game_theory_explanation: Optional[str] = None
+    probability_heat_score: Optional[int] = None
+    visual_prompt_idea: Optional[str] = None
+
+
+class ImageImproveRequest(BaseModel):
+    style_prompt: str
+
+
 class SwipeAction(BaseModel):
     card_data: ScenarioCardData
     domain_id: str
     action: str  # "save" | "discard"
+    generate_image: bool = True
 
 
 class SwipeResponse(BaseModel):

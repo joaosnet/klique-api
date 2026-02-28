@@ -92,6 +92,7 @@ services:
       - ./logs:/app/logs
       - ./.env:/app/.env
       - gemini_cookies:/usr/local/lib/python3.12/site-packages/gemini_webapi/utils/temp
+      - generated_media:/app/generated_media
     develop:
       # Create a `watch` configuration to update the app
       # https://docs.docker.com/compose/file-watch/#compose-watch-versus-bind-mounts
@@ -109,22 +110,22 @@ services:
         - action: rebuild
           path: ./uv.lock
 
-  g4f:
-    # build:
-    #   context: ../gpt4free
-    #   dockerfile: docker/Dockerfile
-    image: hlohaus789/g4f:latest
-    container_name: g4f
-    ports:
-      - "8080:8080"
-      - "7900:7900"
-    shm_size: "2g"
-    networks:
-      - whatsapp-network
-    volumes:
-      - ./har_and_cookies:/app/har_and_cookies
-      - ./generated_media:/app/generated_media
-    restart: always
+  # g4f:
+  #   # build:
+  #   #   context: ../gpt4free
+  #   #   dockerfile: docker/Dockerfile
+  #   image: hlohaus789/g4f:latest
+  #   container_name: g4f
+  #   ports:
+  #     - "8080:8080"
+  #     - "7900:7900"
+  #   shm_size: "2g"
+  #   networks:
+  #     - whatsapp-network
+  #   volumes:
+  #     - ./har_and_cookies:/app/har_and_cookies
+  #     - ./generated_media:/app/generated_media
+  #   restart: always
 
   frontend:
     container_name: klique-frontend

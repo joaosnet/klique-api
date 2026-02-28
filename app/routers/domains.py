@@ -5,6 +5,8 @@ Cada domínio representa uma área de treino preditivo do usuário,
 como "Dinâmicas de Encontros", "Geopolítica" ou "Negociação Salarial".
 """
 
+import os
+import shutil
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -12,8 +14,10 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
+    File,
     HTTPException,
     Request,
+    UploadFile,
     status,
 )
 
@@ -25,13 +29,19 @@ from ..database import (
     get_simulation_logs_collection,
 )
 from ..dependencies import get_current_active_user
-from ..services.image_generation import get_or_generate_domain_image
+from ..services.image_generation import (
+    MEDIA_DIR,
+    get_or_generate_domain_image,
+    improve_image_with_ai,
+)
 from .schemas import (
     DefautMessage,
     Domain,
     DomainCreate,
     DomainStats,
+    DomainUpdate,
     DomainWithStats,
+    ImageImproveRequest,
 )
 
 router = APIRouter(prefix='/api/domains', tags=['domains'])
@@ -259,3 +269,187 @@ async def delete_domain(  # noqa: PLR0913
     return DefautMessage(
         success=True, message='Domínio e todos os seus dados foram removidos.'
     )
+
+
+@router.put('/{domain_id}', response_model=Domain)
+async def update_domain(
+    domain_id: str,
+    data: DomainUpdate,
+    current_user=Depends(get_current_active_user),
+    domains_col=Depends(get_domains_collection),
+):
+    """Atualiza nome e/ou tema de um domínio."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(domain_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de domínio inválido')
+
+    doc = await domains_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Domínio não encontrado')
+
+    updates = {k: v for k, v in data.model_dump().items() if v is not None}
+    # If theme changed, clear image_url so it can be regenerated
+    if 'theme' in updates and updates['theme'] != doc.get('theme'):
+        updates['image_url'] = None
+
+    if not updates:
+        doc['_id'] = str(doc['_id'])
+        return Domain(**doc)
+
+    await domains_col.update_one({'_id': oid}, {'$set': updates})
+    doc.update(updates)
+    doc['_id'] = str(doc['_id'])
+    return Domain(**doc)
+
+
+@router.post('/{domain_id}/regenerate-image', response_model=DefautMessage)
+async def regenerate_domain_image(
+    domain_id: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user=Depends(get_current_active_user),
+    domains_col=Depends(get_domains_collection),
+):
+    """Regenera a imagem do domínio via IA, ignorando o cache."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(domain_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de domínio inválido')
+
+    doc = await domains_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Domínio não encontrado')
+
+    gemini_client = getattr(request.app.state, 'gemini_webapi_client', None)
+    if not gemini_client:
+        raise HTTPException(
+            status_code=503, detail='Motor de IA não está configurado.'
+        )
+
+    background_tasks.add_task(
+        get_or_generate_domain_image, doc['theme'], gemini_client, True
+    )
+
+    return DefautMessage(
+        success=True, message='Regeneração de imagem iniciada em background.'
+    )
+
+
+@router.post('/{domain_id}/improve-image', response_model=DefautMessage)
+async def improve_domain_image(
+    domain_id: str,
+    body: ImageImproveRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user=Depends(get_current_active_user),
+    domains_col=Depends(get_domains_collection),
+):
+    """Melhora a imagem do domínio com um prompt de estilo via IA."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(domain_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de domínio inválido')
+
+    doc = await domains_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Domínio não encontrado')
+
+    gemini_client = getattr(request.app.state, 'gemini_webapi_client', None)
+    if not gemini_client:
+        raise HTTPException(
+            status_code=503, detail='Motor de IA não está configurado.'
+        )
+
+    theme = doc['theme']
+    base_prompt = (
+        f"Ilustração 3D atmosférica cinematográfica do conceito '{theme}', "
+        'tema de teoria dos jogos, qualidade premium.'
+    )
+    # Use domain_id as filename so it doesn't conflict with the shared theme cache
+    background_tasks.add_task(
+        improve_image_with_ai,
+        'domains',
+        domain_id,
+        body.style_prompt,
+        base_prompt,
+        gemini_client,
+    )
+    # Update the domain's image_url to point to the custom file
+    abs_url = f'/media/domains/{domain_id}.png'
+    await domains_col.update_one({'_id': oid}, {'$set': {'image_url': abs_url}})
+
+    return DefautMessage(
+        success=True, message='Melhoria de imagem iniciada em background.'
+    )
+
+
+@router.post('/{domain_id}/upload-image', response_model=DefautMessage)
+async def upload_domain_image(
+    domain_id: str,
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_active_user),
+    domains_col=Depends(get_domains_collection),
+):
+    """Faz upload manual de imagem para o domínio."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(domain_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de domínio inválido')
+
+    doc = await domains_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Domínio não encontrado')
+
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=400, detail='O ficheiro deve ser uma imagem.'
+        )
+
+    domains_dir = os.path.join(MEDIA_DIR, 'domains')
+    os.makedirs(domains_dir, exist_ok=True)
+    dest_path = os.path.join(domains_dir, f'{domain_id}.png')
+
+    with open(dest_path, 'wb') as out:
+        shutil.copyfileobj(file.file, out)
+
+    abs_url = f'/media/domains/{domain_id}.png'
+    await domains_col.update_one({'_id': oid}, {'$set': {'image_url': abs_url}})
+
+    return DefautMessage(success=True, message='Imagem carregada com sucesso.')
+
+
+@router.delete('/{domain_id}/image', response_model=DefautMessage)
+async def remove_domain_image(
+    domain_id: str,
+    current_user=Depends(get_current_active_user),
+    domains_col=Depends(get_domains_collection),
+):
+    """Remove a imagem personalizada do domínio."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(domain_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de domínio inválido')
+
+    doc = await domains_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Domínio não encontrado')
+
+    # Remove the custom domain image file
+    img_path = os.path.join(MEDIA_DIR, 'domains', f'{domain_id}.png')
+    if os.path.exists(img_path):
+        os.remove(img_path)
+
+    await domains_col.update_one({'_id': oid}, {'$set': {'image_url': None}})
+
+    return DefautMessage(success=True, message='Imagem removida.')

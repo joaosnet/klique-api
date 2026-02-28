@@ -45,15 +45,15 @@ export const DEMO_CARDS = [
 
 export const DEMO_DOMAINS = [
     {
-        domain: { id: 'demo-domain-1', name: 'Dinâmicas de Escritório', theme: 'office', image_url: '/media/domains/office.png' },
+        domain: { id: 'demo-domain-1', name: 'Dinâmicas de Escritório', theme: 'office' },
         stats: { cards_count: 14, due_today: 3, accuracy: 0.82 }
     },
     {
-        domain: { id: 'demo-domain-2', name: 'Negociação Salarial', theme: 'finance', image_url: '/media/domains/finance.png' },
+        domain: { id: 'demo-domain-2', name: 'Negociação Salarial', theme: 'finance' },
         stats: { cards_count: 8, due_today: 0, accuracy: 0.95 }
     },
     {
-        domain: { id: 'demo-domain-3', name: 'Atracção e Status', theme: 'dating', image_url: '/media/domains/dating.png' },
+        domain: { id: 'demo-domain-3', name: 'Atracção e Status', theme: 'dating' },
         stats: { cards_count: 22, due_today: 5, accuracy: 0.64 }
     }
 ];

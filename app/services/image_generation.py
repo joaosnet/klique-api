@@ -1,8 +1,8 @@
 import os
-from typing import Optional
+from typing import Any, Optional
 
 from bson import ObjectId
-from gemini_webapi import GeminiClient
+from google.genai import types
 
 from ..database import (
     get_domain_images_collection,
@@ -12,7 +12,7 @@ from ..database import (
 from ..logger import logger
 
 MEDIA_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)), 'generated_media'
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'generated_media'
 )
 
 
@@ -20,47 +20,49 @@ async def generate_and_save_image(
     prompt: str,
     output_dir: str,
     filename: str,
-    gemini_client: GeminiClient,
+    gemini_client: Any,
+    force: bool = False,
 ) -> Optional[str]:
     """
-    Usa o gemini_webapi para gerar uma imagem.
+    Usa a Gemini API oficial (Imagen) para gerar uma imagem.
     Retorna o path relativo da imagem (ex: 'domains/dating.png') se sucesso.
+    Se force=True, ignora o cache e regenera a imagem.
     """
     os.makedirs(os.path.join(MEDIA_DIR, output_dir), exist_ok=True)
     base_name = filename.rsplit('.', 1)[0]
     expected_path = os.path.join(MEDIA_DIR, output_dir, f'{base_name}.png')
 
-    if os.path.exists(expected_path):
+    if not force and os.path.exists(expected_path):
         logger.debug(f'Imagem já gerada em cache local: {expected_path}')
         return f'{output_dir}/{base_name}.png'
 
-    full_prompt = f'Gere uma imagem: {prompt} --ar 16:9'
-
     try:
-        logger.info(f'Gerando imagem via gemini_webapi para: {prompt[:50]}...')
-        response = await gemini_client.generate_content(full_prompt)
+        logger.info(f'Gerando imagem via Gemini Imagen para: {prompt[:50]}...')
+        response = await gemini_client.aio.models.generate_images(
+            model='imagen-3.0-generate-002',
+            prompt=prompt,
+            config=types.GenerateImagesConfig(
+                number_of_images=1,
+                output_mime_type='image/png',
+            ),
+        )
 
-        if not response.images:
+        if not response.generated_images:
             logger.warning(
-                f'O modelo não retornou imagens para o prompt: {prompt[:50]}'
+                f'Imagen não retornou imagens para o prompt: {prompt[:50]}'
             )
             return None
 
-        generated_img = response.images[0]
-        # remove a extensão se filename a tiver, pq o .save() adiciona .png
-        base_name = filename.rsplit('.', 1)[0]
+        image_bytes = response.generated_images[0].image.image_bytes
+        if not image_bytes:
+            logger.warning(f'Imagem vazia retornada para: {prompt[:50]}')
+            return None
 
-        save_path = os.path.join(MEDIA_DIR, output_dir)
-        saved_file = await generated_img.save(
-            path=save_path,
-            filename=f'{base_name}.png',
-            verbose=False,
-            full_size=True,
-        )
+        with open(expected_path, 'wb') as f:
+            f.write(image_bytes)
 
-        if saved_file:
-            logger.success(f'Imagem gerada e salva: {saved_file}')
-            return f'{output_dir}/{base_name}.png'
+        logger.success(f'Imagem gerada e salva: {expected_path}')
+        return f'{output_dir}/{base_name}.png'
 
     except Exception as e:
         logger.error(f'Erro ao gerar imagem: {e}')
@@ -69,7 +71,7 @@ async def generate_and_save_image(
 
 
 async def get_or_generate_domain_image(
-    theme: str, gemini_client: GeminiClient
+    theme: str, gemini_client: Any, force: bool = False
 ) -> Optional[str]:
     """
     Verifica se a imagem deste tema de domínio já existe no cache (shared db).
@@ -79,7 +81,7 @@ async def get_or_generate_domain_image(
     col = get_domain_images_collection()
     cached = await col.find_one({'theme': theme})
 
-    if cached and cached.get('image_url'):
+    if not force and cached and cached.get('image_url'):
         abs_url = cached['image_url']
         # Propagate to any domain docs that still lack image_url
         # (e.g. newly created domain whose theme already has a cached image)
@@ -107,6 +109,7 @@ async def get_or_generate_domain_image(
         output_dir='domains',
         filename=theme,
         gemini_client=gemini_client,
+        force=force,
     )
 
     if path:
@@ -129,7 +132,7 @@ async def get_or_generate_domain_image(
 
 
 async def get_or_generate_card_image(
-    card_id: str, visual_prompt: str, gemini_client: GeminiClient
+    card_id: str, visual_prompt: str, gemini_client: Any, force: bool = False
 ) -> Optional[str]:
     """
     Gera uma imagem para um card específico baseado na ideia
@@ -148,6 +151,7 @@ async def get_or_generate_card_image(
         output_dir='cards',
         filename=card_id,
         gemini_client=gemini_client,
+        force=force,
     )
 
     if path:
@@ -163,7 +167,36 @@ async def get_or_generate_card_image(
     return None
 
 
-async def init_demo_images(gemini_client: GeminiClient) -> None:
+async def improve_image_with_ai(
+    output_dir: str,
+    filename: str,
+    style_prompt: str,
+    base_prompt: str,
+    gemini_client: Any,
+) -> Optional[str]:
+    """
+    Melhora uma imagem existente usando a IA.
+
+    Tenta passar a imagem atual ao Gemini com instruções de estilo.
+    Se não for suportado, faz fallback gerando uma nova imagem com o
+    base_prompt + style_prompt combinados.
+
+    Returns o path relativo da nova imagem ou None em caso de falha.
+    """
+    combined_prompt = (
+        f'{base_prompt}. Aplica o seguinte estilo artístico: {style_prompt}. '
+        'Mantém a qualidade cinematográfica, fotorealista, sem texto na imagem.'
+    )
+    return await generate_and_save_image(
+        prompt=combined_prompt,
+        output_dir=output_dir,
+        filename=filename,
+        gemini_client=gemini_client,
+        force=True,
+    )
+
+
+async def init_demo_images(gemini_client: Any) -> None:
     """Gera imagens para as cartas e domínios da demonstração."""
     import asyncio  # noqa: PLC0415
 

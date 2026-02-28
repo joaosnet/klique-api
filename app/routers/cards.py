@@ -9,6 +9,7 @@ do christmas.py.
 import json
 import os
 import re
+import shutil
 from datetime import datetime, timezone
 
 from bson import ObjectId
@@ -16,8 +17,10 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
+    File,
     HTTPException,
     Request,
+    UploadFile,
 )
 from fastapi.responses import StreamingResponse
 
@@ -27,11 +30,16 @@ from ..database import (
     get_scenario_cards_collection,
 )
 from ..dependencies import get_current_active_user
-from ..services.image_generation import get_or_generate_card_image
+from ..services.image_generation import (
+    MEDIA_DIR,
+    get_or_generate_card_image,
+)
 from .schemas import (
     DefautMessage,
     GenerateCardRequest,
+    ImageImproveRequest,
     ScenarioCard,
+    ScenarioCardUpdate,
     SwipeAction,
     SwipeResponse,
 )
@@ -88,7 +96,10 @@ async def _card_generation_stream(
             },
         )
 
-        response = await gemini_client.generate_content(full_prompt)
+        response = await gemini_client.aio.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=full_prompt,
+        )
         raw_text = response.text.strip()
 
         # Extrair JSON — remover blocos de código markdown se presentes
@@ -157,7 +168,7 @@ async def generate_card_stream(
         raise HTTPException(
             status_code=503,
             detail=(
-                'Gemini WebAPI não está configurado. '
+                'Motor de IA não está configurado. '
                 'Verifique SECURE_1PSID no .env.'
             ),
         )
@@ -246,7 +257,7 @@ async def swipe_card(  # noqa: PLR0913
 
     # Dispara a geração de imagem da carta em background
     gemini_client = getattr(request.app.state, 'gemini_webapi_client', None)
-    if gemini_client and body.card_data.visual_prompt_idea:
+    if body.generate_image and gemini_client and body.card_data.visual_prompt_idea:
         background_tasks.add_task(
             get_or_generate_card_image,
             card_id,
@@ -317,3 +328,176 @@ async def delete_card(
     await cards_col.delete_one({'_id': oid})
 
     return DefautMessage(success=True, message='Card removido.')
+
+
+@router.put('/{card_id}', response_model=ScenarioCard)
+async def update_card(
+    card_id: str,
+    body: ScenarioCardUpdate,
+    current_user=Depends(get_current_active_user),
+    cards_col=Depends(get_scenario_cards_collection),
+):
+    """Atualiza os campos de texto de um card guardado."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(card_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de card inválido')
+
+    doc = await cards_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Card não encontrado')
+
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not updates:
+        doc['_id'] = str(doc['_id'])
+        return ScenarioCard(**doc)
+
+    await cards_col.update_one({'_id': oid}, {'$set': updates})
+    doc.update(updates)
+    doc['_id'] = str(doc['_id'])
+    return ScenarioCard(**doc)
+
+
+@router.post('/{card_id}/regenerate-image', response_model=DefautMessage)
+async def regenerate_card_image(
+    card_id: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user=Depends(get_current_active_user),
+    cards_col=Depends(get_scenario_cards_collection),
+):
+    """Regenera a imagem de um card via IA, ignorando o cache."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(card_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de card inválido')
+
+    doc = await cards_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Card não encontrado')
+
+    gemini_client = getattr(request.app.state, 'gemini_webapi_client', None)
+    if not gemini_client:
+        raise HTTPException(
+            status_code=503, detail='Motor de IA não está configurado.'
+        )
+
+    visual_prompt = doc.get('visual_prompt_idea') or doc.get('scenario_context', '')
+    background_tasks.add_task(
+        get_or_generate_card_image, card_id, visual_prompt, gemini_client, True
+    )
+
+    return DefautMessage(
+        success=True, message='Regeneração de imagem iniciada em background.'
+    )
+
+
+@router.post('/{card_id}/improve-image', response_model=DefautMessage)
+async def improve_card_image(
+    card_id: str,
+    body: ImageImproveRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    current_user=Depends(get_current_active_user),
+    cards_col=Depends(get_scenario_cards_collection),
+):
+    """Melhora a imagem do card com um prompt de estilo via IA."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(card_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de card inválido')
+
+    doc = await cards_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Card não encontrado')
+
+    gemini_client = getattr(request.app.state, 'gemini_webapi_client', None)
+    if not gemini_client:
+        raise HTTPException(
+            status_code=503, detail='Motor de IA não está configurado.'
+        )
+
+    base_prompt = doc.get('visual_prompt_idea') or doc.get('scenario_context', '')
+    combined_prompt = (
+        f'{base_prompt}. Aplica o seguinte estilo artístico: {body.style_prompt}. '
+        'Mantém a qualidade cinematográfica, fotorealista, sem texto na imagem.'
+    )
+    background_tasks.add_task(
+        get_or_generate_card_image, card_id, combined_prompt, gemini_client, True
+    )
+
+    return DefautMessage(
+        success=True, message='Melhoria de imagem iniciada em background.'
+    )
+
+
+@router.post('/{card_id}/upload-image', response_model=DefautMessage)
+async def upload_card_image(
+    card_id: str,
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_active_user),
+    cards_col=Depends(get_scenario_cards_collection),
+):
+    """Faz upload manual de imagem para o card."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(card_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de card inválido')
+
+    doc = await cards_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Card não encontrado')
+
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=400, detail='O ficheiro deve ser uma imagem.'
+        )
+
+    cards_dir = os.path.join(MEDIA_DIR, 'cards')
+    os.makedirs(cards_dir, exist_ok=True)
+    dest_path = os.path.join(cards_dir, f'{card_id}.png')
+
+    with open(dest_path, 'wb') as out:
+        shutil.copyfileobj(file.file, out)
+
+    abs_url = f'/media/cards/{card_id}.png'
+    await cards_col.update_one(
+        {'_id': oid}, {'$set': {'media_urls': [abs_url]}}
+    )
+
+    return DefautMessage(success=True, message='Imagem carregada com sucesso.')
+
+
+@router.delete('/{card_id}/image', response_model=DefautMessage)
+async def remove_card_image(
+    card_id: str,
+    current_user=Depends(get_current_active_user),
+    cards_col=Depends(get_scenario_cards_collection),
+):
+    """Remove a imagem associada ao card."""
+    user_id = str(current_user['_id'])
+
+    try:
+        oid = ObjectId(card_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail='ID de card inválido')
+
+    doc = await cards_col.find_one({'_id': oid, 'user_id': user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Card não encontrado')
+
+    img_path = os.path.join(MEDIA_DIR, 'cards', f'{card_id}.png')
+    if os.path.exists(img_path):
+        os.remove(img_path)
+
+    await cards_col.update_one({'_id': oid}, {'$set': {'media_urls': []}})
+
+    return DefautMessage(success=True, message='Imagem removida.')

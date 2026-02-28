@@ -6,7 +6,6 @@ load_dotenv(override=True)
 
 # Gemini API Settings (Official Google API)
 SECRET_KEY = os.getenv('SECRET_KEY')
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 GEMINI_TIMEOUT = int(os.getenv('GEMINI_TIMEOUT', '30'))
 GEMINI_AUTO_CLOSE = os.getenv('GEMINI_AUTO_CLOSE', 'true').lower() == 'true'
 GEMINI_CLOSE_DELAY = int(os.getenv('GEMINI_CLOSE_DELAY', '10'))

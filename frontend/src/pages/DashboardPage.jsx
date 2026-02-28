@@ -10,6 +10,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import { domainsAPI } from '../services/api';
@@ -23,7 +24,8 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
 const CHART_COLORS = [
@@ -430,7 +432,7 @@ export default function DashboardPage() {
                         onChange={(e) => setLogForm({ ...logForm, subject: e.target.value })}
                       >
                         {domains.map(({ domain }, i) => (
-                          <option key={domain.id} value={domain.id}>{domain.name}</option>
+                          <option key={domain.id ?? i} value={domain.id}>{domain.name}</option>
                         ))}
                       </select>
                     )}
@@ -491,7 +493,7 @@ export default function DashboardPage() {
                     const icon = DOMAIN_ICONS[index % DOMAIN_ICONS.length];
 
                     return (
-                      <div className="dash-materia-card" key={domain.id}>
+                      <div className="dash-materia-card" key={domain.id ?? index}>
                         <div className="dash-materia-icon">{icon}</div>
                         <h3>{domain.name}</h3>
                         <div className="dash-materia-stats">
