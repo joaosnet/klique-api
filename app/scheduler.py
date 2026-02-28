@@ -61,7 +61,9 @@ async def _send_srs_daily_reminder() -> None:
 
         whatsapp_service = AppServices.get_whatsapp_service()
         if not whatsapp_service:
-            logger.warning('WhatsApp service não disponível — lembrete cancelado')
+            logger.warning(
+                'WhatsApp service não disponível — lembrete cancelado'
+            )
             return
 
         now = datetime.now(timezone.utc)
@@ -73,7 +75,10 @@ async def _send_srs_daily_reminder() -> None:
             {'$match': {'next_review_date': {'$lte': now}}},
             {'$group': {'_id': '$user_id', 'due_count': {'$sum': 1}}},
         ]
-        due_by_user = await reviews_col.aggregate(pipeline).to_list(length=None)
+        cursor = await reviews_col.aggregate(pipeline)
+        due_by_user = []
+        async for doc in cursor:
+            due_by_user.append(doc)
 
         for entry in due_by_user:
             user_id = entry['_id']
@@ -132,6 +137,7 @@ async def stop_scheduler() -> None:
 def get_scheduler_status() -> dict:
     """Retorna o status atual do scheduler."""
     from datetime import datetime
+
     agora = datetime.now(ZoneInfo(BRAZIL_TZ))
     jobs_info = []
 
@@ -146,7 +152,9 @@ def get_scheduler_status() -> dict:
 
         if job.next_run_time:
             proxima = job.next_run_time.astimezone(ZoneInfo(BRAZIL_TZ))
-            job_data['proxima_execucao'] = proxima.strftime('%d/%m/%Y %H:%M:%S')
+            job_data['proxima_execucao'] = proxima.strftime(
+                '%d/%m/%Y %H:%M:%S'
+            )
 
         jobs_info.append(job_data)
 

@@ -33,7 +33,9 @@ from .schemas import (
 router = APIRouter(prefix='/api/srs', tags=['srs'])
 
 
-def _apply_sm2(interval: int, ease_factor: float, repetitions: int, quality: int):
+def _apply_sm2(
+    interval: int, ease_factor: float, repetitions: int, quality: int
+):
     """
     Aplica o algoritmo SuperMemo-2 e retorna (new_interval, new_ef, new_reps).
     """
@@ -44,7 +46,9 @@ def _apply_sm2(interval: int, ease_factor: float, repetitions: int, quality: int
             new_interval = 6
         else:
             new_interval = round(interval * ease_factor)
-        new_ef = ease_factor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)
+        new_ef = (
+            ease_factor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)
+        )
         new_ef = max(1.3, new_ef)
         new_reps = repetitions + 1
     else:
@@ -65,10 +69,15 @@ async def get_due_cards(
     user_id = str(current_user['_id'])
     now = datetime.now(timezone.utc)
 
-    due_reviews = await reviews_col.find({
-        'user_id': user_id,
-        'next_review_date': {'$lte': now},
-    }).sort('next_review_date', 1).to_list(length=50)
+    due_reviews = (
+        await reviews_col
+        .find({
+            'user_id': user_id,
+            'next_review_date': {'$lte': now},
+        })
+        .sort('next_review_date', 1)
+        .to_list(length=50)
+    )
 
     result = []
     for review_doc in due_reviews:
@@ -78,17 +87,22 @@ async def get_due_cards(
         except Exception:
             continue
 
-        card_doc = await cards_col.find_one({'_id': card_oid, 'user_id': user_id})
+        card_doc = await cards_col.find_one({
+            '_id': card_oid,
+            'user_id': user_id,
+        })
         if not card_doc:
             continue
 
         card_doc['_id'] = str(card_doc['_id'])
         review_doc['_id'] = str(review_doc['_id'])
 
-        result.append(DueCard(
-            card=ScenarioCard(**card_doc),
-            review=Review(**review_doc),
-        ))
+        result.append(
+            DueCard(
+                card=ScenarioCard(**card_doc),
+                review=Review(**review_doc),
+            )
+        )
 
     return result
 
@@ -118,7 +132,10 @@ async def submit_review(
 
     domain_id = card_doc.get('domain_id', '')
 
-    review_doc = await reviews_col.find_one({'card_id': body.card_id, 'user_id': user_id})
+    review_doc = await reviews_col.find_one({
+        'card_id': body.card_id,
+        'user_id': user_id,
+    })
     if not review_doc:
         # Criar registro se não existir (card sem review inicial)
         now = datetime.now(timezone.utc)
@@ -145,12 +162,14 @@ async def submit_review(
 
     await reviews_col.update_one(
         {'card_id': body.card_id, 'user_id': user_id},
-        {'$set': {
-            'interval': new_interval,
-            'ease_factor': new_ef,
-            'repetitions': new_reps,
-            'next_review_date': next_review,
-        }},
+        {
+            '$set': {
+                'interval': new_interval,
+                'ease_factor': new_ef,
+                'repetitions': new_reps,
+                'next_review_date': next_review,
+            }
+        },
     )
 
     log_doc = {
@@ -209,11 +228,23 @@ async def _calculate_streak(user_id: str, logs_col) -> int:
     """Conta dias consecutivos de treino até hoje."""
     pipeline = [
         {'$match': {'user_id': user_id}},
-        {'$project': {'day': {'$dateToString': {'format': '%Y-%m-%d', 'date': '$reviewed_at'}}}},
+        {
+            '$project': {
+                'day': {
+                    '$dateToString': {
+                        'format': '%Y-%m-%d',
+                        'date': '$reviewed_at',
+                    }
+                }
+            }
+        },
         {'$group': {'_id': '$day'}},
         {'$sort': {'_id': -1}},
     ]
-    days_docs = await logs_col.aggregate(pipeline).to_list(length=None)
+    cursor = await logs_col.aggregate(pipeline)
+    days_docs = []
+    async for doc in cursor:
+        days_docs.append(doc)
     if not days_docs:
         return 0
 

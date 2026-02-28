@@ -1,16 +1,16 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Navbar from './components/Layout/Navbar';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import MagicLinkCallback from './pages/MagicLinkCallback';
 import DomainsPage from './pages/DomainsPage';
 import CardSwipePage from './pages/CardSwipePage';
 import TrainingPage from './pages/TrainingPage';
-import OracleDashboardPage from './pages/OracleDashboardPage';
+import DashboardPage from './pages/DashboardPage';
+import ProfilePage from './pages/ProfilePage';
+import BottomNav from './components/Layout/BottomNav';
 import './index.css';
-
 
 
 function ProtectedRoute({ children }) {
@@ -37,7 +37,8 @@ function AppRoutes() {
       <Route path="/magic-login" element={<MagicLinkCallback />} />
       <Route path="/criar/:domainId" element={<CardSwipePage />} />
       <Route path="/treinar" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
-      <Route path="/oracle" element={<ProtectedRoute><OracleDashboardPage /></ProtectedRoute>} />
+      <Route path="/oracle" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/perfil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -58,10 +59,10 @@ export default function App() {
       <DynamicStatusBarHandler />
       <AuthProvider>
         <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-app)', transition: 'background-color 0.3s ease' }}>
-          <Navbar />
-          <main className="flex-1">
+          <main className="flex-1 pb-24 relative">
             <AppRoutes />
           </main>
+          <BottomNav />
         </div>
       </AuthProvider>
     </BrowserRouter>

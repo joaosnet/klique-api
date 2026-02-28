@@ -1,0 +1,59 @@
+/* ProfilePage.css */
+.profile-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2.5rem 2rem;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+    opacity: 0.3;
+}
+
+.profile-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 25px rgba(168, 85, 247, 0.5);
+    position: relative;
+    z-index: 2;
+    border: 4px solid var(--bg-card);
+}
+
+.profile-email {
+    font-size: 1.3rem;
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    text-align: center;
+    word-break: break-all;
+}
+
+.setting-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.setting-item:active {
+    transform: scale(0.98);
+}

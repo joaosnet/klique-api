@@ -34,10 +34,11 @@ export default defineConfig({
     port: 3000,
     watch: {
       usePolling: true,
+      interval: 1000,
     },
     // Allow HMR to work inside Docker — the browser connects to the host machine
     hmr: {
-      clientPort: 3000,
+      clientPort: 80,
     },
     proxy: {
       '/api': { target: process.env.VITE_BACKEND_URL || 'http://fastapi-klique:8000', changeOrigin: true },

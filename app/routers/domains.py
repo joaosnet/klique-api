@@ -70,7 +70,12 @@ async def _compute_domain_stats(domain_id: str, user_id: str) -> DomainStats:
             {'$match': {'domain_id': domain_id, 'user_id': user_id}},
             {'$group': {'_id': None, 'avg': {'$avg': '$performance_rating'}}},
         ]
-        result = await logs_col.aggregate(pipeline).to_list(length=1)
+        cursor = await logs_col.aggregate(pipeline)
+        result = []
+        async for doc in cursor:
+            result.append(doc)
+            if len(result) >= 1:
+                break
         if result:
             raw_avg = result[0].get('avg', 0.0)
             accuracy = round(raw_avg / 5.0, 2)
