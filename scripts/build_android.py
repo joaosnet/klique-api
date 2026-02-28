@@ -4,10 +4,13 @@ Este script usa **rich** para saídas coloridas e painéis, tornando a
 execução mais agradável no terminal.
 """
 
+import re
 import shutil
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
+from collections import defaultdict
 from pathlib import Path
 
 from rich.console import Console
@@ -145,22 +148,31 @@ def clear_gradle_cache(android_dir: Path, gradlew: str) -> None:
 
 
 _VALID_RES_PREFIXES = (
-    'anim', 'animator', 'color', 'drawable', 'font', 'layout',
-    'menu', 'mipmap', 'raw', 'transition', 'values', 'xml',
+    'anim',
+    'animator',
+    'color',
+    'drawable',
+    'font',
+    'layout',
+    'menu',
+    'mipmap',
+    'raw',
+    'transition',
+    'values',
+    'xml',
 )
 
 
 def remove_invalid_res_dirs(android_dir: Path) -> None:
-    """Delete any res/ subdirectories whose names are not valid Android qualifiers.
+    """Delete res/ subdirs whose names are not valid Android qualifiers.
 
     For example ``mipmap-512`` is rejected by aapt2 because '512' is not a
-    known resource qualifier.  We detect dirs whose base name (the part before
-    the first '-') is a known type but whose full name does not match the
-    allowed pattern, and dirs that are entirely unknown, then remove them.
+    known resource qualifier.  We detect dirs whose base name (the part
+    before the first '-') is a known type but whose full name does not
+    match the allowed pattern, and dirs that are entirely unknown, then
+    remove them.
     """
-    import re
-
-    # Pattern: <type>[-<qualifier>]*  where qualifier does not start with a digit
+    # Pattern: <type>[-<qual>]*  where qualifier doesn't start with a digit
     valid_pattern = re.compile(
         r'^(' + '|'.join(_VALID_RES_PREFIXES) + r')(-[a-zA-Z][a-zA-Z0-9]*)*$'
     )
@@ -173,16 +185,121 @@ def remove_invalid_res_dirs(android_dir: Path) -> None:
             continue
         if not valid_pattern.match(entry.name):
             console.print(
-                f'[yellow]Removing invalid resource directory: {entry}[/yellow]'
+                '[yellow]Removing invalid resource directory:'
+                f' {entry}[/yellow]'
             )
             shutil.rmtree(entry)
+
+
+def fix_duplicate_resources(android_dir: Path) -> None:
+    """Detect and fix duplicate resource declarations in values/*.xml.
+    scripts\build_android.py
+        Android's resource merger fails with 'Duplicate resources' when the
+        same resource name is declared in multiple XML files inside a values/
+        directory.  This function scans all values XML files, finds duplicates,
+        and removes entries from non-canonical files, keeping the entry in the
+        file that defines the most resources (e.g. colors.xml).
+    """
+    values_dir = android_dir / 'app' / 'src' / 'main' / 'res' / 'values'
+    if not values_dir.exists():
+        return
+
+    xml_files = sorted(values_dir.glob('*.xml'))
+
+    # Collect all (tag, name) -> list of files that declare it
+    resource_owners: dict[tuple[str, str], list[Path]] = defaultdict(list)
+
+    for xml_file in xml_files:
+        try:
+            tree = ET.parse(xml_file)
+            root = tree.getroot()
+        except ET.ParseError as e:
+            console.print(
+                f'[yellow]Could not parse {xml_file.name}: {e}[/yellow]'
+            )
+            continue
+        for child in root:
+            name = child.get('name')
+            if name:
+                resource_owners[(child.tag, name)].append(xml_file)
+
+    # For each duplicated resource, keep only the entry in the file with
+    # the most resources (usually colors.xml / strings.xml / styles.xml),
+    # and remove it from all other files.
+    fixed_any = False
+    for (tag, name), owners in resource_owners.items():
+        if len(owners) <= 1:
+            continue
+
+        console.print(
+            f'[yellow]Duplicate resource: <{tag} name="{name}"> '
+            f'in {[f.name for f in owners]}[/yellow]'
+        )
+
+        def resource_count(p: Path) -> int:
+            try:
+                return len(ET.parse(p).getroot())
+            except ET.ParseError:
+                return 0
+
+        canonical = max(owners, key=resource_count)
+        to_fix = [f for f in owners if f != canonical]
+
+        for xml_file in to_fix:
+            try:
+                tree = ET.parse(xml_file)
+                root = tree.getroot()
+                removed = []
+                for child in list(root):
+                    if child.tag == tag and child.get('name') == name:
+                        root.remove(child)
+                        removed.append(child)
+                if removed:
+                    if len(root) == 0:
+                        xml_file.unlink()
+                        console.print(
+                            f'[green]Deleted now-empty: '
+                            f'{xml_file.name}[/green]'
+                        )
+                    else:
+                        ET.indent(tree, space='    ')
+                        tree.write(
+                            xml_file,
+                            encoding='utf-8',
+                            xml_declaration=True,
+                        )
+                        console.print(
+                            f'[green]Removed duplicate '
+                            f'<{tag} name="{name}"> from '
+                            f'{xml_file.name} '
+                            f'(kept in {canonical.name})[/green]'
+                        )
+                    fixed_any = True
+            except Exception as e:  # noqa: BLE001
+                console.print(f'[red]Failed to fix {xml_file.name}: {e}[/red]')
+
+    if not fixed_any:
+        console.print('[green]No duplicate resources found.[/green]')
 
 
 def execute_gradle(android_dir: Path, gradlew: str) -> None:
     run(f'{gradlew} clean', cwd=android_dir, check=False)
     try:
         run(f'{gradlew} assembleDebug', cwd=android_dir)
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as first_err:
+        # Check if the error is a duplicate resource conflict (source issue,
+        # not a cache issue) — if so, fix duplicates and retry immediately.
+        console.print(
+            '[yellow]\n⚠️  assembleDebug failed. '
+            'Checking for duplicate resource conflicts...[/yellow]'
+        )
+        fix_duplicate_resources(android_dir)
+        try:
+            run(f'{gradlew} assembleDebug', cwd=android_dir)
+            return  # recovery succeeded
+        except subprocess.CalledProcessError:
+            pass  # fall through to cache-clearing recovery below
+
         console.print(
             '[red]\n❌ Gradle failed to build the APK.\n'
             'This is often caused by a corrupted cache '
@@ -191,7 +308,7 @@ def execute_gradle(android_dir: Path, gradlew: str) -> None:
             'and retrying...'
         )
         try:
-            run(f'{gradlew} cleanBuildCache', cwd=android_dir, check=False)
+            run(f'{gradlew} clean', cwd=android_dir, check=False)
             run(
                 f'{gradlew} assembleDebug --refresh-dependencies',
                 cwd=android_dir,
@@ -199,13 +316,9 @@ def execute_gradle(android_dir: Path, gradlew: str) -> None:
         except subprocess.CalledProcessError:
             console.print(
                 '[red]Automated recovery failed.\n'
-                'Please run the following commands manually or delete '
-                'the problematic files in ~/.gradle/caches and rerun '
-                '`task android`:\n'
-                '  gradlew.bat cleanBuildCache\n'
-                '  gradlew.bat assembleDebug --refresh-dependencies'
+                'Please check the error output above and rerun `task android`.'
             )
-            raise
+            raise first_err
 
 
 def display_and_optionally_install_apk(android_dir: Path) -> None:
