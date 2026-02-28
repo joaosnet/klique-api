@@ -1,10 +1,10 @@
 """Dependências específicas para webhooks."""
 
+from typing import Any
+
 from fastapi import Depends, Request
 
 from .database import get_db
-from .services.gemini import GeminiService
-from .services.shared import AppServices
 from .services.whatsapp import WhatsAppService
 
 
@@ -13,7 +13,7 @@ class WebhookDependencies:
 
     def __init__(
         self,
-        image_generation_service: GeminiService,
+        image_generation_service: Any | None,
         whatsapp_service: WhatsAppService,
         db,
     ):
@@ -31,8 +31,8 @@ def get_webhook_dependencies(
     # no 'lifespan'. Caso contrário, usa o serviço padrão.
     image_generation_service = getattr(
         request.app.state,
-        'gemini_web_api_service',
-        AppServices.get_image_generation_service(),
+        'gemini_webapi_client',
+        None,
     )
 
     return WebhookDependencies(

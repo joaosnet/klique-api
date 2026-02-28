@@ -1,6 +1,3 @@
-from typing import Any
-
-from .gemini import GeminiService
 from .whatsapp import WhatsAppService
 
 
@@ -11,17 +8,6 @@ class AppServices:
     """
 
     _whatsapp_service: WhatsAppService | None = None
-    _image_generation_service: Any | None = None
-
-    @classmethod
-    def get_image_generation_service(cls) -> GeminiService:
-        """
-        Retorna a instância do serviço de geração de imagem (Gemini oficial).
-        O serviço Gemini Web API agora roda como servidor MCP separado.
-        """
-        if cls._image_generation_service is None:
-            cls._image_generation_service = GeminiService()
-        return cls._image_generation_service
 
     @classmethod
     def get_whatsapp_service(cls) -> WhatsAppService:

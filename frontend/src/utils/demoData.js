@@ -11,6 +11,7 @@ export const DEMO_CARDS = [
             'O "budget congelado" é uma âncora de negociação, não uma restrição real. Aceitar silenciosamente sinaliza que este frame funcionou e será repetido.',
         game_theory_explanation:
             'Este é um Jogo de Barganha com Assimetria de Informação. O gestor tem incentivo em minimizar o custo salarial. A estratégia dominante é converter o jogo de 1 rodada para multi-rodada: "Entendo o constrangimento de agora. Posso propor definirmos métricas concretas para revisitar isto em Janeiro?" Isto preserva a relação, sinaliza valor e cria um compromisso público do gestor.',
+        media_urls: ['/media/cards/demo-1.png'],
     },
     {
         id: 'demo-2',
@@ -24,6 +25,7 @@ export const DEMO_CARDS = [
             'O sinal indica teste de reacção ou baixo custo percebido da tua presença. Reagir imediatamente confirma alto investimento emocional e reduz o teu poder de barganha.',
         game_theory_explanation:
             'Em jogos de atracção, o valor percebido (Status Signal) é inversamente proporcional à disponibilidade aparente. O cancelamento foi um teste de Costly Signal — a selfie foi a verificação. A jogada ótima: não reages por 24–48h. Depois reinicias com um frame diferente de alto status: "Vi algo que acho que ia interessar-te — [referência específica ao que ela gosta]." Isto reposiciona-te como o agente de iniciativa, não o receptor.',
+        media_urls: ['/media/cards/demo-2.png'],
     },
     {
         id: 'demo-3',
@@ -37,20 +39,21 @@ export const DEMO_CARDS = [
             'Silêncio cria precedente que o comportamento tem custo zero. Confronto directo tem risco de parecer mesquinho. A jogada ótima é reframing de contribuição com o gestor num contexto natural.',
         game_theory_explanation:
             'Este é um Dilema do Prisioneiro assimétrico com elemento de Reputação. Cooperação silenciosa é dominada — cria incentivo para o colega repetir. Confronto directo tem alto risco de reputação negativa. A estratégia ótima: "Fico contente que a análise que o X e eu trabalhámos sobre [tema] tenha ressoado — temos mais dados se quiserem aprofundar." Clarifica a tua contribuição, posiciona-te como colaborador valioso e não como queixoso.',
+        media_urls: ['/media/cards/demo-3.png'],
     },
 ];
 
 export const DEMO_DOMAINS = [
     {
-        domain: { id: 'demo-domain-1', name: 'Dinâmicas de Escritório', theme: 'office' },
+        domain: { id: 'demo-domain-1', name: 'Dinâmicas de Escritório', theme: 'office', image_url: '/media/domains/office.png' },
         stats: { cards_count: 14, due_today: 3, accuracy: 0.82 }
     },
     {
-        domain: { id: 'demo-domain-2', name: 'Negociação Salarial', theme: 'finance' },
+        domain: { id: 'demo-domain-2', name: 'Negociação Salarial', theme: 'finance', image_url: '/media/domains/finance.png' },
         stats: { cards_count: 8, due_today: 0, accuracy: 0.95 }
     },
     {
-        domain: { id: 'demo-domain-3', name: 'Atracção e Status', theme: 'dating' },
+        domain: { id: 'demo-domain-3', name: 'Atracção e Status', theme: 'dating', image_url: '/media/domains/dating.png' },
         stats: { cards_count: 22, due_today: 5, accuracy: 0.64 }
     }
 ];

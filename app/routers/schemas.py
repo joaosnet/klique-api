@@ -320,6 +320,7 @@ class UserPreferences(BaseModel):
 
 # --- Domains ---
 
+
 class DomainCreate(BaseModel):
     name: str
     theme: str
@@ -335,6 +336,7 @@ class Domain(MongoBaseModel):
     user_id: str
     name: str
     theme: str
+    image_url: Optional[str] = None
     created_at: datetime
 
 
@@ -349,12 +351,15 @@ class DomainStats(BaseModel):
 class DomainWithStats(BaseModel):
     domain: Domain
     stats: DomainStats
+    image_url: Optional[str] = None
 
 
 # --- Scenario Cards ---
 
+
 class ScenarioCardData(BaseModel):
     """Raw card data returned by Gemini (not yet persisted)."""
+
     template_type: str
     scenario_context: str
     question: str
@@ -397,6 +402,7 @@ class SwipeResponse(BaseModel):
 
 
 # --- SRS (Spaced Repetition System) ---
+
 
 class Review(MongoBaseModel):
     id: Optional[str] = Field(None, alias='_id')
@@ -442,6 +448,7 @@ class SRSStats(BaseModel):
 
 
 # --- Oracle Analytics ---
+
 
 class DashboardOverview(BaseModel):
     total_domains: int

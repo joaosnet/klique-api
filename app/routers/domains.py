@@ -8,7 +8,14 @@ como "Dinâmicas de Encontros", "Geopolítica" ou "Negociação Salarial".
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Request,
+    status,
+)
 
 from ..database import (
     get_domains_collection,
@@ -17,6 +24,7 @@ from ..database import (
     get_simulation_logs_collection,
 )
 from ..dependencies import get_current_active_user
+from ..services.image_generation import get_or_generate_domain_image
 from .schemas import (
     DefautMessage,
     Domain,
@@ -79,7 +87,9 @@ async def _compute_domain_stats(domain_id: str, user_id: str) -> DomainStats:
 
 @router.post('/', response_model=Domain, status_code=status.HTTP_201_CREATED)
 async def create_domain(
+    request: Request,
     data: DomainCreate,
+    background_tasks: BackgroundTasks,
     current_user=Depends(get_current_active_user),
     domains_col=Depends(get_domains_collection),
 ):
@@ -88,30 +98,62 @@ async def create_domain(
         'user_id': str(current_user['_id']),
         'name': data.name.strip(),
         'theme': data.theme.strip(),
+        'image_url': None,
         'created_at': datetime.now(timezone.utc),
     }
     result = await domains_col.insert_one(doc)
     doc['_id'] = str(result.inserted_id)
+
+    # Dispara a geração de imagem em background
+    gemini_client = getattr(request.app.state, 'gemini_webapi_client', None)
+    if gemini_client:
+        background_tasks.add_task(
+            get_or_generate_domain_image, doc['theme'], gemini_client
+        )
+
     return Domain(**doc)
 
 
 @router.get('/', response_model=list[DomainWithStats])
 async def list_domains(
+    request: Request,
+    background_tasks: BackgroundTasks,
     current_user=Depends(get_current_active_user),
     domains_col=Depends(get_domains_collection),
 ):
     """Lista todos os domínios do usuário com suas estatísticas."""
     user_id = str(current_user['_id'])
-    docs = await domains_col.find({'user_id': user_id}).sort('created_at', -1).to_list(length=None)
+    docs = (
+        await domains_col
+        .find({'user_id': user_id})
+        .sort('created_at', -1)
+        .to_list(length=None)
+    )
 
     result = []
     for doc in docs:
         domain_id = str(doc['_id'])
         doc['_id'] = domain_id
+
+        # Retro-compatibilidade: disparar imagem se faltar
+        if not doc.get('image_url'):
+            gemini_client = getattr(
+                request.app.state, 'gemini_webapi_client', None
+            )
+            if gemini_client:
+                background_tasks.add_task(
+                    get_or_generate_domain_image, doc['theme'], gemini_client
+                )
+
         domain = Domain(**doc)
         stats = await _compute_domain_stats(domain_id, user_id)
         stats.domain_name = domain.name
-        result.append(DomainWithStats(domain=domain, stats=stats))
+        # Copiar a imagem para o domínio
+        result.append(
+            DomainWithStats(
+                domain=domain, stats=stats, image_url=domain.image_url
+            )
+        )
 
     return result
 
@@ -138,11 +180,13 @@ async def get_domain(
     domain = Domain(**doc)
     stats = await _compute_domain_stats(domain_id, user_id)
     stats.domain_name = domain.name
-    return DomainWithStats(domain=domain, stats=stats)
+    return DomainWithStats(
+        domain=domain, stats=stats, image_url=domain.image_url
+    )
 
 
 @router.delete('/{domain_id}', response_model=DefautMessage)
-async def delete_domain(
+async def delete_domain(  # noqa: PLR0913
     domain_id: str,
     current_user=Depends(get_current_active_user),
     domains_col=Depends(get_domains_collection),
@@ -169,10 +213,18 @@ async def delete_domain(
     card_ids = [str(c['_id']) for c in card_docs]
 
     if card_ids:
-        await reviews_col.delete_many({'card_id': {'$in': card_ids}, 'user_id': user_id})
-        await logs_col.delete_many({'card_id': {'$in': card_ids}, 'user_id': user_id})
+        await reviews_col.delete_many({
+            'card_id': {'$in': card_ids},
+            'user_id': user_id,
+        })
+        await logs_col.delete_many({
+            'card_id': {'$in': card_ids},
+            'user_id': user_id,
+        })
 
     await cards_col.delete_many({'domain_id': domain_id, 'user_id': user_id})
     await domains_col.delete_one({'_id': oid})
 
-    return DefautMessage(success=True, message='Domínio e todos os seus dados foram removidos.')
+    return DefautMessage(
+        success=True, message='Domínio e todos os seus dados foram removidos.'
+    )

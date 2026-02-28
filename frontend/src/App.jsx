@@ -42,9 +42,11 @@ function AppRoutes() {
 }
 
 import { useDynamicStatusBar } from './hooks/useDynamicStatusBar';
+import { useThemeInit } from './hooks/useThemeInit';
 
 function DynamicStatusBarHandler() {
   useDynamicStatusBar();
+  useThemeInit();
   return null;
 }
 

@@ -21,7 +21,6 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from rich.console import Console
-import asyncio
 
 console = Console()
 

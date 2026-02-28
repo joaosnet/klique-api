@@ -12,7 +12,13 @@ import re
 from datetime import datetime, timezone
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Request,
+)
 from fastapi.responses import StreamingResponse
 
 from ..database import (
@@ -21,6 +27,7 @@ from ..database import (
     get_scenario_cards_collection,
 )
 from ..dependencies import get_current_active_user
+from ..services.image_generation import get_or_generate_card_image
 from .schemas import (
     DefautMessage,
     GenerateCardRequest,
@@ -56,13 +63,16 @@ async def _card_generation_stream(
     try:
         yield await generate_sse_event(
             'progress',
-            {'step': 1, 'total': 3, 'message': 'Consultando o Oráculo...', 'percent': 20},
+            {
+                'step': 1,
+                'total': 3,
+                'message': 'Consultando o Oráculo...',
+                'percent': 20,
+            },
         )
 
         oracle_prompt = _load_oracle_prompt()
-        user_message = (
-            f'Domínio: {domain_name}\nTema: {domain_theme}\n'
-        )
+        user_message = f'Domínio: {domain_name}\nTema: {domain_theme}\n'
         if context:
             user_message += f'Contexto adicional: {context}\n'
 
@@ -70,7 +80,12 @@ async def _card_generation_stream(
 
         yield await generate_sse_event(
             'progress',
-            {'step': 2, 'total': 3, 'message': 'Gerando cenário tático...', 'percent': 60},
+            {
+                'step': 2,
+                'total': 3,
+                'message': 'Gerando cenário tático...',
+                'percent': 60,
+            },
         )
 
         response = await gemini_client.generate_content(full_prompt)
@@ -81,7 +96,10 @@ async def _card_generation_stream(
         if not json_match:
             yield await generate_sse_event(
                 'error',
-                {'message': 'Gemini não retornou JSON válido. Tente novamente.'},
+                {
+                    'message': 'Gemini não retornou JSON válido.'
+                    ' Tente novamente.'
+                },
             )
             return
 
@@ -89,7 +107,12 @@ async def _card_generation_stream(
 
         yield await generate_sse_event(
             'progress',
-            {'step': 3, 'total': 3, 'message': 'Cenário pronto.', 'percent': 100},
+            {
+                'step': 3,
+                'total': 3,
+                'message': 'Cenário pronto.',
+                'percent': 100,
+            },
         )
 
         yield await generate_sse_event('complete', {'card': card_dict})
@@ -133,7 +156,10 @@ async def generate_card_stream(
     if not gemini_client:
         raise HTTPException(
             status_code=503,
-            detail='Gemini WebAPI não está configurado. Verifique SECURE_1PSID no .env.',
+            detail=(
+                'Gemini WebAPI não está configurado. '
+                'Verifique SECURE_1PSID no .env.'
+            ),
         )
 
     async def stream_generator():
@@ -157,8 +183,10 @@ async def generate_card_stream(
 
 
 @router.post('/swipe', response_model=SwipeResponse)
-async def swipe_card(
+async def swipe_card(  # noqa: PLR0913
+    request: Request,
     body: SwipeAction,
+    background_tasks: BackgroundTasks,
     current_user=Depends(get_current_active_user),
     domains_col=Depends(get_domains_collection),
     cards_col=Depends(get_scenario_cards_collection),
@@ -170,7 +198,9 @@ async def swipe_card(
     - action='discard': descarta silenciosamente
     """
     if body.action not in {'save', 'discard'}:
-        raise HTTPException(status_code=400, detail="action deve ser 'save' ou 'discard'")
+        raise HTTPException(
+            status_code=400, detail="action deve ser 'save' ou 'discard'"
+        )
 
     if body.action == 'discard':
         return SwipeResponse(success=True, message='Card descartado.')
@@ -214,6 +244,16 @@ async def swipe_card(
     }
     await reviews_col.insert_one(review_doc)
 
+    # Dispara a geração de imagem da carta em background
+    gemini_client = getattr(request.app.state, 'gemini_webapi_client', None)
+    if gemini_client and body.card_data.visual_prompt_idea:
+        background_tasks.add_task(
+            get_or_generate_card_image,
+            card_id,
+            body.card_data.visual_prompt_idea,
+            gemini_client,
+        )
+
     return SwipeResponse(
         success=True,
         message='Card salvo no seu deck de treinamento.',
@@ -240,9 +280,12 @@ async def list_cards(
     if not domain:
         raise HTTPException(status_code=404, detail='Domínio não encontrado')
 
-    docs = await cards_col.find(
-        {'domain_id': domain_id, 'user_id': user_id}
-    ).sort('created_at', -1).to_list(length=None)
+    docs = (
+        await cards_col
+        .find({'domain_id': domain_id, 'user_id': user_id})
+        .sort('created_at', -1)
+        .to_list(length=None)
+    )
 
     cards = []
     for doc in docs:

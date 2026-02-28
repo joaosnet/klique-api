@@ -124,34 +124,65 @@ export default function GameTheoryCard({
           <stop offset="0%" stopColor={tmpl.gradStart} stopOpacity="0.9" />
           <stop offset="100%" stopColor={tmpl.gradStart} stopOpacity="0" />
         </linearGradient>
+        <linearGradient id={`${gradId}-imageOverlay`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={tmpl.innerBg} stopOpacity="0.15" />
+          <stop offset="50%" stopColor={tmpl.innerBg} stopOpacity="0.05" />
+          <stop offset="100%" stopColor={tmpl.innerBg} stopOpacity="0.7" />
+        </linearGradient>
+        <clipPath id={`${gradId}-corners`}>
+          <rect x="0" y="0" width="370" height="155" rx="0" />
+        </clipPath>
       </defs>
 
-      {/* Background — transparent so the CSS container bg shows through */}
-      <rect width="370" height="155" fill={`url(#${gradId}-${isBack ? 'back' : 'front'})`} />
+      {/* Background — transparent so the CSS container bg shows through, or Image */}
+      <g clipPath={`url(#${gradId}-corners)`}>
+        {card.media_urls && card.media_urls[0] ? (
+          <>
+            <image
+              href={`${import.meta.env.VITE_API_URL || ''}${card.media_urls[0]}`}
+              x="0" y="0" width="370" height="155"
+              preserveAspectRatio="xMidYMid slice"
+            />
+            <rect width="370" height="155" fill={`url(#${gradId}-imageOverlay)`} />
+          </>
+        ) : (
+          <rect width="370" height="155" fill={`url(#${gradId}-${isBack ? 'back' : 'front'})`} />
+        )}
+      </g>
 
-      {/* Diagonal accent lines */}
-      <line x1="0" y1="0" x2="370" y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
-      <line x1="370" y1="0" x2="0" y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
-      <line x1="185" y1="0" x2="185" y2="155" stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
-      <line x1="0" y1="77" x2="370" y2="77" stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
+      {/* Diagonal accent lines — only without image */}
+      {!(card.media_urls && card.media_urls[0]) && (
+        <>
+          <line x1="0" y1="0" x2="370" y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
+          <line x1="370" y1="0" x2="0" y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
+          <line x1="185" y1="0" x2="185" y2="155" stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
+          <line x1="0" y1="77" x2="370" y2="77" stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
+        </>
+      )}
 
-      {/* Decorative aura circles */}
-      <circle cx="310" cy="40" r="85" fill={tmpl.color} fillOpacity="0.06" />
-      <circle cx="310" cy="40" r="52" fill={tmpl.color} fillOpacity="0.07" />
-      <circle cx="55" cy="125" r="65" fill={tmpl.color} fillOpacity="0.05" />
+      {/* Decorative aura circles — only without image */}
+      {!(card.media_urls && card.media_urls[0]) && (
+        <>
+          <circle cx="310" cy="40" r="85" fill={tmpl.color} fillOpacity="0.06" />
+          <circle cx="310" cy="40" r="52" fill={tmpl.color} fillOpacity="0.07" />
+          <circle cx="55" cy="125" r="65" fill={tmpl.color} fillOpacity="0.05" />
+        </>
+      )}
 
-      {/* Large background symbol */}
-      <text
-        x="185" y="105"
-        fill={tmpl.color}
-        fontSize="78"
-        fontFamily="system-ui, sans-serif"
-        textAnchor="middle"
-        opacity="0.18"
-        transform={isBack ? "scale(-1, 1) translate(-370, 0)" : "none"}
-      >
-        {tmpl.symbol}
-      </text>
+      {/* Large background symbol — only without image */}
+      {!(card.media_urls && card.media_urls[0]) && (
+        <text
+          x="185" y="105"
+          fill={tmpl.color}
+          fontSize="78"
+          fontFamily="system-ui, sans-serif"
+          textAnchor="middle"
+          opacity="0.18"
+          transform={isBack ? "scale(-1, 1) translate(-370, 0)" : "none"}
+        >
+          {tmpl.symbol}
+        </text>
+      )}
 
       {/* ── Template label badge (top-left) ── */}
       <rect x="0" y="0" width={tmpl.labelWidth} height="22" fill={tmpl.color} fillOpacity="0.92" rx="0" />

@@ -7,10 +7,12 @@ warnings.filterwarnings(
     module=r'langchain_core.*',
 )
 
+import os  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from gemini_webapi import GeminiClient
 
 from .config import SECURE_1PSID, SECURE_1PSIDTS
@@ -54,6 +56,11 @@ async def lifespan(app: FastAPI):
             )
             app.state.gemini_webapi_client = gemini_client
             logger.success('Cliente Gemini WebAPI inicializado com sucesso')
+
+            import asyncio  # noqa: PLC0415
+
+            from .services.image_generation import init_demo_images
+            asyncio.create_task(init_demo_images(gemini_client))
         except Exception as e:
             logger.warning(f'Falha ao inicializar Gemini WebAPI: {e}')
             app.state.gemini_webapi_client = None
@@ -99,9 +106,15 @@ app.add_middleware(
 )
 
 # Setup templates and static files
-# static_dir = Path(__file__).parent / 'static'
-# templates = Jinja2Templates(directory=static_dir)
-# app.mount('/static', StaticFiles(directory=static_dir), name='static')
+
+MEDIA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), 'generated_media'
+)
+os.makedirs(MEDIA_DIR, exist_ok=True)
+os.makedirs(os.path.join(MEDIA_DIR, 'domains'), exist_ok=True)
+os.makedirs(os.path.join(MEDIA_DIR, 'cards'), exist_ok=True)
+
+app.mount('/media', StaticFiles(directory=MEDIA_DIR), name='media')
 
 
 # @app.get('/', response_class=HTMLResponse)

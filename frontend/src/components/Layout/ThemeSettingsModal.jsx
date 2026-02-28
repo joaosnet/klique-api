@@ -9,7 +9,7 @@ const COLORS = [
 ];
 
 export default function ThemeSettingsModal({ onClose }) {
-    const [theme, setTheme] = useState(localStorage.getItem('app_theme') || 'dark');
+    const [theme, setTheme] = useState(localStorage.getItem('app_theme') || 'auto');
     const [accent, setAccent] = useState(localStorage.getItem('app_accent') || '#7c3aed');
 
     useEffect(() => {
@@ -24,7 +24,11 @@ export default function ThemeSettingsModal({ onClose }) {
     const handleThemeChange = (newTheme) => {
         setTheme(newTheme);
         localStorage.setItem('app_theme', newTheme);
-        document.documentElement.setAttribute('data-theme', newTheme);
+        // Resolve 'auto' to the actual system preference
+        const resolved = newTheme === 'auto'
+            ? (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+            : newTheme;
+        document.documentElement.setAttribute('data-theme', resolved);
     };
 
     const handleAccentChange = (colorObj) => {
@@ -61,36 +65,92 @@ export default function ThemeSettingsModal({ onClose }) {
                     </button>
                 </div>
 
-                {/* Theme Mode */}
-                <div style={{ marginBottom: 24 }}>
-                    <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
-                        Modo (Light / Dark)
-                    </label>
-                    <div style={{ display: 'flex', gap: 12 }}>
-                        <button
-                            onClick={() => handleThemeChange('light')}
-                            style={{
-                                flex: 1, padding: '10px 0', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
-                                border: theme === 'light' ? '2px solid var(--accent)' : '1px solid var(--border-color)',
-                                background: theme === 'light' ? 'var(--bg-card-inner)' : 'transparent',
-                                color: theme === 'light' ? 'var(--accent)' : 'var(--text-muted)'
-                            }}
-                        >
-                            Light
-                        </button>
-                        <button
-                            onClick={() => handleThemeChange('dark')}
-                            style={{
-                                flex: 1, padding: '10px 0', borderRadius: 8, cursor: 'pointer', fontWeight: 600,
-                                border: theme === 'dark' ? '2px solid var(--accent)' : '1px solid var(--border-color)',
-                                background: theme === 'dark' ? 'var(--bg-card-inner)' : 'transparent',
-                                color: theme === 'dark' ? 'var(--accent)' : 'var(--text-muted)'
-                            }}
-                        >
-                            Dark
-                        </button>
-                    </div>
-                </div>
+                {/* Theme Mode — SVG Slider */}
+                {(() => {
+                    const MODES = [
+                        { key: 'light', icon: '☀', label: 'Light' },
+                        { key: 'auto', icon: '◐', label: 'Auto' },
+                        { key: 'dark', icon: '🌙', label: 'Dark' },
+                    ];
+                    const activeIdx = MODES.findIndex(m => m.key === theme);
+                    const W = 360, H = 52, PAD = 4;
+                    const segW = (W - PAD * 2) / MODES.length;
+                    const thumbX = PAD + activeIdx * segW;
+                    const thumbW = segW;
+                    return (
+                        <div style={{ marginBottom: 24 }}>
+                            <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                                Modo
+                            </label>
+                            <svg
+                                viewBox={`0 0 ${W} ${H}`}
+                                width="100%"
+                                style={{ display: 'block', cursor: 'pointer', borderRadius: H / 2, overflow: 'visible' }}
+                            >
+                                <defs>
+                                    <linearGradient id="slider-track" x1="0" y1="0" x2="1" y2="0">
+                                        <stop offset="0%" stopColor="var(--bg-card-inner)" />
+                                        <stop offset="100%" stopColor="var(--border-color)" />
+                                    </linearGradient>
+                                    <filter id="thumb-glow">
+                                        <feGaussianBlur stdDeviation="4" result="blur" />
+                                        <feMerge>
+                                            <feMergeNode in="blur" />
+                                            <feMergeNode in="SourceGraphic" />
+                                        </feMerge>
+                                    </filter>
+                                </defs>
+
+                                {/* Track */}
+                                <rect x="0" y="0" width={W} height={H} rx={H / 2}
+                                    fill="url(#slider-track)" stroke="var(--border-color)" strokeWidth="1" />
+
+                                {/* Thumb — animated pill */}
+                                <rect
+                                    x={thumbX} y={PAD} width={thumbW} height={H - PAD * 2}
+                                    rx={(H - PAD * 2) / 2}
+                                    fill="var(--accent)"
+                                    fillOpacity="0.25"
+                                    stroke="var(--accent-light)"
+                                    strokeWidth="1.5"
+                                    filter="url(#thumb-glow)"
+                                    style={{ transition: 'x 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+                                />
+
+                                {/* Hit areas + labels */}
+                                {MODES.map((m, i) => {
+                                    const cx = PAD + i * segW + segW / 2;
+                                    const isActive = i === activeIdx;
+                                    return (
+                                        <g key={m.key} onClick={() => handleThemeChange(m.key)} style={{ cursor: 'pointer' }}>
+                                            <rect x={PAD + i * segW} y="0" width={segW} height={H} fill="transparent" />
+                                            <text
+                                                x={cx} y={H / 2 - 4}
+                                                textAnchor="middle" dominantBaseline="middle"
+                                                fontSize="16"
+                                                style={{ transition: 'opacity 0.3s', pointerEvents: 'none' }}
+                                                opacity={isActive ? 1 : 0.5}
+                                            >
+                                                {m.icon}
+                                            </text>
+                                            <text
+                                                x={cx} y={H / 2 + 13}
+                                                textAnchor="middle" dominantBaseline="middle"
+                                                fontSize="9" fontWeight="700" letterSpacing="1.5"
+                                                fontFamily="Courier New, monospace"
+                                                fill={isActive ? 'var(--accent-light)' : 'var(--text-muted)'}
+                                                style={{ transition: 'fill 0.3s, opacity 0.3s', pointerEvents: 'none' }}
+                                                opacity={isActive ? 1 : 0.6}
+                                            >
+                                                {m.label.toUpperCase()}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+                            </svg>
+                        </div>
+                    );
+                })()}
 
                 {/* Accent Color */}
                 <div>

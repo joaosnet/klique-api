@@ -86,32 +86,55 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                             <stop offset="0%" stopColor={t.color} stopOpacity="0.25" />
                             <stop offset="100%" stopColor={t.color} stopOpacity="0" />
                         </radialGradient>
+                        <linearGradient id="imageOverlay" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--bg-card)" stopOpacity="0.1" />
+                            <stop offset="50%" stopColor="var(--bg-card)" stopOpacity="0.05" />
+                            <stop offset="100%" stopColor="var(--bg-card)" stopOpacity="0.65" />
+                        </linearGradient>
+                        <clipPath id={`corners-${domain.id}`}>
+                            <rect x="0" y="0" width="300" height="130" rx="0" />
+                        </clipPath>
                     </defs>
 
-                    {/* Base background */}
-                    <rect width="300" height="130" fill={`url(#${gradId})`} />
-                    {/* Glow radial */}
-                    <rect width="300" height="130" fill={`url(#${gradId}-glow)`} />
+                    {/* Base background or Image */}
+                    <g clipPath={`url(#corners-${domain.id})`}>
+                        {domain.image_url ? (
+                            <>
+                                <image
+                                    href={`${import.meta.env.VITE_API_URL || ''}${domain.image_url}`}
+                                    x="0" y="0" width="300" height="130"
+                                    preserveAspectRatio="xMidYMid slice"
+                                />
+                                <rect width="300" height="130" fill="url(#imageOverlay)" />
+                            </>
+                        ) : (
+                            <rect width="300" height="130" fill={`url(#${gradId})`} />
+                        )}
+                    </g>
+                    {/* Glow radial — only without image */}
+                    {!domain.image_url && <rect width="300" height="130" fill={`url(#${gradId}-glow)`} />}
 
-                    {/* Grid lines */}
-                    {[0, 60, 120, 180, 240, 300].map(x => (
+                    {/* Grid lines — only without image */}
+                    {!domain.image_url && [0, 60, 120, 180, 240, 300].map(x => (
                         <line key={x} x1={x} y1="0" x2={x} y2="130" stroke={t.color} strokeOpacity="0.06" strokeWidth="1" />
                     ))}
-                    {[0, 43, 86, 130].map(y => (
+                    {!domain.image_url && [0, 43, 86, 130].map(y => (
                         <line key={y} x1="0" y1={y} x2="300" y2={y} stroke={t.color} strokeOpacity="0.06" strokeWidth="1" />
                     ))}
 
-                    {/* Large background icon */}
-                    <text
-                        x="230" y="105"
-                        fontSize="90"
-                        fontFamily="system-ui, sans-serif"
-                        fill={t.color}
-                        fillOpacity="0.12"
-                        textAnchor="middle"
-                    >
-                        {t.icon}
-                    </text>
+                    {/* Large background icon — only without image */}
+                    {!domain.image_url && (
+                        <text
+                            x="230" y="105"
+                            fontSize="90"
+                            fontFamily="system-ui, sans-serif"
+                            fill={t.color}
+                            fillOpacity="0.12"
+                            textAnchor="middle"
+                        >
+                            {t.icon}
+                        </text>
+                    )}
 
                     {/* Theme label chip */}
                     <rect x="12" y="10" width="70" height="18" rx="9" fill={t.color} fillOpacity="0.25" />

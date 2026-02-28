@@ -105,6 +105,11 @@ def get_domains_collection():
     return get_db().get_collection('domains')
 
 
+def get_domain_images_collection():
+    """Collection para cache global de imagens de domínio (por tema)."""
+    return get_db().get_collection('domain_images')
+
+
 def get_scenario_cards_collection():
     """Collection para cards de cenário gerados e salvos."""
     return get_db().get_collection('scenario_cards')
