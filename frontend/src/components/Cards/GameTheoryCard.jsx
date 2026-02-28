@@ -87,8 +87,8 @@ export default function GameTheoryCard({
           swiping === 'right'
             ? 'translateX(120%) rotate(12deg)'
             : swiping === 'left'
-            ? 'translateX(-120%) rotate(-12deg)'
-            : 'none',
+              ? 'translateX(-120%) rotate(-12deg)'
+              : 'none',
         opacity: swiping ? 0 : 1,
       }}
     >
@@ -113,15 +113,15 @@ export default function GameTheoryCard({
           <rect width="370" height="155" fill={`url(#${gradId})`} />
 
           {/* Diagonal accent lines */}
-          <line x1="0"   y1="0"   x2="370" y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
-          <line x1="370" y1="0"   x2="0"   y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
-          <line x1="185" y1="0"   x2="185" y2="155" stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
-          <line x1="0"   y1="77"  x2="370" y2="77"  stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
+          <line x1="0" y1="0" x2="370" y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
+          <line x1="370" y1="0" x2="0" y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
+          <line x1="185" y1="0" x2="185" y2="155" stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
+          <line x1="0" y1="77" x2="370" y2="77" stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
 
           {/* Decorative aura circles */}
-          <circle cx="310" cy="40"  r="85"  fill={tmpl.color} fillOpacity="0.06" />
-          <circle cx="310" cy="40"  r="52"  fill={tmpl.color} fillOpacity="0.07" />
-          <circle cx="55"  cy="125" r="65"  fill={tmpl.color} fillOpacity="0.05" />
+          <circle cx="310" cy="40" r="85" fill={tmpl.color} fillOpacity="0.06" />
+          <circle cx="310" cy="40" r="52" fill={tmpl.color} fillOpacity="0.07" />
+          <circle cx="55" cy="125" r="65" fill={tmpl.color} fillOpacity="0.05" />
 
           {/* Large background symbol */}
           <text
@@ -138,8 +138,8 @@ export default function GameTheoryCard({
           {/* ── Template label badge (top-left) ── */}
           <rect x="0" y="0" width={tmpl.labelWidth} height="22" fill={tmpl.color} fillOpacity="0.92" rx="0" />
           {/* bottom-right corner rounding only */}
-          <rect x={tmpl.labelWidth - 8} y="0"  width="8" height="22" fill={tmpl.color} fillOpacity="0.92" />
-          <rect x={tmpl.labelWidth - 8} y="14" width="8" height="8"  fill={tmpl.innerBg} />
+          <rect x={tmpl.labelWidth - 8} y="0" width="8" height="22" fill={tmpl.color} fillOpacity="0.92" />
+          <rect x={tmpl.labelWidth - 8} y="14" width="8" height="8" fill={tmpl.innerBg} />
           <text
             x="10" y="15"
             fill="#000"
@@ -191,7 +191,7 @@ export default function GameTheoryCard({
 
           {/* ── Heat bar ── */}
           <rect x="16" y="147" width="338" height="3" rx="1.5" fill="rgba(255,255,255,0.08)" />
-          <rect x="16" y="147" width={heatFill}  height="3" rx="1.5" fill={hc} />
+          <rect x="16" y="147" width={heatFill} height="3" rx="1.5" fill={hc} />
         </svg>
 
         {/* ── HTML Content Area ── */}
@@ -206,7 +206,7 @@ export default function GameTheoryCard({
             }}>
               ▸ Cenário
             </p>
-            <p style={{ color: '#c9d1db', fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+            <p style={{ color: 'var(--text-main)', fontSize: 13, lineHeight: 1.7, margin: 0 }}>
               {card.scenario_context}
             </p>
           </div>
@@ -227,7 +227,7 @@ export default function GameTheoryCard({
             }}>
               ▸ Pergunta Tática
             </p>
-            <p style={{ color: '#fff', fontSize: 14, fontWeight: 600, lineHeight: 1.6, margin: 0 }}>
+            <p style={{ color: 'var(--text-main)', fontSize: 14, fontWeight: 600, lineHeight: 1.6, margin: 0 }}>
               {card.question}
             </p>
           </div>
@@ -262,7 +262,7 @@ export default function GameTheoryCard({
                 }}>
                   ▸ Resultado Provável
                 </p>
-                <p style={{ color: '#86efac', fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+                <p style={{ color: 'var(--text-main)', fontSize: 13, lineHeight: 1.7, margin: 0 }}>
                   {card.predicted_outcome}
                 </p>
               </div>
@@ -272,13 +272,13 @@ export default function GameTheoryCard({
                 borderRadius: 8, padding: '11px 13px',
               }}>
                 <p style={{
-                  color: '#6b7280', fontSize: 8, letterSpacing: 3,
+                  color: 'var(--text-muted)', fontSize: 8, letterSpacing: 3,
                   textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
                   margin: '0 0 5px', fontWeight: 700,
                 }}>
                   ▸ Análise · Teoria dos Jogos
                 </p>
-                <p style={{ color: '#d1d5db', fontSize: 13, lineHeight: 1.75, margin: 0 }}>
+                <p style={{ color: 'var(--text-main)', fontSize: 13, lineHeight: 1.75, margin: 0 }}>
                   {card.game_theory_explanation}
                 </p>
               </div>
@@ -288,31 +288,31 @@ export default function GameTheoryCard({
           {/* Action buttons */}
           {footer ?? (onSave || onDiscard ? (
             <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={onDiscard}
-              style={{
-                flex: 1, padding: '11px 0', borderRadius: 8,
-                border: '1px solid #ef4444',
-                background: '#ef444411', color: '#ef4444', cursor: 'pointer',
-                fontSize: 18, fontWeight: 700,
-              }}
-              title="Descartar"
-            >
-              ✕
-            </button>
-            <button
-              onClick={onSave}
-              style={{
-                flex: 3, padding: '11px 0', borderRadius: 8, border: 'none',
-                background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-                color: '#fff', cursor: 'pointer',
-                fontSize: 11, fontWeight: 700, letterSpacing: 2,
-                textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
-              }}
-            >
-              Salvar no Deck →
-            </button>
-          </div>
+              <button
+                onClick={onDiscard}
+                style={{
+                  flex: 1, padding: '11px 0', borderRadius: 8,
+                  border: '1px solid #ef4444',
+                  background: '#ef444411', color: '#ef4444', cursor: 'pointer',
+                  fontSize: 18, fontWeight: 700,
+                }}
+                title="Descartar"
+              >
+                ✕
+              </button>
+              <button
+                onClick={onSave}
+                style={{
+                  flex: 3, padding: '11px 0', borderRadius: 8, border: 'none',
+                  background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                  color: '#fff', cursor: 'pointer',
+                  fontSize: 11, fontWeight: 700, letterSpacing: 2,
+                  textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
+                }}
+              >
+                Salvar no Deck →
+              </button>
+            </div>
           ) : null)}
         </div>
       </div>

@@ -2,10 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
-import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import DemoPage from './pages/DemoPage';
 import DomainsPage from './pages/DomainsPage';
 import CardSwipePage from './pages/CardSwipePage';
 import TrainingPage from './pages/TrainingPage';
@@ -32,12 +30,10 @@ function ProtectedRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<DomainsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/demo" element={<DemoPage />} />
-      <Route path="/dominios" element={<ProtectedRoute><DomainsPage /></ProtectedRoute>} />
-      <Route path="/criar/:domainId" element={<ProtectedRoute><CardSwipePage /></ProtectedRoute>} />
+      <Route path="/criar/:domainId" element={<CardSwipePage />} />
       <Route path="/treinar" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
       <Route path="/oracle" element={<ProtectedRoute><OracleDashboardPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -45,12 +41,19 @@ function AppRoutes() {
   );
 }
 
-export default function App() {
+import { useDynamicStatusBar } from './hooks/useDynamicStatusBar';
 
+function DynamicStatusBarHandler() {
+  useDynamicStatusBar();
+  return null;
+}
+
+export default function App() {
   return (
     <BrowserRouter>
+      <DynamicStatusBarHandler />
       <AuthProvider>
-        <div className="min-h-screen flex flex-col" style={{ background: '#12121a' }}>
+        <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-app)', transition: 'background-color 0.3s ease' }}>
           <Navbar />
           <main className="flex-1">
             <AppRoutes />

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { domainsAPI } from '../services/api';
-
+import { useAuth } from '../context/AuthContext';
+import { DEMO_DOMAINS } from '../utils/demoData';
 const THEMES = [
   { value: 'dating', label: 'Dinâmicas de Encontros' },
   { value: 'office', label: 'Política do Escritório' },
@@ -66,16 +67,16 @@ function NewDomainModal({ onClose, onCreate }) {
     >
       <div
         style={{
-          background: '#1a1a2e', border: '1px solid #6b21a8', borderRadius: 12,
+          background: 'var(--bg-card)', border: '1px solid var(--accent-dark)', borderRadius: 12,
           padding: '2rem', width: '100%', maxWidth: 420,
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 style={{ color: '#e9d5ff', fontSize: 18, fontWeight: 700, marginBottom: 20, letterSpacing: 2, textTransform: 'uppercase' }}>
+        <h2 style={{ color: 'var(--text-highlight)', fontSize: 18, fontWeight: 700, marginBottom: 20, letterSpacing: 2, textTransform: 'uppercase' }}>
           Novo Domínio
         </h2>
         <form onSubmit={handleSubmit}>
-          <label style={{ color: '#9ca3af', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+          <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
             Nome do Domínio
           </label>
           <input
@@ -84,20 +85,20 @@ function NewDomainModal({ onClose, onCreate }) {
             placeholder="Ex: Dinâmicas de Escritório Q4"
             required
             style={{
-              width: '100%', background: '#0f172a', border: '1px solid #374151',
-              color: '#e5e7eb', borderRadius: 6, padding: '8px 12px', fontSize: 14,
+              width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)',
+              color: 'var(--text-main)', borderRadius: 6, padding: '8px 12px', fontSize: 14,
               outline: 'none', marginBottom: 16, boxSizing: 'border-box',
             }}
           />
-          <label style={{ color: '#9ca3af', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+          <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
             Tema
           </label>
           <select
             value={theme}
             onChange={(e) => setTheme(e.target.value)}
             style={{
-              width: '100%', background: '#0f172a', border: '1px solid #374151',
-              color: '#e5e7eb', borderRadius: 6, padding: '8px 12px', fontSize: 14,
+              width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)',
+              color: 'var(--text-main)', borderRadius: 6, padding: '8px 12px', fontSize: 14,
               outline: 'none', marginBottom: theme === 'custom' ? 8 : 24, boxSizing: 'border-box',
             }}
           >
@@ -109,8 +110,8 @@ function NewDomainModal({ onClose, onCreate }) {
               onChange={(e) => setCustomTheme(e.target.value)}
               placeholder="Descreva o tema..."
               style={{
-                width: '100%', background: '#0f172a', border: '1px solid #374151',
-                color: '#e5e7eb', borderRadius: 6, padding: '8px 12px', fontSize: 14,
+                width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)',
+                color: 'var(--text-main)', borderRadius: 6, padding: '8px 12px', fontSize: 14,
                 outline: 'none', marginBottom: 24, boxSizing: 'border-box',
               }}
             />
@@ -121,8 +122,8 @@ function NewDomainModal({ onClose, onCreate }) {
               type="button"
               onClick={onClose}
               style={{
-                flex: 1, padding: '9px 0', borderRadius: 6, border: '1px solid #374151',
-                color: '#9ca3af', background: 'transparent', cursor: 'pointer', fontSize: 13,
+                flex: 1, padding: '9px 0', borderRadius: 6, border: '1px solid var(--border-color)',
+                color: 'var(--text-muted)', background: 'transparent', cursor: 'pointer', fontSize: 13,
               }}
             >
               Cancelar
@@ -132,7 +133,7 @@ function NewDomainModal({ onClose, onCreate }) {
               disabled={loading}
               style={{
                 flex: 2, padding: '9px 0', borderRadius: 6, border: 'none',
-                background: '#7c3aed', color: '#fff', cursor: 'pointer', fontSize: 13,
+                background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13,
                 fontWeight: 700, letterSpacing: 1, opacity: loading ? 0.6 : 1,
               }}
             >
@@ -147,6 +148,7 @@ function NewDomainModal({ onClose, onCreate }) {
 
 export default function DomainsPage() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -154,8 +156,12 @@ export default function DomainsPage() {
   const loadDomains = async () => {
     setLoading(true);
     try {
-      const data = await domainsAPI.list();
-      setDomains(data);
+      if (!isAuthenticated) {
+        setDomains(DEMO_DOMAINS);
+      } else {
+        const data = await domainsAPI.list();
+        setDomains(data);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -171,37 +177,49 @@ export default function DomainsPage() {
   };
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', padding: '2rem 1rem' }}>
+    <div style={{ minHeight: 'calc(100vh - 56px)', padding: '2rem 1rem' }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
           <div>
-            <h1 style={{ color: '#e9d5ff', fontSize: 24, fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase', margin: 0 }}>
+            <h1 style={{ color: 'var(--text-highlight)', fontSize: 24, fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase', margin: 0 }}>
               Domínios de Jogo
             </h1>
-            <p style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
               Cada domínio é um campo de batalha. Escolha o teu e treina os reflexos.
             </p>
           </div>
-          <button
-            onClick={() => setShowModal(true)}
-            style={{
-              background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8,
-              padding: '10px 20px', fontSize: 13, fontWeight: 700, letterSpacing: 1,
-              cursor: 'pointer', textTransform: 'uppercase',
-            }}
-          >
-            + Novo Domínio
-          </button>
+          {isAuthenticated ? (
+            <button
+              onClick={() => setShowModal(true)}
+              style={{
+                background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8,
+                padding: '10px 20px', fontSize: 13, fontWeight: 700, letterSpacing: 1,
+                cursor: 'pointer', textTransform: 'uppercase',
+              }}
+            >
+              + Novo Domínio
+            </button>
+          ) : (
+            <div style={{
+              background: 'var(--bg-card-inner)', border: '1px solid var(--accent)',
+              borderRadius: 8, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12
+            }}>
+              <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>MODO DEMO</span>
+              <Link to="/register" style={{ color: 'var(--text-highlight)', fontSize: 12, fontWeight: 600, textDecoration: 'underline' }}>
+                Criar Conta Grátis →
+              </Link>
+            </div>
+          )}
         </div>
 
         {loading ? (
-          <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 80 }}>A carregar domínios...</p>
+          <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: 80 }}>A carregar domínios...</p>
         ) : domains.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: 80 }}>
-            <p style={{ color: '#4b5563', fontSize: 48, marginBottom: 16 }}>⚡</p>
-            <p style={{ color: '#6b7280', fontSize: 16, marginBottom: 8 }}>Nenhum domínio criado ainda.</p>
-            <p style={{ color: '#4b5563', fontSize: 13 }}>Cria o teu primeiro domínio para começar a treinar.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 48, marginBottom: 16 }}>⚡</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 16, marginBottom: 8 }}>Nenhum domínio criado ainda.</p>
+            <p style={{ color: 'var(--border-color)', fontSize: 13 }}>Cria o teu primeiro domínio para começar a treinar.</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
@@ -210,18 +228,18 @@ export default function DomainsPage() {
                 key={domain.id}
                 onClick={() => navigate(`/criar/${domain.id}`)}
                 style={{
-                  background: '#1a1a2e', border: '1px solid #2d2d44', borderRadius: 12,
+                  background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 12,
                   padding: '1.25rem', cursor: 'pointer', transition: 'border-color 0.2s',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#7c3aed'}
-                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#2d2d44'}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent)'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <h3 style={{ color: '#e9d5ff', fontSize: 16, fontWeight: 700, margin: 0, flex: 1, marginRight: 8 }}>
+                  <h3 style={{ color: 'var(--text-highlight)', fontSize: 16, fontWeight: 700, margin: 0, flex: 1, marginRight: 8 }}>
                     {domain.name}
                   </h3>
                   <span style={{
-                    background: '#7c3aed22', color: '#a78bfa', border: '1px solid #7c3aed44',
+                    background: 'var(--bg-card-inner)', color: 'var(--accent)', border: '1px solid var(--accent-dark)',
                     borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 600,
                     letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap',
                   }}>
@@ -230,24 +248,24 @@ export default function DomainsPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: '#9ca3af', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Cards</div>
-                    <div style={{ color: '#e9d5ff', fontSize: 22, fontWeight: 800 }}>{stats.cards_count}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Cards</div>
+                    <div style={{ color: 'var(--text-highlight)', fontSize: 22, fontWeight: 800 }}>{stats.cards_count}</div>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: '#9ca3af', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Hoje</div>
-                    <div style={{ color: stats.due_today > 0 ? '#f59e0b' : '#6b7280', fontSize: 22, fontWeight: 800 }}>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Hoje</div>
+                    <div style={{ color: stats.due_today > 0 ? '#f59e0b' : 'var(--text-muted)', fontSize: 22, fontWeight: 800 }}>
                       {stats.due_today}
                     </div>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ color: '#9ca3af', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Precisão</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Precisão</div>
                     <div style={{ color: '#22c55e', fontSize: 22, fontWeight: 800 }}>
                       {stats.accuracy > 0 ? `${Math.round(stats.accuracy * 100)}%` : '—'}
                     </div>
                   </div>
                 </div>
                 <div style={{ marginTop: 14, textAlign: 'right' }}>
-                  <span style={{ color: '#7c3aed', fontSize: 12, fontWeight: 600 }}>Gerar Cards →</span>
+                  <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 600 }}>Gerar Cards →</span>
                 </div>
               </div>
             ))}
