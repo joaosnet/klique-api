@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import './RegisterForm.css';
+import { getErrorMessage } from '../../utils/errorHandler';
 
 export default function RegisterForm() {
     const [name, setName] = useState('');
@@ -36,8 +37,7 @@ export default function RegisterForm() {
             });
         } catch (err) {
             setError(
-                err.response?.data?.detail ||
-                'Erro ao criar conta. Tente novamente.'
+                getErrorMessage(err, 'Erro ao criar conta. Tente novamente.')
             );
         } finally {
             setLoading(false);

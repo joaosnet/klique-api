@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import MagicLinkCallback from './pages/MagicLinkCallback';
 import DomainsPage from './pages/DomainsPage';
 import CardSwipePage from './pages/CardSwipePage';
 import TrainingPage from './pages/TrainingPage';
@@ -33,6 +34,7 @@ function AppRoutes() {
       <Route path="/" element={<DomainsPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/magic-login" element={<MagicLinkCallback />} />
       <Route path="/criar/:domainId" element={<CardSwipePage />} />
       <Route path="/treinar" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
       <Route path="/oracle" element={<ProtectedRoute><OracleDashboardPage /></ProtectedRoute>} />

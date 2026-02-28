@@ -32,11 +32,15 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
+    // Allow HMR to work inside Docker — the browser connects to the host machine
+    hmr: {
+      clientPort: 3000,
+    },
     proxy: {
-      '/api': { target: 'http://localhost:8000', changeOrigin: true },
-      '/token': { target: 'http://localhost:8000', changeOrigin: true },
-      '/auth': { target: 'http://localhost:8000', changeOrigin: true },
-      '/users': { target: 'http://localhost:8000', changeOrigin: true },
+      '/api': { target: process.env.VITE_BACKEND_URL || 'http://fastapi-klique:8000', changeOrigin: true },
+      '/token': { target: process.env.VITE_BACKEND_URL || 'http://fastapi-klique:8000', changeOrigin: true },
+      '/auth': { target: process.env.VITE_BACKEND_URL || 'http://fastapi-klique:8000', changeOrigin: true },
+      '/users': { target: process.env.VITE_BACKEND_URL || 'http://fastapi-klique:8000', changeOrigin: true },
     },
   },
 })

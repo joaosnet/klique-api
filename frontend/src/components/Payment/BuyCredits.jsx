@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { paymentsAPI } from '../../services/api';
 import './BuyCredits.css';
+import { getErrorMessage } from '../../utils/errorHandler';
 
 export default function BuyCredits() {
     const [unitPrice, setUnitPrice] = useState(1.00);
@@ -63,8 +64,7 @@ export default function BuyCredits() {
             setPayment(result);
         } catch (err) {
             setError(
-                err.response?.data?.detail ||
-                'Erro ao criar pagamento. Tente novamente.'
+                getErrorMessage(err, 'Erro ao criar pagamento. Tente novamente.')
             );
         } finally {
             setLoading(false);

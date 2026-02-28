@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './LoginForm.css';
+import { getErrorMessage } from '../../utils/errorHandler';
 
 export default function LoginForm() {
     const [email, setEmail] = useState('');
@@ -22,8 +23,7 @@ export default function LoginForm() {
             navigate('/');
         } catch (err) {
             setError(
-                err.response?.data?.detail ||
-                'Erro ao fazer login. Verifique suas credenciais.'
+                getErrorMessage(err, 'Erro ao fazer login. Verifique suas credenciais.')
             );
         } finally {
             setLoading(false);

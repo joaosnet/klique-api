@@ -72,6 +72,18 @@ def get_processed_messages_collection():
     return get_db().get_collection('processed_messages')
 
 
+def get_otp_collection():
+    return get_db().get_collection('otp')
+
+
+def get_magic_links_collection():
+    return get_db().get_collection('magic_links')
+
+
+def get_webauthn_challenges_collection():
+    return get_db().get_collection('webauthn_challenges')
+
+
 def get_status_generation_rate_limit_collection():
     return get_db().get_collection('status_generation_rate_limit')
 

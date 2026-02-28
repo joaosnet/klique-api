@@ -31,14 +31,21 @@ class User(MongoBaseModel):
     """Modelo de usuário do MongoDB."""
 
     id: str = Field(..., alias='_id')
-    profile_id: str
+    profile_id: Optional[str] = None
     name: str
-    email: EmailStr
-    user_type: str
-    confirmed_code: bool
+    email: Optional[EmailStr] = None
+    phone_number: Optional[str] = None
+    user_type: str = 'user'
+    confirmed_code: bool = False
     created_at: datetime
     updated_at: datetime
     password: Optional[str] = None
+    google_id: Optional[str] = None
+    apple_id: Optional[str] = None
+    guest_id: Optional[str] = None
+    is_temporary: bool = False
+    auth_methods: list[str] = ['password']
+    webauthn_credentials: list[dict] = []
 
 
 class Profile(MongoBaseModel):
@@ -53,7 +60,8 @@ class Profile(MongoBaseModel):
     district: str
     deficiency: str
     avatar_url: Optional[str] = None
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone_number: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -68,8 +76,9 @@ class TokenData(BaseModel):
 
 
 class LoginForm(BaseModel):
-    email: EmailStr
-    password: str
+    email: Optional[EmailStr] = None
+    phone_number: Optional[str] = None
+    password: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -84,6 +93,55 @@ class GoogleLoginRequest(BaseModel):
     token: str
 
 
+class AppleLoginRequest(BaseModel):
+    token: str
+    name: Optional[str] = None
+
+
+class PasskeyRegistrationOptionsResponse(BaseModel):
+    options: dict
+    registration_id: str
+
+
+class PasskeyRegistrationVerificationRequest(BaseModel):
+    registration_id: str
+    credential: dict
+
+
+class PasskeyAuthenticationOptionsResponse(BaseModel):
+    options: dict
+    authentication_id: str
+
+
+class PasskeyAuthenticationVerificationRequest(BaseModel):
+    authentication_id: str
+    credential: dict
+
+
+class OTPRequest(BaseModel):
+    phone_number: str
+    method: str = 'whatsapp'  # 'whatsapp' or 'sms'
+
+
+class OTPVerifyRequest(BaseModel):
+    phone_number: str
+    code: str
+
+
+class MagicLinkRequest(BaseModel):
+    email: EmailStr
+
+
+class MagicLinkVerifyRequest(BaseModel):
+    token: str
+
+
+class LazyRegistrationResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user_id: str
+
+
 class UserCreate(BaseModel):
     name: str = Form('João Neto')
     country: str = Form('Brasil')
@@ -92,8 +150,9 @@ class UserCreate(BaseModel):
     district: str = Form('Centro')
     deficiency: str = Form('Nenhuma')
     avatar_url: Optional[str] = None
-    email: EmailStr = Form('joao@example.com')
-    password: str = Form('senha')
+    email: Optional[EmailStr] = Form(None)
+    phone_number: Optional[str] = Form(None)
+    password: Optional[str] = Form(None)
 
 
 class UserResponse(MongoBaseModel):

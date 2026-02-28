@@ -4,6 +4,7 @@ import { domainsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { DEMO_DOMAINS } from '../utils/demoData';
 import DomainSVGCard from '../components/Cards/DomainSVGCard';
+import { getErrorMessage } from '../utils/errorHandler';
 const THEMES = [
   { value: 'dating', label: 'Dinâmicas de Encontros' },
   { value: 'office', label: 'Política do Escritório' },
@@ -52,7 +53,7 @@ function NewDomainModal({ onClose, onCreate }) {
       await onCreate(name.trim(), finalTheme);
       onClose();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Erro ao criar domínio');
+      setError(getErrorMessage(err, 'Erro ao criar domínio'));
     } finally {
       setLoading(false);
     }

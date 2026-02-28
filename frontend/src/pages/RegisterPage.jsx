@@ -2,27 +2,60 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
+import { getErrorMessage } from '../utils/errorHandler';
 
 // ── Step 1: Basic Data ───────────────────────────────────────────────────────
 function StepBasicData({ data, onChange, onNext }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [usePasskey, setUsePasskey] = useState(false);
+  const { login, registerPasskey, loginWithGoogle } = useAuth();
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      // Mock token for demo, similar to LoginPage
+      alert("Google Login placeholder - Irá criar a conta e pular o passo 1.");
+      // await loginWithGoogle("google-token");
+      // onNext();
+    } catch (err) {
+      setError("Erro no cadastro com Google");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (data.password.length < 6) {
+    if (!usePasskey && data.password.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres.');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      await authAPI.register(data.name, data.email, data.password);
-      await login(data.email, data.password);
+      let finalPassword = data.password;
+      if (usePasskey) {
+        const array = new Uint8Array(16);
+        window.crypto.getRandomValues(array);
+        finalPassword = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+      }
+
+      await authAPI.register(data.name, data.email, finalPassword);
+      await login(data.email, finalPassword);
+
+      if (usePasskey) {
+        try {
+          await registerPasskey();
+        } catch (pkErr) {
+          console.warn('Registro de passkey cancelado ou falhou, continuando com a conta criada.');
+        }
+      }
+
       onNext();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Erro ao cadastrar. Tente novamente.');
+      setError(getErrorMessage(err, 'Erro ao cadastrar. Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -34,60 +67,126 @@ function StepBasicData({ data, onChange, onNext }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {['name', 'email', 'password'].map((field) => (
-        <div key={field}>
-          <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">
-            {field === 'name' ? 'Nome' : field === 'email' ? 'Email' : 'Senha'}
+    <div className="space-y-6">
+      {/* Social Buttons */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:bg-white/5"
+          style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
+          Google
+        </button>
+        <button
+          type="button"
+          className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:bg-white/5"
+          style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <span className="text-lg"></span>
+          Apple
+        </button>
+      </div>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+        <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#15121f] px-2 text-gray-500 tracking-tighter">ou use seu email</span></div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {['name', 'email'].map((field) => (
+          <div key={field}>
+            <label className="block text-[10px] uppercase tracking-widest text-gray-400 mb-1.5 ml-1">
+              {field === 'name' ? 'Nome' : 'Email'}
+            </label>
+            <input
+              type={field === 'name' ? 'text' : 'email'}
+              value={data[field]}
+              onChange={(e) => onChange(field, e.target.value)}
+              placeholder={field === 'email' ? 'seu@email.com' : 'Seu nome'}
+              required
+              className="w-full rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-600 outline-none focus:ring-1 ring-purple-500"
+              style={inputStyle}
+            />
+          </div>
+        ))}
+
+        {!usePasskey && (
+          <div>
+            <label className="block text-[10px] uppercase tracking-widest text-gray-400 mb-1.5 ml-1">Senha</label>
+            <input
+              type="password"
+              value={data.password}
+              onChange={(e) => onChange('password', e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+              required={!usePasskey}
+              className="w-full rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-600 outline-none focus:ring-1 ring-purple-500"
+              style={inputStyle}
+            />
+          </div>
+        )}
+
+        <div className="flex items-center justify-between p-3 rounded-lg mt-2" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
+          <div>
+            <span className="block text-sm text-orange-400 font-semibold mb-0.5">Criar Passkey (Biometria)</span>
+            <span className="block text-xs text-orange-200/70">Login sem senha, mais rápido e seguro.</span>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" checked={usePasskey} onChange={(e) => setUsePasskey(e.target.checked)} className="sr-only peer" />
+            <div className="w-11 h-6 bg-orange-900/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
           </label>
-          <input
-            type={field === 'password' ? 'password' : field === 'email' ? 'email' : 'text'}
-            value={data[field]}
-            onChange={(e) => onChange(field, e.target.value)}
-            placeholder={field === 'email' ? 'seu@email.com' : field === 'password' ? 'Mínimo 6 caracteres' : 'Seu nome'}
-            required
-            className="w-full rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-600 outline-none"
-            style={inputStyle}
-          />
         </div>
-      ))}
-      {error && (
-        <p className="text-sm rounded-lg px-3 py-2"
-           style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.3)' }}>
-          {error}
-        </p>
-      )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90 disabled:opacity-50"
-        style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
-      >
-        {loading ? 'Criando conta...' : 'Criar Conta & Continuar →'}
-      </button>
-    </form>
+
+        {error && (
+          <p className="text-sm rounded-lg px-4 py-3 mt-4" style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.3)' }}>
+            {error}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full mt-6 py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90 disabled:opacity-50"
+          style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
+        >
+          {loading ? 'Aguarde...' : 'Criar Conta & Continuar →'}
+        </button>
+      </form>
+    </div>
   );
 }
 
 // ── Step 2: Prisoner's Dilemma ────────────────────────────────────────────────
 const OUTCOMES = {
   cooperate: {
-    cooperate: { you: '+3', other: '+3', label: 'Ganho Mútuo', color: '#22c55e',
-      desc: 'Quando dois cooperam, o sistema prospera. Ótimo de Pareto — mas não Equilíbrio de Nash.' },
-    defect:    { you: '-1', other: '+5', label: 'Você foi explorado', color: '#ef4444',
-      desc: 'Você cooperou e foi traído. O traidor leva tudo, você fica com o prejuízo.' },
+    cooperate: {
+      you: '+3', other: '+3', label: 'Ganho Mútuo', color: '#22c55e',
+      desc: 'Quando dois cooperam, o sistema prospera. Ótimo de Pareto — mas não Equilíbrio de Nash.'
+    },
+    defect: {
+      you: '-1', other: '+5', label: 'Você foi explorado', color: '#ef4444',
+      desc: 'Você cooperou e foi traído. O traidor leva tudo, você fica com o prejuízo.'
+    },
   },
   defect: {
-    cooperate: { you: '+5', other: '-1', label: 'Você explorou', color: '#f59e0b',
-      desc: 'Você traiu quem confiava. Lucrativo no curto prazo, destrutivo no longo.' },
-    defect:    { you: '+1', other: '+1', label: 'Guerra de Atrito', color: '#ef4444',
-      desc: 'Ambos desconfiam, ambos perdem pouco. Este é o Equilíbrio de Nash.' },
+    cooperate: {
+      you: '+5', other: '-1', label: 'Você explorou', color: '#f59e0b',
+      desc: 'Você traiu quem confiava. Lucrativo no curto prazo, destrutivo no longo.'
+    },
+    defect: {
+      you: '+1', other: '+1', label: 'Guerra de Atrito', color: '#ef4444',
+      desc: 'Ambos desconfiam, ambos perdem pouco. Este é o Equilíbrio de Nash.'
+    },
   },
   isolate: {
-    cooperate: { you: '0', other: '0', label: 'Isolamento', color: '#6b7280',
-      desc: 'Você se isolou. Seguro, mas sem crescimento.' },
-    defect:    { you: '0', other: '0', label: 'Isolamento', color: '#6b7280',
-      desc: 'Você se isolou. Não foi explorado, mas ficou parado.' },
+    cooperate: {
+      you: '0', other: '0', label: 'Isolamento', color: '#6b7280',
+      desc: 'Você se isolou. Seguro, mas sem crescimento.'
+    },
+    defect: {
+      you: '0', other: '0', label: 'Isolamento', color: '#6b7280',
+      desc: 'Você se isolou. Não foi explorado, mas ficou parado.'
+    },
   },
 };
 
@@ -109,8 +208,8 @@ function StepPrisonersDilemma({ onNext }) {
         <div className="space-y-3">
           {[
             { key: 'cooperate', label: 'COLABORAR', desc: 'Confio no outro. Juntos podemos ganhar.', color: '#22c55e' },
-            { key: 'defect',    label: 'EXPLORAR',  desc: 'Vou trair. Maximizo meu ganho individual.', color: '#ef4444' },
-            { key: 'isolate',   label: 'ISOLAR',    desc: 'Me retiro. Não arrisquei, não ganhei.', color: '#6b7280' },
+            { key: 'defect', label: 'EXPLORAR', desc: 'Vou trair. Maximizo meu ganho individual.', color: '#ef4444' },
+            { key: 'isolate', label: 'ISOLAR', desc: 'Me retiro. Não arrisquei, não ganhei.', color: '#6b7280' },
           ].map(({ key, label, desc, color }) => (
             <button
               key={key}
@@ -149,7 +248,7 @@ function StepPrisonersDilemma({ onNext }) {
             </div>
           </div>
           <div className="rounded-lg p-4 text-xs text-gray-400"
-               style={{ background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)' }}>
+            style={{ background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)' }}>
             <span className="text-purple-300 font-semibold">Nash Equilibrium:</span>{' '}
             Quando ambos exploram — ninguém tem incentivo de mudar sozinho, mesmo que cooperar fosse melhor para todos.
           </div>
@@ -168,11 +267,11 @@ function StepPrisonersDilemma({ onNext }) {
 
 // ── Step 3: Battle Card Creator ───────────────────────────────────────────────
 const AI_QUESTIONS = [
-  { id: 'style',    q: 'No conflito, você tende a...', opts: ['Cooperar primeiro, retaliar se traído', 'Atacar antes de ser atacado', 'Observar e esperar o momento certo'] },
+  { id: 'style', q: 'No conflito, você tende a...', opts: ['Cooperar primeiro, retaliar se traído', 'Atacar antes de ser atacado', 'Observar e esperar o momento certo'] },
   { id: 'strength', q: 'Sua maior força estratégica é...', opts: ['Construir alianças duradouras', 'Antecipar movimentos do adversário', 'Adaptar-se rapidamente a mudanças'] },
   { id: 'betrayal', q: 'Quando alguém te trai você...', opts: ['Respondo com força proporcional', 'Corto qualquer relação futura', 'Espero a oportunidade de virar o jogo'] },
   { id: 'resource', q: 'Você prioriza recursos ou influência?', opts: ['Recursos — capital é poder real', 'Influência — quem controla narrativas, vence', 'Equilíbrio entre os dois'] },
-  { id: 'horizon',  q: 'Seu horizonte de planejamento é...', opts: ['Próximas 72 horas (tático)', 'Próximo ano (estratégico)', 'Próxima década (geopolítico)'] },
+  { id: 'horizon', q: 'Seu horizonte de planejamento é...', opts: ['Próximas 72 horas (tático)', 'Próximo ano (estratégico)', 'Próxima década (geopolítico)'] },
 ];
 
 function StepBattleCardCreator({ onNext }) {
@@ -195,7 +294,7 @@ function StepBattleCardCreator({ onNext }) {
           Foto (opcional)
         </label>
         <div className="image-upload-wrapper"
-             style={photoBase64 ? { backgroundImage: `url(${photoBase64})` } : {}}>
+          style={photoBase64 ? { backgroundImage: `url(${photoBase64})` } : {}}>
           <input type="file" accept="image/*" onChange={handlePhoto} />
           {!photoBase64 && (
             <div className="text-center pointer-events-none">
@@ -243,9 +342,9 @@ function StepBattleCardCreator({ onNext }) {
 
 // ── Step 4: Final Card ────────────────────────────────────────────────────────
 const STRATEGY_MAP = {
-  'Cooperar primeiro, retaliar se traído': { name: 'TIT-FOR-TAT',  color: '#22c55e' },
-  'Atacar antes de ser atacado':           { name: 'FIRST-STRIKE', color: '#ef4444' },
-  'Observar e esperar o momento certo':    { name: 'PATIENT HAWK', color: '#f59e0b' },
+  'Cooperar primeiro, retaliar se traído': { name: 'TIT-FOR-TAT', color: '#22c55e' },
+  'Atacar antes de ser atacado': { name: 'FIRST-STRIKE', color: '#ef4444' },
+  'Observar e esperar o momento certo': { name: 'PATIENT HAWK', color: '#f59e0b' },
 };
 
 function StepFinalCard({ name, cardData, onFinish }) {
@@ -265,7 +364,7 @@ function StepFinalCard({ name, cardData, onFinish }) {
               <img src={photo} alt="avatar" className="w-full h-full object-cover absolute inset-0 opacity-90" />
             ) : (
               <div className="w-full h-full flex items-center justify-center"
-                   style={{ background: 'linear-gradient(135deg, #1a0a2e, #4c1d95)' }}>
+                style={{ background: 'linear-gradient(135deg, #1a0a2e, #4c1d95)' }}>
                 <span className="text-5xl">⚡</span>
               </div>
             )}
@@ -289,7 +388,7 @@ function StepFinalCard({ name, cardData, onFinish }) {
       </div>
 
       <div className="w-full rounded-xl p-5 space-y-3"
-           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(168,85,247,0.15)' }}>
+        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(168,85,247,0.15)' }}>
         <h3 className="font-title text-sm tracking-widest text-white">STATS INICIAIS</h3>
         {[
           { label: 'Poder', value: 50, color: '#ef4444' },
@@ -364,10 +463,10 @@ export default function RegisterPage() {
   const handleChange = (field, value) => setFormData((d) => ({ ...d, [field]: value }));
 
   const STEP_TITLES = {
-    1: { title: 'CRIAR CONTA',  sub: 'Comece sua jornada estratégica.' },
-    2: { title: 'TUTORIAL',     sub: 'Aprenda o Dilema do Prisioneiro na prática.' },
-    3: { title: 'SEU CARD',     sub: 'Responda 5 perguntas para gerar sua carta.' },
-    4: { title: 'PRONTO!',      sub: 'Seu card de batalha foi gerado.' },
+    1: { title: 'CRIAR CONTA', sub: 'Comece sua jornada estratégica.' },
+    2: { title: 'TUTORIAL', sub: 'Aprenda o Dilema do Prisioneiro na prática.' },
+    3: { title: 'SEU CARD', sub: 'Responda 5 perguntas para gerar sua carta.' },
+    4: { title: 'PRONTO!', sub: 'Seu card de batalha foi gerado.' },
   };
 
   const { title, sub } = STEP_TITLES[step];
@@ -385,7 +484,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="rounded-2xl p-6 sm:p-8"
-             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(168,85,247,0.2)' }}>
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(168,85,247,0.2)' }}>
           <StepperHeader current={step} />
 
           <h1 className="font-title text-2xl tracking-wider text-white mb-1">{title}</h1>

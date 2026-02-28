@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from http import HTTPStatus
+from typing import Optional
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -13,6 +14,7 @@ from ..database import get_profiles_collection, get_users_collection
 from ..dependencies import (
     create_access_token,
     get_password_hash,
+    get_current_user_optional,
 )
 from ..logger import logger
 from .schemas import (
@@ -25,6 +27,7 @@ from .schemas import (
     confirmCodeResponse,
     verifyEmailRequest,
     verifyEmailResponse,
+    User as UserSchema,
 )
 
 router = APIRouter()
@@ -40,53 +43,99 @@ async def register(
     user_data: UserCreate,
     db_users=Depends(get_users_collection),
     db_profiles=Depends(get_profiles_collection),
+    current_user: Optional[dict] = Depends(get_current_user_optional),
 ):
-    # Verificar se o e-mail já existe
+    # Verificar se o e-mail já existe (apenas se não for o e-mail do próprio usuário atual)
     existing_user = await db_users.find_one({'email': user_data.email})
-    if existing_user:
+    if existing_user and (
+        not current_user
+        or str(existing_user['_id']) != str(current_user['_id'])
+    ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail='E-mail já cadastrado.',
         )
 
-    # Criar perfil
-    profile = Profile(
-        name=user_data.name,
-        nickname=user_data.name,
-        country=user_data.country,
-        state=user_data.state,
-        city=user_data.city,
-        district=user_data.district,
-        deficiency=user_data.deficiency,
-        avatar_url=user_data.avatar_url,
-        email=user_data.email,
-        created_at=datetime.now(timezone.utc),
-        updated_at=datetime.now(timezone.utc),
-    )
-    new_profile = await db_profiles.insert_one(
-        profile.model_dump(exclude={'id'})
-    )
-
-    # Criar usuário
     hashed_password = get_password_hash(user_data.password)
     confirmation_code = str(random.randint(1000, 9999))
 
-    new_user_data = {
-        'name': user_data.name,
-        'email': user_data.email,
-        'password': hashed_password,
-        'profile_id': str(new_profile.inserted_id),
-        'user_type': 'user',
-        'confirmed_code': False,
-        'confirmation_code': confirmation_code,
-        'created_at': datetime.now(timezone.utc),
-        'updated_at': datetime.now(timezone.utc),
-    }
+    if current_user and current_user.get('is_temporary'):
+        # Upgrade temporary user
+        profile_id = current_user.get('profile_id')
 
-    result = await db_users.insert_one(new_user_data)
-    created_user = await db_users.find_one({'_id': result.inserted_id})
+        # Update profile
+        await db_profiles.update_one(
+            {'_id': ObjectId(profile_id)},
+            {
+                '$set': {
+                    'name': user_data.name,
+                    'nickname': user_data.name,
+                    'country': user_data.country,
+                    'state': user_data.state,
+                    'city': user_data.city,
+                    'district': user_data.district,
+                    'deficiency': user_data.deficiency,
+                    'avatar_url': user_data.avatar_url,
+                    'email': user_data.email,
+                    'updated_at': datetime.now(timezone.utc),
+                }
+            },
+        )
 
-    # Enviar e-mail de confirmação (opcional, mas recomendado)
+        # Update user
+        await db_users.update_one(
+            {'_id': current_user['_id']},
+            {
+                '$set': {
+                    'name': user_data.name,
+                    'email': user_data.email,
+                    'password': hashed_password,
+                    'is_temporary': False,
+                    'confirmed_code': False,
+                    'confirmation_code': confirmation_code,
+                    'updated_at': datetime.now(timezone.utc),
+                }
+            },
+        )
+        created_user = await db_users.find_one({'_id': current_user['_id']})
+    else:
+        # Criar perfil
+        profile = Profile(
+            name=user_data.name,
+            nickname=user_data.name,
+            country=user_data.country,
+            state=user_data.state,
+            city=user_data.city,
+            district=user_data.district,
+            deficiency=user_data.deficiency,
+            avatar_url=user_data.avatar_url,
+            email=user_data.email,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        new_profile = await db_profiles.insert_one(
+            profile.model_dump(exclude={'id'})
+        )
+
+        # Criar usuário
+        new_user_data = {
+            'name': user_data.name,
+            'email': user_data.email,
+            'password': hashed_password,
+            'profile_id': str(new_profile.inserted_id),
+            'user_type': 'user',
+            'is_temporary': False,
+            'auth_methods': ['password'],
+            'confirmed_code': False,
+            'confirmation_code': confirmation_code,
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc),
+        }
+
+        result = await db_users.insert_one(new_user_data)
+        created_user = await db_users.find_one({'_id': result.inserted_id})
+
+    # Enviar e-mail de confirmação
     await send_confirmation_code(
         confirmation_code, created_user['email'], created_user['name']
     )

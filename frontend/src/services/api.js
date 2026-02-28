@@ -59,6 +59,56 @@ export const authAPI = {
         return response.data;
     },
 
+    loginWithApple: async (appleToken, name) => {
+        const response = await api.post('/auth/apple', { token: appleToken, name });
+        return response.data;
+    },
+
+    requestOTP: async (phoneNumber, method = 'whatsapp') => {
+        const response = await api.post('/auth/otp/request', { phone_number: phoneNumber, method });
+        return response.data;
+    },
+
+    verifyOTP: async (phoneNumber, code) => {
+        const response = await api.post('/auth/otp/verify', { phone_number: phoneNumber, code });
+        return response.data;
+    },
+
+    requestMagicLink: async (email) => {
+        const response = await api.post('/auth/magic-link/request', { email });
+        return response.data;
+    },
+
+    verifyMagicLink: async (token) => {
+        const response = await api.post('/auth/magic-link/verify', { token });
+        return response.data;
+    },
+
+    getPasskeyRegistrationOptions: async () => {
+        const response = await api.post('/auth/passkey/register/options');
+        return response.data;
+    },
+
+    verifyPasskeyRegistration: async (registrationId, credential) => {
+        const response = await api.post('/auth/passkey/register/verify', { registration_id: registrationId, credential });
+        return response.data;
+    },
+
+    getPasskeyAuthenticationOptions: async (email) => {
+        const response = await api.post('/auth/passkey/authenticate/options', null, { params: { email } });
+        return response.data;
+    },
+
+    verifyPasskeyAuthentication: async (authenticationId, credential) => {
+        const response = await api.post('/auth/passkey/authenticate/verify', { authentication_id: authenticationId, credential });
+        return response.data;
+    },
+
+    lazyRegister: async () => {
+        const response = await api.post('/auth/lazy');
+        return response.data;
+    },
+
     validateToken: async () => {
         const response = await api.post('/auth/valid_token');
         return response.data;

@@ -67,6 +67,54 @@ export function AuthProvider({ children }) {
         return response;
     };
 
+    const loginWithApple = async (appleToken, name) => {
+        const response = await authAPI.loginWithApple(appleToken, name);
+        localStorage.setItem('access_token', response.access_token);
+
+        const userData = await authAPI.getCurrentUser();
+        setUser(userData);
+        setIsAuthenticated(true);
+        await refreshCredits();
+
+        return response;
+    };
+
+    const loginWithOTP = async (phoneNumber, code) => {
+        const response = await authAPI.verifyOTP(phoneNumber, code);
+        localStorage.setItem('access_token', response.access_token);
+
+        const userData = await authAPI.getCurrentUser();
+        setUser(userData);
+        setIsAuthenticated(true);
+        await refreshCredits();
+
+        return response;
+    };
+
+    const loginWithMagicLink = async (token) => {
+        const response = await authAPI.verifyMagicLink(token);
+        localStorage.setItem('access_token', response.access_token);
+
+        const userData = await authAPI.getCurrentUser();
+        setUser(userData);
+        setIsAuthenticated(true);
+        await refreshCredits();
+
+        return response;
+    };
+
+    const lazyRegister = async () => {
+        const response = await authAPI.lazyRegister();
+        localStorage.setItem('access_token', response.access_token);
+
+        const userData = await authAPI.getCurrentUser();
+        setUser(userData);
+        setIsAuthenticated(true);
+        await refreshCredits();
+
+        return response;
+    };
+
     const logout = async () => {
         try {
             await authAPI.logout();
@@ -79,6 +127,42 @@ export function AuthProvider({ children }) {
         setCredits({ free: 0, paid: 0, total: 0 });
     };
 
+    const registerPasskey = async () => {
+        try {
+            const { options, registration_id } = await authAPI.getPasskeyRegistrationOptions();
+            const { startRegistration } = await import('@simplewebauthn/browser');
+            const attResp = await startRegistration({ optionsJSON: options });
+            await authAPI.verifyPasskeyRegistration(registration_id, attResp);
+            const userData = await authAPI.getCurrentUser();
+            setUser(userData);
+            return true;
+        } catch (error) {
+            console.error('Falha ao registrar passkey:', error);
+            throw error;
+        }
+    };
+
+    const loginWithPasskey = async (email) => {
+        try {
+            const { options, authentication_id } = await authAPI.getPasskeyAuthenticationOptions(email);
+            const { startAuthentication } = await import('@simplewebauthn/browser');
+            const asseResp = await startAuthentication({ optionsJSON: options });
+
+            const response = await authAPI.verifyPasskeyAuthentication(authentication_id, asseResp);
+            localStorage.setItem('access_token', response.access_token);
+
+            const userData = await authAPI.getCurrentUser();
+            setUser(userData);
+            setIsAuthenticated(true);
+            await refreshCredits();
+
+            return response;
+        } catch (error) {
+            console.error('Falha na autenticação com passkey:', error);
+            throw error;
+        }
+    };
+
     const value = {
         user,
         credits,
@@ -86,6 +170,12 @@ export function AuthProvider({ children }) {
         isAuthenticated,
         login,
         loginWithGoogle,
+        loginWithApple,
+        loginWithOTP,
+        loginWithMagicLink,
+        lazyRegister,
+        registerPasskey,
+        loginWithPasskey,
         logout,
         refreshCredits,
     };

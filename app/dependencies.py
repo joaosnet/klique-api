@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pwdlib import PasswordHash
 from pymongo.collection import Collection
+from bson import ObjectId
 
 from .database import (
     get_users_collection,
@@ -65,7 +66,15 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = await db_users.find_one({'email': username})
+    
+    if username.startswith('anon_'):
+        try:
+            user = await db_users.find_one({'_id': ObjectId(username[5:])})
+        except Exception:
+            raise credentials_exception
+    else:
+        user = await db_users.find_one({'$or': [{'email': username}, {'phone_number': username}]})
+        
     if user is None:
         raise credentials_exception
     return user
@@ -101,7 +110,10 @@ async def get_current_user_optional(
         if username is None:
             return None
 
-        user = await db_users.find_one({'email': username})
+        if username.startswith('anon_'):
+            user = await db_users.find_one({'_id': ObjectId(username[5:])})
+        else:
+            user = await db_users.find_one({'$or': [{'email': username}, {'phone_number': username}]})
         return user
     except Exception:
         return None
@@ -123,7 +135,7 @@ def invalidate_token(token: str):
 async def authenticate_user(
     db_users: Collection, username: str, password: str
 ):
-    user = await db_users.find_one({'email': username.lower().strip()})
+    user = await db_users.find_one({'$or': [{'email': username.lower().strip()}, {'phone_number': username.strip()}]})
     if not user:
         return False
     if not user.get('password'):
@@ -142,7 +154,12 @@ async def authenticate_token(token: str, db_users):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid token',
             )
-        user = await db_users.find_one({'email': username})
+        
+        if username.startswith('anon_'):
+            user = await db_users.find_one({'_id': ObjectId(username[5:])})
+        else:
+            user = await db_users.find_one({'$or': [{'email': username}, {'phone_number': username}]})
+            
         if user is None:
             return HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

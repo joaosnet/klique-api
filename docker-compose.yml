@@ -130,24 +130,42 @@ services:
     container_name: klique-frontend
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
-      - "80:80"
+      - "80:3000"
     depends_on:
       - fastapi-app
     networks:
       - whatsapp-network
     restart: always
+    # Bind-mount source so Vite hot-reload picks up changes instantly
+    volumes:
+      - ./frontend:/app
+      # Keep the container's node_modules — don't overwrite with host folder
+      - /app/node_modules
+    environment:
+      - VITE_BACKEND_URL=http://fastapi-klique:8000
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/" ]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+      start_period: 15s
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend/src
+          target: /app/src
+        - action: sync
+          path: ./frontend/public
+          target: /app/public
+        - action: sync
+          path: ./frontend/index.html
+          target: /app/index.html
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/vite.config.js
     logging:
       driver: "json-file"
       options:
