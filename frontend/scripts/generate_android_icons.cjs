@@ -2,41 +2,25 @@ const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs');
 
-const svgPath = path.resolve(__dirname, '../../docs/icone_aplicativo.svg');
+const lightSvgPath = path.resolve(__dirname, '../../docs/icone_aplicativo_light.svg');
+const darkSvgPath = path.resolve(__dirname, '../../docs/icone_aplicativo.svg');
 const androidResPath = path.resolve(__dirname, '../android/app/src/main/res');
 
-const svgBuffer = fs.readFileSync(svgPath);
+const lightSvgBuffer = fs.readFileSync(lightSvgPath);
+const darkSvgBuffer = fs.readFileSync(darkSvgPath);
 
 // Icon sizes needed for each density
 // standard: 48dp
 // adaptive (foreground/background): 108dp
 const mipmapDensities = [
-    { folder: 'mipmap-mdpi', standard: 48, adaptive: 108 },
-    { folder: 'mipmap-hdpi', standard: 72, adaptive: 162 },
-    { folder: 'mipmap-xhdpi', standard: 96, adaptive: 216 },
-    { folder: 'mipmap-xxhdpi', standard: 144, adaptive: 324 },
-    { folder: 'mipmap-xxxhdpi', standard: 192, adaptive: 432 },
-];
-
-// Extra sizes in mipmap-anydpi-v26
-const extraFiles = [
-    { filename: 'ic_launcher_48.png', size: 48 },
-    { filename: 'ic_launcher_72.png', size: 72 },
-    { filename: 'ic_launcher_96.png', size: 96 },
-    { filename: 'ic_launcher_144.png', size: 144 },
-    { filename: 'ic_launcher_192.png', size: 192 },
-    // for adaptive anydpi, the foreground can be a high-res fallback
-    { filename: 'ic_launcher_foreground.png', size: 432 },
-    { filename: 'ic_launcher_512.png', size: 512 },
-    { filename: 'ic_launcher_full.png', size: 512 },
-    { filename: 'ic_launcher_transparent.png', size: 512 },
+    { densityName: 'mdpi', standard: 48, adaptive: 108 },
+    { densityName: 'hdpi', standard: 72, adaptive: 162 },
+    { densityName: 'xhdpi', standard: 96, adaptive: 216 },
+    { densityName: 'xxhdpi', standard: 144, adaptive: 324 },
+    { densityName: 'xxxhdpi', standard: 192, adaptive: 432 },
 ];
 
 async function generateIcon(svgBuf, outputPath, size, isAdaptiveForeground = false) {
-    // For adaptive foreground (108dp base), the safe zone is the inner 72dp.
-    // This implies that the logo should be scaled down to about 66% (72/108) of the image size.
-    // We achieve this by resizing the logo to 66% of the target size, and extending it with transparent padding to reach the full size.
-
     let process = sharp(svgBuf);
 
     if (isAdaptiveForeground) {
@@ -62,14 +46,10 @@ async function generateIcon(svgBuf, outputPath, size, isAdaptiveForeground = fal
     console.log(`✓  ${path.relative(androidResPath, outputPath)}  (${size}x${size}${isAdaptiveForeground ? ' with padding' : ''})`);
 }
 
-async function main() {
-    console.log('Generating Android icons from SVG...\n');
-
+async function generateForTheme(svgBuffer, themeFolderSuffix) {
     const tasks = [];
-
-    // Generate standard mipmap icons per density
-    for (const { folder, standard, adaptive } of mipmapDensities) {
-        const dir = path.join(androidResPath, folder);
+    for (const { densityName, standard, adaptive } of mipmapDensities) {
+        const dir = path.join(androidResPath, `mipmap${themeFolderSuffix}-${densityName}`);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
         // Standard icons (older devices or fallback) -> 48dp
@@ -87,11 +67,30 @@ async function main() {
         tasks.push(generateIcon(svgBuffer, path.join(dir, 'ic_launcher_192.png'), 192));
         tasks.push(generateIcon(svgBuffer, path.join(dir, 'ic_launcher_512.png'), 512));
     }
+    return Promise.all(tasks);
+}
 
-    // removed the invalid PNG generation for mipmap-anydpi-v26
+// Extra legacy anydpi resources that are not directly theme-dependent
+async function generateAnydpiLegacy() {
+    const tasks = [];
+    const anydpiDir = path.join(androidResPath, 'mipmap-anydpi-v26');
+    if (!fs.existsSync(anydpiDir)) fs.mkdirSync(anydpiDir, { recursive: true });
+    // Note: Do not place PNG files in anydpi folder
+    return Promise.all(tasks);
+}
 
-    await Promise.all(tasks);
-    console.log('\n✅ All icons generated successfully!');
+async function main() {
+    console.log('Generating Android icons from Light & Dark SVGs...\n');
+
+    // Default folders (Light mode) Use light svg
+    await generateForTheme(lightSvgBuffer, '');
+
+    // Night folders (Dark mode) Use dark svg
+    await generateForTheme(darkSvgBuffer, '-night');
+
+    await generateAnydpiLegacy();
+
+    console.log('\n✅ All Day and Night icons generated successfully!');
 }
 
 main().catch(err => {
