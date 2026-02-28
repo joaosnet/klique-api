@@ -37,14 +37,14 @@ export default defineConfig({
       interval: 1000,
     },
     // Allow HMR to work inside Docker — the browser connects to the host machine
-    hmr: {
-      clientPort: 80,
-    },
+    // clientPort: 80 is only needed inside Docker (nginx proxy). Omit it for native dev.
+    ...(process.env.VITE_DOCKER ? { hmr: { clientPort: 80 } } : {}),
     proxy: {
-      '/api': { target: process.env.VITE_BACKEND_URL || 'http://fastapi-klique:8000', changeOrigin: true },
-      '/token': { target: process.env.VITE_BACKEND_URL || 'http://fastapi-klique:8000', changeOrigin: true },
-      '/auth': { target: process.env.VITE_BACKEND_URL || 'http://fastapi-klique:8000', changeOrigin: true },
-      '/users': { target: process.env.VITE_BACKEND_URL || 'http://fastapi-klique:8000', changeOrigin: true },
+      '/api': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
+      '/token': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
+      '/auth': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
+      '/users': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
+      '/media': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
     },
   },
 })

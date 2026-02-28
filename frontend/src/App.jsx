@@ -18,7 +18,7 @@ function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    <GamifiedLoader label="Carregando..." />
+    return <GamifiedLoader label="Carregando..." />;
   }
 
   return isAuthenticated ? children : <Navigate to="/login" replace />;
@@ -52,8 +52,8 @@ function DynamicStatusBarHandler() {
 export default function App() {
   return (
     <BrowserRouter>
-      <DynamicStatusBarHandler />
       <AuthProvider>
+        <DynamicStatusBarHandler />
         <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-app)', transition: 'background-color 0.3s ease' }}>
           <main className="flex-1 pb-24 relative">
             <AppRoutes />

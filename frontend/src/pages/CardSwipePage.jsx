@@ -37,7 +37,7 @@ export default function CardSwipePage() {
 
     domainsAPI.getOne(domainId)
       .then((data) => setDomain(data.domain))
-      .catch(() => navigate('/dominios'));
+      .catch(() => navigate('/'));
   }, [domainId, isAuthenticated]);
 
   const generateCard = async () => {
@@ -73,12 +73,11 @@ export default function CardSwipePage() {
         setError('Resposta inesperada da IA. Tente novamente.');
       }
     } catch (e) {
-      setError(e.message || 'Erro ao gerar cenário.');
+      console.error('[generateCard] erro:', e);
+      setError(e.message || 'Erro ao gerar cenário. Verifica a ligação.');
     } finally {
-      if (isAuthenticated) {
-        setGenerating(false);
-        setProgress(null);
-      }
+      setGenerating(false);
+      setProgress(null);
     }
   };
 
@@ -157,7 +156,7 @@ export default function CardSwipePage() {
         {/* Header */}
         <div style={{ marginBottom: '1.5rem' }}>
           <button
-            onClick={() => navigate('/dominios')}
+            onClick={() => navigate('/')}
             style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, padding: 0, marginBottom: 8 }}
           >
             ← Domínios

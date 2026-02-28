@@ -18,6 +18,7 @@ from fastapi import (
 )
 
 from ..database import (
+    get_domain_images_collection,
     get_domains_collection,
     get_reviews_collection,
     get_scenario_cards_collection,
@@ -136,11 +137,23 @@ async def list_domains(
     )
 
     result = []
+    img_col = get_domain_images_collection()
     for doc in docs:
         domain_id = str(doc['_id'])
         doc['_id'] = domain_id
 
-        # Retro-compatibilidade: disparar imagem se faltar
+        # Retrocompat: fill image_url from shared cache if missing in doc
+        if not doc.get('image_url'):
+            cached = await img_col.find_one({'theme': doc.get('theme', '')})
+            if cached and cached.get('image_url'):
+                doc['image_url'] = cached['image_url']
+                # Persist it back so future reads are instant
+                await domains_col.update_one(
+                    {'_id': ObjectId(domain_id)},
+                    {'$set': {'image_url': cached['image_url']}},
+                )
+
+        # Trigger generation if still no image
         if not doc.get('image_url'):
             gemini_client = getattr(
                 request.app.state, 'gemini_webapi_client', None
@@ -182,6 +195,19 @@ async def get_domain(
         raise HTTPException(status_code=404, detail='Domínio não encontrado')
 
     doc['_id'] = str(doc['_id'])
+
+    # Retrocompat: populate image_url from shared cache if domain doc lacks it
+    if not doc.get('image_url'):
+        img_col = get_domain_images_collection()
+        cached = await img_col.find_one({'theme': doc.get('theme', '')})
+        if cached and cached.get('image_url'):
+            doc['image_url'] = cached['image_url']
+            # Persist it back
+            await domains_col.update_one(
+                {'_id': oid},
+                {'$set': {'image_url': cached['image_url']}},
+            )
+
     domain = Domain(**doc)
     stats = await _compute_domain_stats(domain_id, user_id)
     stats.domain_name = domain.name

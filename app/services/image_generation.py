@@ -6,6 +6,7 @@ from gemini_webapi import GeminiClient
 
 from ..database import (
     get_domain_images_collection,
+    get_domains_collection,
     get_scenario_cards_collection,
 )
 from ..logger import logger
@@ -79,7 +80,15 @@ async def get_or_generate_domain_image(
     cached = await col.find_one({'theme': theme})
 
     if cached and cached.get('image_url'):
-        return cached['image_url']
+        abs_url = cached['image_url']
+        # Propagate to any domain docs that still lack image_url
+        # (e.g. newly created domain whose theme already has a cached image)
+        domains_col = get_domains_collection()
+        await domains_col.update_many(
+            {'theme': theme, 'image_url': None},
+            {'$set': {'image_url': abs_url}},
+        )
+        return abs_url
 
     prompt = (
         'Cria uma ilustração 3D incrivelmente atmosférica, '
@@ -107,6 +116,13 @@ async def get_or_generate_domain_image(
             {'$set': {'image_url': abs_url, 'theme': theme}},
             upsert=True,
         )
+        # Propagate image_url to all domain docs with this theme
+        domains_col = get_domains_collection()
+        await domains_col.update_many(
+            {'theme': theme},
+            {'$set': {'image_url': abs_url}},
+        )
+        logger.info(f'image_url propagado para domínios com tema "{theme}"')
         return abs_url
 
     return None
