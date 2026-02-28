@@ -1,0 +1,202 @@
+.gamified-loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2rem;
+    background: transparent;
+    z-index: 10;
+}
+
+.gamified-loader-container.fullscreen {
+    min-height: calc(100vh - 56px);
+    /* Discounting bottom nav in app context */
+    background: var(--bg-app);
+}
+
+.loader-core {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.orbit {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid transparent;
+}
+
+.orbit-1 {
+    width: 100%;
+    height: 100%;
+    border-top-color: var(--accent);
+    border-bottom-color: var(--accent-hover);
+    animation: spin 3s linear infinite;
+    opacity: 0.8;
+}
+
+.orbit-2 {
+    width: 75%;
+    height: 75%;
+    border-left-color: #a855f7;
+    border-right-color: #d8b4fe;
+    animation: spin-reverse 2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+    opacity: 0.6;
+}
+
+.orbit-3 {
+    width: 50%;
+    height: 50%;
+    border-top-color: #faf5ff;
+    border-bottom-color: #faf5ff;
+    animation: spin 1.5s linear infinite;
+    opacity: 0.9;
+}
+
+.oracle-eye {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 80%);
+    border-radius: 50%;
+    box-shadow: 0 0 20px 5px rgba(124, 58, 237, 0.6);
+    animation: oraclePulse 2s ease-in-out infinite alternate;
+}
+
+.eye-core {
+    width: 8px;
+    height: 8px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #fff;
+}
+
+.loader-text-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+}
+
+.loader-label {
+    color: var(--text-highlight);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+}
+
+.tips-container {
+    position: relative;
+    width: 100%;
+    height: 48px;
+    /* Fixed height for tip area */
+    display: flex;
+    justify-content: center;
+}
+
+.lore-tip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.5;
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+    transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+}
+
+.lore-tip.active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.progress-bar-container {
+    width: 180px;
+    height: 2px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 16px;
+    opacity: 0.5;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    animation: loadProgress 3.5s cubic-bezier(0.1, 0.8, 0.2, 1) infinite;
+    border-radius: 4px;
+    box-shadow: 0 0 10px var(--accent);
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes spin-reverse {
+    0% {
+        transform: rotate(360deg);
+    }
+
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes oraclePulse {
+    0% {
+        transform: scale(0.8);
+        box-shadow: 0 0 10px 2px rgba(124, 58, 237, 0.4);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: scale(1.2);
+        box-shadow: 0 0 25px 8px rgba(124, 58, 237, 0.8);
+        opacity: 1;
+    }
+}
+
+@keyframes loadProgress {
+    0% {
+        width: 0%;
+        opacity: 1;
+    }
+
+    80% {
+        width: 100%;
+        opacity: 1;
+    }
+
+    90% {
+        width: 100%;
+        opacity: 0;
+    }
+
+    100% {
+        width: 0%;
+        opacity: 0;
+    }
+}

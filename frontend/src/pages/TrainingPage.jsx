@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { srsAPI } from '../services/api';
+import GamifiedLoader from '../components/Layout/GamifiedLoader';
 import GameTheoryCard from '../components/Cards/GameTheoryCard';
 import DeckPileDisplay from '../components/Cards/DeckPileDisplay';
 
@@ -64,11 +65,7 @@ export default function TrainingPage() {
   const progress = dueCards.length > 0 ? (currentIndex / dueCards.length) * 100 : 0;
 
   if (loading) {
-    return (
-      <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#6b7280' }}>A carregar fila de treino...</p>
-      </div>
-    );
+    <GamifiedLoader label="A carregar fila de treino..." />
   }
 
   if (done) {

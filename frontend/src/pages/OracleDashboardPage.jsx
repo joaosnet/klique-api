@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { oracleAPI } from '../services/api';
+import GamifiedLoader from '../components/Layout/GamifiedLoader';
 
 function StatCard({ label, value, color, suffix = '' }) {
   return (
@@ -136,11 +137,7 @@ export default function OracleDashboardPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#6b7280' }}>A carregar o Oráculo...</p>
-      </div>
-    );
+    <GamifiedLoader label="A carregar o Oráculo..." />
   }
 
   return (

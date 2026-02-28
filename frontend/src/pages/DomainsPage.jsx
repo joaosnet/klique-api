@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { DEMO_DOMAINS } from '../utils/demoData';
 import DomainSVGCard from '../components/Cards/DomainSVGCard';
 import { getErrorMessage } from '../utils/errorHandler';
+import GamifiedLoader from '../components/Layout/GamifiedLoader';
 const THEMES = [
   { value: 'dating', label: 'Dinâmicas de Encontros' },
   { value: 'office', label: 'Política do Escritório' },
@@ -216,7 +217,7 @@ export default function DomainsPage() {
         </div>
 
         {loading ? (
-          <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: 80 }}>A carregar domínios...</p>
+          <GamifiedLoader label="A carregar domínios..." />
         ) : domains.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: 80 }}>
             <p style={{ color: 'var(--text-muted)', fontSize: 48, marginBottom: 16 }}>⚡</p>

@@ -10,6 +10,7 @@ import TrainingPage from './pages/TrainingPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import BottomNav from './components/Layout/BottomNav';
+import GamifiedLoader from './components/Layout/GamifiedLoader';
 import './index.css';
 
 
@@ -17,12 +18,7 @@ function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-spinner">⚡</div>
-        <p className="mt-4 text-gray-400 text-sm uppercase tracking-widest">Carregando...</p>
-      </div>
-    );
+    <GamifiedLoader label="Carregando..." />
   }
 
   return isAuthenticated ? children : <Navigate to="/login" replace />;

@@ -13,6 +13,7 @@ import {
 } from 'chart.js';
 import { Bar, Line } from 'react-chartjs-2';
 import { domainsAPI } from '../services/api';
+import GamifiedLoader from '../components/Layout/GamifiedLoader';
 
 ChartJS.register(
   CategoryScale,
@@ -396,7 +397,7 @@ export default function DashboardPage() {
                   <h3 className="dash-chart-title">📊 Progresso por Domínio</h3>
                   <div style={{ height: 250 }}>
                     {domainsLoading ? (
-                      <p style={{ color: 'var(--dash-text-secondary)', textAlign: 'center', paddingTop: 80 }}>Carregando domínios...</p>
+                      <GamifiedLoader label="A carregar domínios..." fullScreen={false} />
                     ) : activeDomainIds.length === 0 ? (
                       <p style={{ color: 'var(--dash-text-secondary)', textAlign: 'center', paddingTop: 80 }}>Nenhum domínio criado ainda.</p>
                     ) : (
@@ -475,7 +476,7 @@ export default function DashboardPage() {
               </h2>
 
               {domainsLoading ? (
-                <p style={{ color: 'var(--dash-text-secondary)', textAlign: 'center', paddingTop: 80 }}>Carregando domínios...</p>
+                <GamifiedLoader label="A carregar domínios..." fullScreen={false} />
               ) : domains.length === 0 ? (
                 <div style={{ textAlign: 'center', paddingTop: 80 }}>
                   <p style={{ fontSize: 48, marginBottom: 16 }}>⚡</p>
