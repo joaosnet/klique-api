@@ -114,87 +114,169 @@ export const paymentsAPI = {
 };
 
 // ========================================
-// Christmas Avatar API
+// OmniFlash — Domains API
 // ========================================
 
-export const christmasAPI = {
-    generateAvatar: async (imageFile, template, removeBg = false, onProgress) => {
-        const formData = new FormData();
-        formData.append('image', imageFile);
-        formData.append('template', template);
-        formData.append('remove_bg', removeBg);
+export const domainsAPI = {
+    list: async () => {
+        const response = await api.get('/api/domains/');
+        return response.data;
+    },
 
-        // Usar SSE para progresso
-        const token = localStorage.getItem('access_token');
-        const headers = {};
-        if (token) {
-            headers.Authorization = `Bearer ${token}`;
+    create: async (name, theme) => {
+        const response = await api.post('/api/domains/', { name, theme });
+        return response.data;
+    },
+
+    getOne: async (domainId) => {
+        const response = await api.get(`/api/domains/${domainId}`);
+        return response.data;
+    },
+
+    remove: async (domainId) => {
+        const response = await api.delete(`/api/domains/${domainId}`);
+        return response.data;
+    },
+};
+
+// ========================================
+// OmniFlash — Cards API
+// ========================================
+
+/**
+ * Utilitário interno para processar um stream SSE.
+ * Chama onProgress(data) para eventos 'progress' e resolve com o
+ * payload do evento 'complete'. Rejeita em 'error'.
+ */
+async function _readSSEStream(response, onProgress) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let eventType = '';
+    let eventData = '';
+    let buffer = '';
+    let result = null;
+
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+            if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim();
+            } else if (line.startsWith('data: ')) {
+                eventData += line.slice(6);
+            } else if (line === '' && eventType) {
+                try {
+                    if (eventData) {
+                        const data = JSON.parse(eventData);
+                        if (eventType === 'progress' && onProgress) {
+                            onProgress(data);
+                        } else if (eventType === 'complete') {
+                            result = data;
+                        } else if (eventType === 'error') {
+                            throw new Error(data.message);
+                        }
+                    }
+                } catch (e) {
+                    console.error('SSE Parse Error:', e, eventData);
+                    if (e.message !== 'Unexpected end of JSON input') {
+                        throw e;
+                    }
+                }
+                eventType = '';
+                eventData = '';
+            }
         }
+    }
 
-        const response = await fetch(`${API_BASE_URL}/api/christmas/swap-stream`, {
+    return result;
+}
+
+export const cardsAPI = {
+    generateStream: async (domainId, context = null, onProgress) => {
+        const token = localStorage.getItem('access_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE_URL}/api/cards/generate-stream`, {
             method: 'POST',
             headers,
-            body: formData,
+            body: JSON.stringify({ domain_id: domainId, context }),
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            const error = new Error(errorData.detail || 'Erro ao gerar avatar');
-            error.status = response.status;
-            throw error;
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Erro ao gerar card');
         }
 
-        // Processar SSE stream
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let eventType = '';
-        let eventData = '';
-        let buffer = '';
-        let result = null;
-
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                if (line.startsWith('event: ')) {
-                    eventType = line.slice(7).trim();
-                } else if (line.startsWith('data: ')) {
-                    eventData += line.slice(6); // Acumular data caso seja dividido
-                } else if (line === '' && eventType) {
-                    try {
-                        if (eventData) {
-                            const data = JSON.parse(eventData);
-
-                            if (eventType === 'progress' && onProgress) {
-                                onProgress(data);
-                            } else if (eventType === 'complete') {
-                                result = data;
-                            } else if (eventType === 'error') {
-                                throw new Error(data.message);
-                            }
-                        }
-                    } catch (e) {
-                        console.error('SSE Parse Error:', e, eventData);
-                        if (e.message !== 'Unexpected end of JSON input') {
-                            throw e;
-                        }
-                    }
-                    eventType = '';
-                    eventData = '';
-                }
-            }
-        }
-
-        return result;
+        return _readSSEStream(response, onProgress);
     },
 
-    getTemplates: async () => {
-        const response = await api.get('/api/christmas/templates');
+    swipe: async (cardData, domainId, action) => {
+        const response = await api.post('/api/cards/swipe', {
+            card_data: cardData,
+            domain_id: domainId,
+            action,
+        });
+        return response.data;
+    },
+
+    list: async (domainId) => {
+        const response = await api.get(`/api/cards/${domainId}`);
+        return response.data;
+    },
+
+    remove: async (cardId) => {
+        const response = await api.delete(`/api/cards/${cardId}`);
+        return response.data;
+    },
+};
+
+// ========================================
+// OmniFlash — SRS API
+// ========================================
+
+export const srsAPI = {
+    getDue: async () => {
+        const response = await api.get('/api/srs/due');
+        return response.data;
+    },
+
+    submitReview: async (cardId, performanceRating) => {
+        const response = await api.post('/api/srs/review', {
+            card_id: cardId,
+            performance_rating: performanceRating,
+        });
+        return response.data;
+    },
+
+    getStats: async () => {
+        const response = await api.get('/api/srs/stats');
+        return response.data;
+    },
+};
+
+// ========================================
+// OmniFlash — Oracle Analytics API
+// ========================================
+
+export const oracleAPI = {
+    getDashboard: async () => {
+        const response = await api.get('/api/oracle/dashboard');
+        return response.data;
+    },
+
+    getRadar: async () => {
+        const response = await api.get('/api/oracle/radar');
+        return response.data;
+    },
+
+    getActivity: async () => {
+        const response = await api.get('/api/oracle/activity');
         return response.data;
     },
 };

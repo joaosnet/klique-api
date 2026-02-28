@@ -98,9 +98,13 @@ klique-api/
 │       └── whatsapp.py       # Cliente HTTP para o container go-whatsapp
 ├── frontend/                 # React 19 + Vite + Tailwind CSS v4
 ├── dashboard/                # Painel admin em HTML/JS puro
-├── scripts/
+├── scripts/                 # Utilitários Python com saída formatada via `rich`
 │   ├── create_admin.py       # Cria usuário admin no MongoDB via CLI
-│   └── setup_cookies.py      # Extrai cookies do Gemini WebAPI do browser
+│   ├── setup_cookies.py      # Extrai cookies do Gemini WebAPI do browser
+│   ├── ngrok.py              # Abre túnel ngrok para testes locais
+│   ├── build_android.py      # Compila APK Android (via Capacitor)
+│   ├── hot_reload_android.py # Dev server + Capacitor livereload no dispositivo
+│   └── ...                  # demais scripts também usam `rich` para cores/panels
 ├── docker-compose.yml        # Ambiente de desenvolvimento
 ├── docker-compose.production.yml  # Produção com Traefik + Let's Encrypt
 └── Dockerfile                # Python 3.14 + uv
@@ -198,6 +202,44 @@ cd klique-api
 uv sync
 cp .env.example .env
 # Edite .env com suas chaves
+```
+
+### Desenvolvimento Android 📱
+
+Durante o desenvolvimento do frontend é comum querer testar alterações
+diretamente em um dispositivo físico ou emulador sem recompilar o APK a
+cada mudança.  para isso foi criado um modo *hot reload* acessível através
+da task do Taskipy:
+
+```bash
+# inicia o servidor de desenvolvimento e abre o projeto Android com
+# livereload habilitado (recarrega automaticamente quando o código web
+# muda).  o dispositivo precisa estar conectado via USB ou na mesma
+# rede e com depuração remota ativada.
+#
+# o script utiliza `npm install --legacy-peer-deps` para evitar a
+# falha de dependências conflitantes que aparece com o plugin PWA.
+task android-hot
+```
+
+A task executa `npm run dev` na pasta `frontend`, garante que a plataforma
+Android esteja adicionada e sincronizada (inclusive adicionando automaticamente
+se ela ainda não existir), e em seguida chama o Capacitor CLI com as opções
+`-l --external` usando o **endereço IP real da máquina** (não `0.0.0.0`).
+Isso faz com que o aplicativo móvel consiga carregar o conteúdo web de um
+computador na mesma rede; o endereço é detectado automaticamente pelo script.
+
+Se um dispositivo ou emulador estiver conectado via ADB, o script também
+detecta o ID e passa `--target=<id>` para o CLI, por isso você não precisa
+navegar pelo menu interativo (que não responde quando chamado de dentro do
+Python).  O app carrega os assets diretamente do servidor Vite em execução.
+
+A task `android` tradicional (build) agora também instala automaticamente o
+APK de debug no primeiro dispositivo detectado via `adb install -r`.  Se
+nenhum dispositivo estiver conectado, ele apenas informa o caminho do APK
+sem falhar; assim você pode rodar o `task android` e testar num telefone em
+um só comando.
+
 uv run task run
 ```
 

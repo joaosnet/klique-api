@@ -1,0 +1,89 @@
+<svg viewBox="0 0 512 512" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Squircle Gradient (Dark Space) -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f19" />
+      <stop offset="50%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#05080f" />
+    </linearGradient>
+
+    <!-- Back Card Gradient (Dark Teal/Purple tint) -->
+    <linearGradient id="card-back-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#132b35" />
+      <stop offset="100%" stop-color="#0d1b2a" />
+    </linearGradient>
+
+    <!-- Front Card Gradient (Graphite/Cyber) -->
+    <linearGradient id="card-front-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f2937" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+
+    <!-- Border Glow for Front Card (Klique API Teal -> Cyan) -->
+    <linearGradient id="border-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#009688" />
+      <stop offset="100%" stop-color="#00f2fe" />
+    </linearGradient>
+
+    <!-- Flash / Heat Score Gradient (Neon Orange/Pink) -->
+    <linearGradient id="flash-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF512F" />
+      <stop offset="100%" stop-color="#F09819" />
+    </linearGradient>
+
+    <!-- Drop Shadow for Cards -->
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+
+    <!-- Glow for the Flash and Eye -->
+    <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- App Icon Base Squircle -->
+  <rect width="512" height="512" rx="115" ry="115" fill="url(#bg-grad)" />
+
+  <!-- Abstract Grid/Nodes Background inside the Squircle -->
+  <g stroke="#ffffff" opacity="0.03" stroke-width="1.5">
+    <path d="M 0 128 L 512 128 M 0 256 L 512 256 M 0 384 L 512 384" />
+    <path d="M 128 0 L 128 512 M 256 0 L 256 512 M 384 0 L 384 512" />
+  </g>
+
+  <!-- BACK CARD (Tilted Right) -->
+  <g transform="rotate(15 256 256)" filter="url(#shadow)">
+    <rect x="136" y="86" width="240" height="340" rx="24" fill="url(#card-back-grad)" stroke="#0f4c5c" stroke-width="4"/>
+    <!-- Subtle Inner Details for Back Card -->
+    <rect x="156" y="106" width="200" height="300" rx="12" fill="none" stroke="#0f4c5c" stroke-width="2" opacity="0.5"/>
+  </g>
+
+  <!-- FRONT CARD (Tilted Left, The Oracle) -->
+  <g transform="rotate(-6 256 256)" filter="url(#shadow)">
+    <!-- Main Card Body -->
+    <rect x="136" y="86" width="240" height="340" rx="24" fill="url(#card-front-grad)" stroke="url(#border-glow)" stroke-width="6"/>
+    
+    <!-- Tactical Corners (Crosshairs style) -->
+    <g stroke="url(#border-glow)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Top Left -->
+      <path d="M 156 126 L 156 106 L 176 106" />
+      <!-- Top Right -->
+      <path d="M 336 106 L 356 106 L 356 126" />
+      <!-- Bottom Left -->
+      <path d="M 156 386 L 156 406 L 176 406" />
+      <!-- Bottom Right -->
+      <path d="M 356 386 L 356 406 L 336 406" />
+    </g>
+
+    <!-- The Eye of the Oracle (Game Theory Vision) -->
+    <path d="M 166 256 Q 256 186 346 256 Q 256 326 166 256 Z" fill="#0d1421" stroke="url(#border-glow)" stroke-width="6" stroke-linejoin="round" filter="url(#neon-glow)"/>
+    
+    <!-- The Iris -->
+    <circle cx="256" cy="256" r="28" fill="none" stroke="url(#border-glow)" stroke-width="6" opacity="0.8"/>
+
+    <!-- The OmniFlash Lightning Bolt (Heat Score / Fast Tactics) -->
+    <path d="M 270 150 L 225 256 L 255 256 L 240 360 L 295 240 L 265 240 Z" fill="url(#flash-grad)" filter="url(#neon-glow)"/>
+  </g>
+
+</svg>

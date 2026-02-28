@@ -1,7 +1,7 @@
 from pymongo import AsyncMongoClient
 from pymongo.server_api import ServerApi
 
-from app.config import DB_DATABASE, get_mongodb_url
+from .config import DB_DATABASE, get_mongodb_url
 
 # Cliente e banco de dados para conexões
 _client: AsyncMongoClient = None
@@ -93,3 +93,28 @@ def get_payment_transactions_collection():
 def get_link_analytics_collection():
     """Collection para rastrear views de preview (OG) e cliques em links."""
     return get_db().get_collection('link_analytics')
+
+
+# ========================================
+# OmniFlash Collections
+# ========================================
+
+
+def get_domains_collection():
+    """Collection para domínios de treino do usuário."""
+    return get_db().get_collection('domains')
+
+
+def get_scenario_cards_collection():
+    """Collection para cards de cenário gerados e salvos."""
+    return get_db().get_collection('scenario_cards')
+
+
+def get_reviews_collection():
+    """Collection para estado de revisão SRS por card/usuário."""
+    return get_db().get_collection('reviews')
+
+
+def get_simulation_logs_collection():
+    """Collection para logs de sessões de treino SRS."""
+    return get_db().get_collection('simulation_logs')

@@ -1,0 +1,263 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { domainsAPI } from '../services/api';
+
+const THEMES = [
+  { value: 'dating', label: 'Dinâmicas de Encontros' },
+  { value: 'office', label: 'Política do Escritório' },
+  { value: 'finance', label: 'Mercado Financeiro' },
+  { value: 'negotiation', label: 'Negociação' },
+  { value: 'geopolitics', label: 'Geopolítica' },
+  { value: 'social', label: 'Dinâmicas Sociais' },
+  { value: 'custom', label: 'Outro (personalizado)' },
+];
+
+function HeatBadge({ score }) {
+  const color =
+    score >= 67 ? '#ef4444' : score >= 34 ? '#f59e0b' : '#22c55e';
+  return (
+    <span
+      style={{
+        background: color + '22',
+        color,
+        border: `1px solid ${color}55`,
+        borderRadius: 4,
+        padding: '1px 6px',
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: 1,
+      }}
+    >
+      HEAT {score}
+    </span>
+  );
+}
+
+function NewDomainModal({ onClose, onCreate }) {
+  const [name, setName] = useState('');
+  const [theme, setTheme] = useState('dating');
+  const [customTheme, setCustomTheme] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    const finalTheme = theme === 'custom' ? customTheme.trim() || 'personalizado' : theme;
+    setLoading(true);
+    setError('');
+    try {
+      await onCreate(name.trim(), finalTheme);
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Erro ao criar domínio');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: '#1a1a2e', border: '1px solid #6b21a8', borderRadius: 12,
+          padding: '2rem', width: '100%', maxWidth: 420,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 style={{ color: '#e9d5ff', fontSize: 18, fontWeight: 700, marginBottom: 20, letterSpacing: 2, textTransform: 'uppercase' }}>
+          Novo Domínio
+        </h2>
+        <form onSubmit={handleSubmit}>
+          <label style={{ color: '#9ca3af', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+            Nome do Domínio
+          </label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: Dinâmicas de Escritório Q4"
+            required
+            style={{
+              width: '100%', background: '#0f172a', border: '1px solid #374151',
+              color: '#e5e7eb', borderRadius: 6, padding: '8px 12px', fontSize: 14,
+              outline: 'none', marginBottom: 16, boxSizing: 'border-box',
+            }}
+          />
+          <label style={{ color: '#9ca3af', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
+            Tema
+          </label>
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value)}
+            style={{
+              width: '100%', background: '#0f172a', border: '1px solid #374151',
+              color: '#e5e7eb', borderRadius: 6, padding: '8px 12px', fontSize: 14,
+              outline: 'none', marginBottom: theme === 'custom' ? 8 : 24, boxSizing: 'border-box',
+            }}
+          >
+            {THEMES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+          {theme === 'custom' && (
+            <input
+              value={customTheme}
+              onChange={(e) => setCustomTheme(e.target.value)}
+              placeholder="Descreva o tema..."
+              style={{
+                width: '100%', background: '#0f172a', border: '1px solid #374151',
+                color: '#e5e7eb', borderRadius: 6, padding: '8px 12px', fontSize: 14,
+                outline: 'none', marginBottom: 24, boxSizing: 'border-box',
+              }}
+            />
+          )}
+          {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                flex: 1, padding: '9px 0', borderRadius: 6, border: '1px solid #374151',
+                color: '#9ca3af', background: 'transparent', cursor: 'pointer', fontSize: 13,
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                flex: 2, padding: '9px 0', borderRadius: 6, border: 'none',
+                background: '#7c3aed', color: '#fff', cursor: 'pointer', fontSize: 13,
+                fontWeight: 700, letterSpacing: 1, opacity: loading ? 0.6 : 1,
+              }}
+            >
+              {loading ? 'Criando...' : 'Criar Domínio'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function DomainsPage() {
+  const navigate = useNavigate();
+  const [domains, setDomains] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+
+  const loadDomains = async () => {
+    setLoading(true);
+    try {
+      const data = await domainsAPI.list();
+      setDomains(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadDomains(); }, []);
+
+  const handleCreate = async (name, theme) => {
+    await domainsAPI.create(name, theme);
+    await loadDomains();
+  };
+
+  return (
+    <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', padding: '2rem 1rem' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+          <div>
+            <h1 style={{ color: '#e9d5ff', fontSize: 24, fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase', margin: 0 }}>
+              Domínios de Jogo
+            </h1>
+            <p style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>
+              Cada domínio é um campo de batalha. Escolha o teu e treina os reflexos.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            style={{
+              background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 8,
+              padding: '10px 20px', fontSize: 13, fontWeight: 700, letterSpacing: 1,
+              cursor: 'pointer', textTransform: 'uppercase',
+            }}
+          >
+            + Novo Domínio
+          </button>
+        </div>
+
+        {loading ? (
+          <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 80 }}>A carregar domínios...</p>
+        ) : domains.length === 0 ? (
+          <div style={{ textAlign: 'center', marginTop: 80 }}>
+            <p style={{ color: '#4b5563', fontSize: 48, marginBottom: 16 }}>⚡</p>
+            <p style={{ color: '#6b7280', fontSize: 16, marginBottom: 8 }}>Nenhum domínio criado ainda.</p>
+            <p style={{ color: '#4b5563', fontSize: 13 }}>Cria o teu primeiro domínio para começar a treinar.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+            {domains.map(({ domain, stats }) => (
+              <div
+                key={domain.id}
+                onClick={() => navigate(`/criar/${domain.id}`)}
+                style={{
+                  background: '#1a1a2e', border: '1px solid #2d2d44', borderRadius: 12,
+                  padding: '1.25rem', cursor: 'pointer', transition: 'border-color 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#7c3aed'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#2d2d44'}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <h3 style={{ color: '#e9d5ff', fontSize: 16, fontWeight: 700, margin: 0, flex: 1, marginRight: 8 }}>
+                    {domain.name}
+                  </h3>
+                  <span style={{
+                    background: '#7c3aed22', color: '#a78bfa', border: '1px solid #7c3aed44',
+                    borderRadius: 4, padding: '2px 8px', fontSize: 10, fontWeight: 600,
+                    letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap',
+                  }}>
+                    {domain.theme}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#9ca3af', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Cards</div>
+                    <div style={{ color: '#e9d5ff', fontSize: 22, fontWeight: 800 }}>{stats.cards_count}</div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#9ca3af', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Hoje</div>
+                    <div style={{ color: stats.due_today > 0 ? '#f59e0b' : '#6b7280', fontSize: 22, fontWeight: 800 }}>
+                      {stats.due_today}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#9ca3af', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase' }}>Precisão</div>
+                    <div style={{ color: '#22c55e', fontSize: 22, fontWeight: 800 }}>
+                      {stats.accuracy > 0 ? `${Math.round(stats.accuracy * 100)}%` : '—'}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 14, textAlign: 'right' }}>
+                  <span style={{ color: '#7c3aed', fontSize: 12, fontWeight: 600 }}>Gerar Cards →</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showModal && (
+        <NewDomainModal onClose={() => setShowModal(false)} onCreate={handleCreate} />
+      )}
+    </div>
+  );
+}

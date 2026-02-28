@@ -3,11 +3,11 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const NAV_LINKS = [
-  { to: '/',           label: 'Início',     public: true  },
-  { to: '/simulador',  label: 'Simulador',  public: false },
-  { to: '/mural',      label: 'Mural',      public: false },
-  { to: '/dashboard',  label: 'Dashboard',  public: false },
-  { to: '/portfolio',  label: 'Portfólio',  public: true  },
+  { to: '/',         label: 'Início',    public: true,  guestOnly: false },
+  { to: '/demo',     label: 'Demo',      public: true,  guestOnly: true  },
+  { to: '/dominios', label: 'Domínios',  public: false, guestOnly: false },
+  { to: '/treinar',  label: 'Treinar',   public: false, guestOnly: false },
+  { to: '/oracle',   label: 'Dashboard', public: false, guestOnly: false },
 ];
 
 export default function Navbar() {
@@ -37,13 +37,14 @@ export default function Navbar() {
           className="font-title text-xl tracking-widest text-purple-400 hover:text-purple-300 transition-colors"
           onClick={() => setMenuOpen(false)}
         >
-          GAME THEORY
+          OMNIFLASH
         </Link>
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map(({ to, label, public: pub }) => {
+          {NAV_LINKS.map(({ to, label, public: pub, guestOnly = false }) => {
             if (!pub && !isAuthenticated) return null;
+            if (guestOnly && isAuthenticated) return null;
             return (
               <Link
                 key={to}
@@ -116,8 +117,9 @@ export default function Navbar() {
           className="md:hidden border-t border-gray-800 px-4 py-3 flex flex-col gap-2"
           style={{ background: '#0f172a' }}
         >
-          {NAV_LINKS.map(({ to, label, public: pub }) => {
+          {NAV_LINKS.map(({ to, label, public: pub, guestOnly = false }) => {
             if (!pub && !isAuthenticated) return null;
+            if (guestOnly && isAuthenticated) return null;
             return (
               <Link
                 key={to}

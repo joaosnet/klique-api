@@ -16,11 +16,14 @@ from __future__ import annotations
 
 import argparse
 import os
-import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 from pyngrok import conf, ngrok
+from rich.console import Console
+from rich.panel import Panel
+
+console = Console()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -56,34 +59,34 @@ def main(argv: list[str] | None = None) -> int:
             pass
     else:
         # No token — show helpful instructions and exit
-        print('ngrok authtoken not found.')
-        print(
+        console.print('[red]ngrok authtoken not found.[/red]')
+        console.print(
             "Please create a '.ngrok.env' file at the project root with the line:"
         )
-        print('NGROK_AUTH_TOKEN=SEU_TOKEN_AQUI')
-        print('')
-        print('Example (PowerShell):')
-        print('  $env:NGROK_AUTH_TOKEN = "SEU_TOKEN_AQUI"')
-        print('  setx NGROK_AUTH_TOKEN "SEU_TOKEN_AQUI"')
-        print('')
-        print('Or install via the ngrok CLI:')
-        print('  ngrok config add-authtoken SEU_TOKEN_AQUI')
-        print('')
-        print(
+        console.print('    NGROK_AUTH_TOKEN=SEU_TOKEN_AQUI')
+        console.print('')
+        console.print('Example (PowerShell):')
+        console.print('  $env:NGROK_AUTH_TOKEN = "SEU_TOKEN_AQUI"')
+        console.print('  setx NGROK_AUTH_TOKEN "SEU_TOKEN_AQUI"')
+        console.print('')
+        console.print('Or install via the ngrok CLI:')
+        console.print('  ngrok config add-authtoken SEU_TOKEN_AQUI')
+        console.print('')
+        console.print(
             'Get your token here: https://dashboard.ngrok.com/get-started/your-authtoken'
         )
         return 2
 
-    print(f'Starting ngrok tunnel to localhost:{args.port}...')
+    console.print(Panel(f'Starting ngrok tunnel to localhost:{args.port}...', border_style='green'))
     try:
         tunnel = ngrok.connect(args.port, 'http')
-        print(f'ngrok public url: {tunnel.public_url}')
-        print('Press Ctrl+C to stop the tunnel')
+        console.print(f'[green]ngrok public url:[/green] {tunnel.public_url}')
+        console.print('Press Ctrl+C to stop the tunnel')
 
         # Block until interrupted
         ngrok.get_ngrok_process().proc.wait()
     except KeyboardInterrupt:
-        print('Stopping ngrok tunnel...')
+        console.print('Stopping ngrok tunnel...')
         try:
             ngrok.disconnect(tunnel.public_url)
             ngrok.kill()
@@ -91,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
             pass
         return 0
     except Exception as exc:
-        print('Failed to start ngrok tunnel:', exc, file=sys.stderr)
+        console.print('[red]Failed to start ngrok tunnel:[/red]', exc, style='red')
         return 2
 
     return 0

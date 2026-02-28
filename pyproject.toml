@@ -79,3 +79,5 @@ ngrok = 'python -m scripts.ngrok --port 80'
 # Configuração
 setup-cookies = "uv run python scripts/setup_cookies.py librewolf"
 create-admin = "python scripts/create_admin.py"
+android = "python scripts/build_android.py"
+android-hot = "python scripts/hot_reload_android.py"

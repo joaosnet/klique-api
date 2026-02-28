@@ -167,7 +167,7 @@ async def verify_email(
             user=user_response,
         )
 
-    result = send_confirmation_code(confirmation_code, email, name)
+    result = await send_confirmation_code(confirmation_code, email, name)
     if result['success']:
         return verifyEmailResponse(
             success=True,

@@ -123,8 +123,10 @@ def invalidate_token(token: str):
 async def authenticate_user(
     db_users: Collection, username: str, password: str
 ):
-    user = await db_users.find_one({'email': username})
+    user = await db_users.find_one({'email': username.lower().strip()})
     if not user:
+        return False
+    if not user.get('password'):
         return False
     if not verify_password(password, user['password']):
         return False

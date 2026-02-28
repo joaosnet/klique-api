@@ -190,9 +190,9 @@ class UserCredits(BaseModel):
 
     id: Optional[str] = Field(None, alias='_id')
     user_id: str
-    free_credits: int = 1  # 1 imagem grátis
-    paid_credits: int = 0  # Créditos comprados
-    total_generated: int = 0  # Total de imagens geradas
+    free_credits: int = 1
+    paid_credits: int = 0
+    total_generated: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -217,7 +217,7 @@ class UserCreditsBalance(BaseModel):
 class UseCreditsRequest(BaseModel):
     """Request para usar créditos."""
 
-    action: str = 'generate_avatar'  # Tipo de ação que consome crédito
+    action: str = 'generate_card'
 
 
 class UseCreditsResponse(BaseModel):
@@ -233,13 +233,13 @@ class PaymentTransaction(BaseModel):
 
     id: Optional[str] = Field(None, alias='_id')
     user_id: str
-    mp_payment_id: Optional[str] = None  # ID do Mercado Pago
-    amount: float  # Valor em R$
-    credits_amount: int  # Créditos a liberar
-    status: str = 'pending'  # pending, approved, rejected, cancelled
+    mp_payment_id: Optional[str] = None
+    amount: float
+    credits_amount: int
+    status: str = 'pending'
     pix_qr_code: Optional[str] = None
     pix_qr_code_base64: Optional[str] = None
-    pix_copy_paste: Optional[str] = None  # Código copia e cola
+    pix_copy_paste: Optional[str] = None
     expiration_date: Optional[datetime] = None
     created_at: datetime
     paid_at: Optional[datetime] = None
@@ -269,9 +269,9 @@ class CreatePixPaymentResponse(BaseModel):
     payment_id: str
     amount: float
     credits_amount: int
-    qr_code: str  # URL da imagem do QR Code
-    qr_code_base64: str  # QR Code em base64
-    copy_paste: str  # Código copia e cola
+    qr_code: str
+    qr_code_base64: str
+    copy_paste: str
     expiration_date: datetime
 
 
@@ -296,8 +296,8 @@ class PaymentConfigResponse(BaseModel):
 class CreditHistoryItem(BaseModel):
     """Item do histórico de créditos."""
 
-    type: str  # 'purchase', 'use', 'free'
-    amount: int  # Quantidade de créditos
+    type: str
+    amount: int
     description: str
     created_at: datetime
 
@@ -307,3 +307,158 @@ class CreditHistoryResponse(BaseModel):
 
     items: list[CreditHistoryItem]
     total_items: int
+
+
+# ========================================
+# OmniFlash — Game Theory Engine Schemas
+# ========================================
+
+
+class UserPreferences(BaseModel):
+    card_size_scale: float = 1.0
+
+
+# --- Domains ---
+
+class DomainCreate(BaseModel):
+    name: str
+    theme: str
+
+
+class DomainUpdate(BaseModel):
+    name: Optional[str] = None
+    theme: Optional[str] = None
+
+
+class Domain(MongoBaseModel):
+    id: Optional[str] = Field(None, alias='_id')
+    user_id: str
+    name: str
+    theme: str
+    created_at: datetime
+
+
+class DomainStats(BaseModel):
+    domain_id: str
+    domain_name: str
+    cards_count: int
+    due_today: int
+    accuracy: float
+
+
+class DomainWithStats(BaseModel):
+    domain: Domain
+    stats: DomainStats
+
+
+# --- Scenario Cards ---
+
+class ScenarioCardData(BaseModel):
+    """Raw card data returned by Gemini (not yet persisted)."""
+    template_type: str
+    scenario_context: str
+    question: str
+    predicted_outcome: str
+    game_theory_explanation: str
+    probability_heat_score: int
+    visual_prompt_idea: Optional[str] = None
+
+
+class ScenarioCard(MongoBaseModel):
+    id: Optional[str] = Field(None, alias='_id')
+    domain_id: str
+    user_id: str
+    template_type: str
+    scenario_context: str
+    question: str
+    predicted_outcome: str
+    game_theory_explanation: str
+    media_urls: list[str] = []
+    probability_heat_score: int
+    visual_prompt_idea: Optional[str] = None
+    created_at: datetime
+
+
+class GenerateCardRequest(BaseModel):
+    domain_id: str
+    context: Optional[str] = None
+
+
+class SwipeAction(BaseModel):
+    card_data: ScenarioCardData
+    domain_id: str
+    action: str  # "save" | "discard"
+
+
+class SwipeResponse(BaseModel):
+    success: bool
+    message: str
+    card_id: Optional[str] = None
+
+
+# --- SRS (Spaced Repetition System) ---
+
+class Review(MongoBaseModel):
+    id: Optional[str] = Field(None, alias='_id')
+    card_id: str
+    user_id: str
+    next_review_date: datetime
+    interval: int = 1
+    ease_factor: float = 2.5
+    repetitions: int = 0
+
+
+class SimulationLog(MongoBaseModel):
+    id: Optional[str] = Field(None, alias='_id')
+    user_id: str
+    card_id: str
+    domain_id: str
+    performance_rating: int  # 0-5
+    reviewed_at: datetime
+
+
+class ReviewSubmitRequest(BaseModel):
+    card_id: str
+    performance_rating: int = Field(..., ge=0, le=5)
+
+
+class ReviewSubmitResponse(BaseModel):
+    success: bool
+    next_review_date: datetime
+    interval_days: int
+    new_ease_factor: float
+
+
+class DueCard(BaseModel):
+    card: ScenarioCard
+    review: Review
+
+
+class SRSStats(BaseModel):
+    total_trained: int
+    streak_days: int
+    cards_mastered: int
+    due_today: int
+
+
+# --- Oracle Analytics ---
+
+class DashboardOverview(BaseModel):
+    total_domains: int
+    total_cards: int
+    due_today: int
+    weekly_trained: int
+    streak_days: int
+
+
+class RadarEntry(BaseModel):
+    domain_name: str
+    domain_id: str
+    accuracy: float
+    trained_count: int
+
+
+class ActivityEntry(BaseModel):
+    date: str
+    count: int
+    avg_rating: float

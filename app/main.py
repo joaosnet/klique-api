@@ -17,14 +17,14 @@ from .config import SECURE_1PSID, SECURE_1PSIDTS
 from .database import close_db_connection, get_client
 from .logger import logger
 from .routers import (
-    analytics,
     auth,
-    christmas,
+    cards,
     credits,
+    domains,
+    oracle_analytics,
     payments,
     register,
-    scheduler,
-    telemetry,
+    srs,
     whatsapp,
 )
 from .scheduler import setup_scheduler, start_scheduler, stop_scheduler
@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
             app.state.gemini_webapi_client = None
     else:
         logger.warning(
-            'SECURE_1PSID não configurado - Gemini WebAPI desabilitado'
+            'SECURE_1PSID não configurado — Motor do Oráculo desabilitado'
         )
         app.state.gemini_webapi_client = None
 
@@ -77,12 +77,12 @@ async def lifespan(app: FastAPI):
     await close_db_connection()
 
 
-app = FastAPI(title='Klique AI API', version='1.0.0', lifespan=lifespan)
+app = FastAPI(title='OmniFlash API', version='1.0.0', lifespan=lifespan)
 
 
 origins = [
-    'https://fotodenatal.me',
-    'http://fotodenatal.me',
+    'https://omniflash.app',
+    'http://omniflash.app',
     'http://localhost',
     'http://localhost:8080',
     'http://localhost:8000',
@@ -111,15 +111,15 @@ app.add_middleware(
 
 
 # Include routers
-app.include_router(analytics.router)
 app.include_router(auth.router)
 app.include_router(register.router)
-app.include_router(scheduler.router)
 app.include_router(whatsapp.router)
-app.include_router(telemetry.router)
-app.include_router(christmas.router)
 app.include_router(credits.router)
 app.include_router(payments.router)
+app.include_router(domains.router)
+app.include_router(cards.router)
+app.include_router(srs.router)
+app.include_router(oracle_analytics.router)
 
 if __name__ == '__main__':
     import uvicorn

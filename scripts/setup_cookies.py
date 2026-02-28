@@ -9,7 +9,8 @@ Uso:
     python setup_cookies.py [navegador]
 
 Navegadores suportados:
-    chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, librewolf, safari
+    chrome, chromium, opera, opera_gx, brave, edge,
+    vivaldi, firefox, librewolf, safari
 
 Se nenhum navegador for especificado, tenta todos os navegadores disponíveis.
 """
@@ -19,6 +20,10 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
+from rich.console import Console
+import asyncio
+
+console = Console()
 
 # Adicionar o diretório atual ao path para importar gemini_webapi
 sys.path.insert(0, str(Path(__file__).parent))
@@ -27,8 +32,8 @@ try:
     import browser_cookie3 as bc3
     from gemini_webapi import GeminiClient
 except ImportError as e:
-    print(f'Erro ao importar dependências: {e}')
-    print(
+    console.print(f'[red]Erro ao importar dependências:[/red] {e}')
+    console.print(
         'Certifique-se de que browser-cookie3 e gemini_webapi estão instalados.'
     )
     sys.exit(1)
@@ -42,115 +47,128 @@ def setup_cookies(browser_name=None):
                      Se None, tenta todos os navegadores disponíveis.
     """
     if browser_name:
-        print(f'🔍 Procurando cookies do Gemini no navegador: {browser_name}')
+        console.print(
+            f'🔍 Procurando cookies do Gemini no navegador: '
+            f'[bold]{browser_name}[/bold]'
+        )
     else:
-        print(
+        console.print(
             '🔍 Procurando cookies do Gemini em todos os navegadores disponíveis...'
         )
 
+    browser_functions = {
+        'chrome': bc3.chrome,
+        'chromium': bc3.chromium,
+        'opera': bc3.opera,
+        'opera_gx': bc3.opera_gx,
+        'brave': bc3.brave,
+        'edge': bc3.edge,
+        'vivaldi': bc3.vivaldi,
+        'firefox': bc3.firefox,
+        'librewolf': bc3.librewolf,
+        'safari': bc3.safari,
+    }
+
+    def _extract(name, func):
+        """Retorna tuple (psid, psidts) ou (None, None) se não existirem."""
+        cj = func(domain_name='google.com')
+        cookies = {c.name: c.value for c in cj}
+        if '__Secure-1PSID' in cookies:
+            return cookies['__Secure-1PSID'], cookies.get('__Secure-1PSIDTS', '')
+        return None, None
+
+    secure_1psid = None
+    secure_1psidts = None
+    browser_used = None
+
     try:
-        # Mapeamento de nomes de navegadores para funções do browser_cookie3
-        browser_functions = {
-            'chrome': bc3.chrome,
-            'chromium': bc3.chromium,
-            'opera': bc3.opera,
-            'opera_gx': bc3.opera_gx,
-            'brave': bc3.brave,
-            'edge': bc3.edge,
-            'vivaldi': bc3.vivaldi,
-            'firefox': bc3.firefox,
-            'librewolf': bc3.librewolf,
-            'safari': bc3.safari,
-        }
-
-        secure_1psid = None
-        secure_1psidts = None
-        browser_used = None
-
         if browser_name:
-            # Usar navegador específico
             if browser_name not in browser_functions:
                 print(f"❌ Navegador '{browser_name}' não suportado.")
                 print(
-                    f'Navegadores suportados: {", ".join(browser_functions.keys())}'
+                    'Navegadores suportados: '
+                    f'{", ".join(browser_functions.keys())}'
                 )
                 return False
 
             try:
-                cj = browser_functions[browser_name](domain_name='google.com')
-                cookies = {cookie.name: cookie.value for cookie in cj}
-
-                if '__Secure-1PSID' in cookies:
-                    secure_1psid = cookies['__Secure-1PSID']
-                    secure_1psidts = cookies.get('__Secure-1PSIDTS', '')
-                    browser_used = browser_name
+                psid, psidts = _extract(
+                    browser_name, browser_functions[browser_name]
+                )
+                if not psid:
                     print(
-                        f'✅ Cookies encontrados no navegador: {browser_name}'
-                    )
-                else:
-                    print(
-                        f'❌ Cookie __Secure-1PSID não encontrado no navegador {browser_name}.'
+                        '❌ Cookie __Secure-1PSID não encontrado '
+                        f'no navegador {browser_name}.'
                     )
                     return False
-
+                secure_1psid, secure_1psidts = psid, psidts
+                browser_used = browser_name
+                print(
+                    f'✅ Cookies encontrados no navegador: {browser_name}'
+                )
             except Exception as e:
                 print(f'❌ Erro ao acessar navegador {browser_name}: {e}')
                 print(
-                    'Certifique-se de que o navegador está instalado e você tem permissões adequadas.'
+                    'Certifique-se de que o navegador está instalado '
+                    'e você tem permissões adequadas.'
                 )
                 return False
         else:
-            # Tentar todos os navegadores disponíveis
             for name, func in browser_functions.items():
                 try:
-                    cj = func(domain_name='google.com')
-                    cookies = {cookie.name: cookie.value for cookie in cj}
-
-                    if '__Secure-1PSID' in cookies:
-                        secure_1psid = cookies['__Secure-1PSID']
-                        secure_1psidts = cookies.get('__Secure-1PSIDTS', '')
+                    psid, psidts = _extract(name, func)
+                    if psid:
+                        secure_1psid, secure_1psidts = psid, psidts
                         browser_used = name
-                        print(f'✅ Cookies encontrados no navegador: {name}')
+                        console.print(
+                            f'✅ Cookies encontrados no navegador: '
+                            f'[green]{name}[/green]'
+                        )
                         break
-
                 except Exception as e:
-                    # Ignorar erros de navegadores não disponíveis
                     if (
                         'not found' in str(e).lower()
                         or 'permission' in str(e).lower()
                     ):
                         continue
-                    print(f'⚠️  Erro ao verificar navegador {name}: {e}')
+                    console.print(
+                        f'⚠️  Erro ao verificar navegador '
+                        f'[yellow]{name}[/yellow]: {e}'
+                    )
 
         if not secure_1psid:
-            print(
+            console.print(
                 '❌ Cookie __Secure-1PSID não encontrado em nenhum navegador.'
             )
-            print(
-                'Certifique-se de que você está logado no Gemini (gemini.google.com) no seu navegador.'
+            console.print(
+                'Certifique-se de que você está logado no Gemini '
+                '(gemini.google.com) no seu navegador.'
             )
             if not browser_name:
-                print(
-                    'Dica: Você pode especificar um navegador específico, ex: python setup_cookies.py chrome'
+                console.print(
+                    'Dica: Você pode especificar um navegador específico, '
+                    'ex: python setup_cookies.py chrome'
                 )
             return False
 
-        # Atualizar .env preservando o formato
         update_env_file(secure_1psid, secure_1psidts)
 
-        print('✅ Cookies salvos com sucesso no .env!')
-        print(f'   Navegador usado: {browser_used}')
-        print(f'   SECURE_1PSID: {secure_1psid[:20]}...')
+        console.print('✅ Cookies salvos com sucesso no .env!')
+        console.print(f'   Navegador usado: [green]{browser_used}[/green]')
+        console.print(f'   SECURE_1PSID: {secure_1psid[:20]}...')
         return True
 
     except Exception as e:
-        print(f'❌ Erro ao obter cookies: {e}')
-        print('Tente fazer login no Gemini manualmente e executar novamente.')
+        console.print(f'❌ Erro ao obter cookies: {e}')
+        console.print(
+            'Tente fazer login no Gemini manualmente e executar novamente.'
+        )
         return False
 
 
 def update_env_file(secure_1psid, secure_1psidts):
-    """Atualiza o arquivo .env preservando comentários e outras configurações."""
+    """Atualiza o arquivo .env preservando comentários
+    e outras configurações."""
     env_path = Path('.env')
 
     if not env_path.exists():
@@ -173,7 +191,8 @@ DRIVE_TOKEN_PATH=config/token.json
 DRIVE_FOLDER_ID=sua_pasta_pessoal_id_aqui
 
 # Como obter as credenciais:
-# 1. Gemini: Faça login no gemini.google.com e extraia os cookies __Secure-1PSID e __Secure-1PSIDTS
+# 1. Gemini: Faça login no gemini.google.com e extraia os cookies
+#    __Secure-1PSID e __Secure-1PSIDTS
 #
 # 2. Google Drive - OAuth 2.0 + Pasta Pessoal:
 #   - Vá para Google Cloud Console > APIs & Services > Credentials
@@ -265,10 +284,12 @@ def main():
         print('Uso: python setup_cookies.py [navegador]')
         print('\nNavegadores suportados:')
         print(
-            '  chrome, chromium, opera, opera_gx, brave, edge, vivaldi, firefox, librewolf, safari'
+            '  chrome, chromium, opera, opera_gx, brave, edge, '
+            'vivaldi, firefox, librewolf, safari'
         )
         print(
-            '\nSe nenhum navegador for especificado, tenta todos os navegadores disponíveis.'
+            '\nSe nenhum navegador for especificado, tenta todos '
+            'os navegadores disponíveis.'
         )
         print('\nExemplos:')
         print('  python setup_cookies.py          # Todos os navegadores')

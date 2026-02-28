@@ -1,14 +1,18 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Layout/Navbar';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import SimulatorPage from './pages/SimulatorPage';
-import MuralPage from './pages/MuralPage';
-import DashboardPage from './pages/DashboardPage';
-import PortfolioPage from './pages/PortfolioPage';
+import DemoPage from './pages/DemoPage';
+import DomainsPage from './pages/DomainsPage';
+import CardSwipePage from './pages/CardSwipePage';
+import TrainingPage from './pages/TrainingPage';
+import OracleDashboardPage from './pages/OracleDashboardPage';
 import './index.css';
+
+
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -31,16 +35,18 @@ function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/portfolio" element={<PortfolioPage />} />
-      <Route path="/simulador" element={<ProtectedRoute><SimulatorPage /></ProtectedRoute>} />
-      <Route path="/mural" element={<ProtectedRoute><MuralPage /></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/demo" element={<DemoPage />} />
+      <Route path="/dominios" element={<ProtectedRoute><DomainsPage /></ProtectedRoute>} />
+      <Route path="/criar/:domainId" element={<ProtectedRoute><CardSwipePage /></ProtectedRoute>} />
+      <Route path="/treinar" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
+      <Route path="/oracle" element={<ProtectedRoute><OracleDashboardPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
 export default function App() {
+
   return (
     <BrowserRouter>
       <AuthProvider>

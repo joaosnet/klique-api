@@ -74,11 +74,11 @@ export default function CTASection() {
             Cadastre-se e Batalhe
           </Link>
           <Link
-            to="/simulador"
+            to="/demo"
             className="px-10 py-4 rounded-lg font-title tracking-widest text-sm uppercase transition-all hover:bg-gray-800"
             style={{ border: '1px solid rgba(168,85,247,0.4)', color: '#c084fc' }}
           >
-            Ver o Simulador
+            Ver a Demo
           </Link>
         </div>
 
