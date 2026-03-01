@@ -1,8 +1,8 @@
 import os
 from typing import Any, Optional
 
+import httpx
 from bson import ObjectId
-from google.genai import types
 
 from ..database import (
     get_domain_images_collection,
@@ -12,7 +12,8 @@ from ..database import (
 from ..logger import logger
 
 MEDIA_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'generated_media'
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+    'generated_media',
 )
 
 
@@ -24,7 +25,7 @@ async def generate_and_save_image(
     force: bool = False,
 ) -> Optional[str]:
     """
-    Usa a Gemini API oficial (Imagen) para gerar uma imagem.
+    Usa a GeminiWeb API para gerar uma imagem.
     Retorna o path relativo da imagem (ex: 'domains/dating.png') se sucesso.
     Se force=True, ignora o cache e regenera a imagem.
     """
@@ -37,26 +38,39 @@ async def generate_and_save_image(
         return f'{output_dir}/{base_name}.png'
 
     try:
-        logger.info(f'Gerando imagem via Gemini Imagen para: {prompt[:50]}...')
-        response = await gemini_client.aio.models.generate_images(
-            model='imagen-3.0-generate-002',
-            prompt=prompt,
-            config=types.GenerateImagesConfig(
-                number_of_images=1,
-                output_mime_type='image/png',
-            ),
-        )
+        logger.info(f'Gerando imagem via GeminiWeb API para: {prompt[:50]}...')
 
-        if not response.generated_images:
+        response = await gemini_client.generate_content(prompt)
+        images = getattr(response, 'images', None)
+
+        if not images:
             logger.warning(
-                f'Imagen não retornou imagens para o prompt: {prompt[:50]}'
+                f'Gemini não retornou imagens para o prompt: {prompt[:50]}'
             )
             return None
 
-        image_bytes = response.generated_images[0].image.image_bytes
-        if not image_bytes:
-            logger.warning(f'Imagem vazia retornada para: {prompt[:50]}')
+        image = images[0]
+        image_url = getattr(image, 'url', None)
+
+        if not image_url:
+            logger.warning(f'URL de imagem não encontrada para: {prompt[:50]}')
             return None
+
+        # Headers and cookies to bypass 403 Forbidden
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/120.0.0.0 Safari/537.36'
+        }
+        cookies = getattr(gemini_client, 'cookies', {})
+
+        # Descarregar a imagem usando httpx
+        async with httpx.AsyncClient(
+            follow_redirects=True, headers=headers, cookies=cookies
+        ) as client:
+            img_res = await client.get(image_url)
+            img_res.raise_for_status()
+            image_bytes = img_res.content
 
         with open(expected_path, 'wb') as f:
             f.write(image_bytes)
@@ -185,7 +199,8 @@ async def improve_image_with_ai(
     """
     combined_prompt = (
         f'{base_prompt}. Aplica o seguinte estilo artístico: {style_prompt}. '
-        'Mantém a qualidade cinematográfica, fotorealista, sem texto na imagem.'
+        'Mantém a qualidade cinematográfica, fotorealista, '
+        'sem texto na imagem.'
     )
     return await generate_and_save_image(
         prompt=combined_prompt,

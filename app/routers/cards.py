@@ -96,10 +96,7 @@ async def _card_generation_stream(
             },
         )
 
-        response = await gemini_client.aio.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=full_prompt,
-        )
+        response = await gemini_client.generate_content(full_prompt)
         raw_text = response.text.strip()
 
         # Extrair JSON — remover blocos de código markdown se presentes
@@ -257,7 +254,11 @@ async def swipe_card(  # noqa: PLR0913
 
     # Dispara a geração de imagem da carta em background
     gemini_client = getattr(request.app.state, 'gemini_webapi_client', None)
-    if body.generate_image and gemini_client and body.card_data.visual_prompt_idea:
+    if (
+        body.generate_image
+        and gemini_client
+        and body.card_data.visual_prompt_idea
+    ):
         background_tasks.add_task(
             get_or_generate_card_image,
             card_id,
@@ -386,7 +387,9 @@ async def regenerate_card_image(
             status_code=503, detail='Motor de IA não está configurado.'
         )
 
-    visual_prompt = doc.get('visual_prompt_idea') or doc.get('scenario_context', '')
+    visual_prompt = doc.get('visual_prompt_idea') or doc.get(
+        'scenario_context', ''
+    )
     background_tasks.add_task(
         get_or_generate_card_image, card_id, visual_prompt, gemini_client, True
     )
@@ -423,13 +426,19 @@ async def improve_card_image(
             status_code=503, detail='Motor de IA não está configurado.'
         )
 
-    base_prompt = doc.get('visual_prompt_idea') or doc.get('scenario_context', '')
+    base_prompt = doc.get('visual_prompt_idea') or doc.get(
+        'scenario_context', ''
+    )
     combined_prompt = (
         f'{base_prompt}. Aplica o seguinte estilo artístico: {body.style_prompt}. '
         'Mantém a qualidade cinematográfica, fotorealista, sem texto na imagem.'
     )
     background_tasks.add_task(
-        get_or_generate_card_image, card_id, combined_prompt, gemini_client, True
+        get_or_generate_card_image,
+        card_id,
+        combined_prompt,
+        gemini_client,
+        True,
     )
 
     return DefautMessage(

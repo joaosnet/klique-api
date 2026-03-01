@@ -11,6 +11,9 @@ GEMINI_AUTO_CLOSE = os.getenv('GEMINI_AUTO_CLOSE', 'true').lower() == 'true'
 GEMINI_CLOSE_DELAY = int(os.getenv('GEMINI_CLOSE_DELAY', '10'))
 GEMINI_CONCURRENCY_LIMIT = int(os.getenv('GEMINI_CONCURRENCY_LIMIT', '5'))
 
+# Legay API warning
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+
 # Legacy Gemini Web API settings (now handled by MCP server)
 SECURE_1PSID = os.getenv('SECURE_1PSID')  # Kept for backward compatibility
 SECURE_1PSIDTS = os.getenv('SECURE_1PSIDTS')  # Kept for backward compatibility

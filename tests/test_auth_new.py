@@ -1,5 +1,5 @@
-import pytest
 from fastapi.testclient import TestClient
+
 from app.main import app
 
 client = TestClient(app)
@@ -28,7 +28,7 @@ def test_magic_link_request():
         '/auth/magic-link/request', json={'email': 'test@example.com'}
     )
     # Should probably be 200 even if user doesn't exist, to prevent email enumeration
-    assert response.status_code in [200, 404]
+    assert response.status_code in {200, 404}
 
 
 def test_otp_request():
@@ -37,16 +37,16 @@ def test_otp_request():
         json={'phone_number': '5511999999999', 'method': 'whatsapp'},
     )
     # It attempts to send, we might get 200 or 500 if the whatsapp service is down
-    assert response.status_code in [200, 500, 422, 400]
+    assert response.status_code in {200, 500, 422, 400}
 
 
 def test_social_apple_invalid_token():
     response = client.post(
         '/auth/apple', json={'token': 'invalid_token', 'name': 'Apple User'}
     )
-    assert response.status_code in [400, 401]
+    assert response.status_code in {400, 401}
 
 
 def test_social_google_invalid_token():
     response = client.post('/auth/google', json={'token': 'invalid_token'})
-    assert response.status_code in [400, 401]
+    assert response.status_code in {400, 401}

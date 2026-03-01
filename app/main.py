@@ -10,12 +10,12 @@ warnings.filterwarnings(
 import os  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
 
-from google import genai as google_genai
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from gemini_webapi import GeminiClient
 
-from .config import GOOGLE_API_KEY
+from .config import SECURE_1PSID, SECURE_1PSIDTS
 from .database import close_db_connection, get_client
 from .logger import logger
 from .routers import (
@@ -28,10 +28,8 @@ from .routers import (
     profile_router,
     register,
     srs,
-    whatsapp,
 )
 from .scheduler import setup_scheduler, start_scheduler, stop_scheduler
-from .services.whatsapp import WhatsAppService
 
 
 @asynccontextmanager
@@ -43,23 +41,21 @@ async def lifespan(app: FastAPI):
     # Inicializa o cliente do banco de dados no startup
     app.state.db_client = get_client()
 
-    # Inicializa o serviço do WhatsApp
-    whatsapp_service = WhatsAppService()
-    app.state.whatsapp_service = whatsapp_service
-
     # Inicializa o cliente Gemini API oficial (usando GOOGLE_API_KEY)
     gemini_client = None
-    if GOOGLE_API_KEY:
+    if SECURE_1PSID:
         try:
-            gemini_client = google_genai.Client(api_key=GOOGLE_API_KEY)
+            logger.info('Inicializando cliente GeminiWeb API (MCP)')
+            gemini_client = GeminiClient(SECURE_1PSID, SECURE_1PSIDTS)
+            await gemini_client.init(timeout=30)
             app.state.gemini_webapi_client = gemini_client
-            logger.success('Cliente Gemini API inicializado com sucesso')
+            logger.success('Cliente GeminiWeb API inicializado com sucesso')
         except Exception as e:
-            logger.warning(f'Falha ao inicializar Gemini API: {e}')
+            logger.warning(f'Falha ao inicializar GeminiWeb API: {e}')
             app.state.gemini_webapi_client = None
     else:
-        logger.warning(
-            'GOOGLE_API_KEY não configurado — Motor do Oráculo desabilitado'
+        logger.info(
+            'SECURE_1PSID não configurado — Motor do Oráculo desabilitado'
         )
         app.state.gemini_webapi_client = None
 
@@ -71,7 +67,6 @@ async def lifespan(app: FastAPI):
 
     # Encerra os serviços ao finalizar a aplicação
     await stop_scheduler()
-    await whatsapp_service.close()
     await close_db_connection()
 
 
@@ -118,7 +113,6 @@ app.mount('/media', StaticFiles(directory=MEDIA_DIR), name='media')
 # Include routers
 app.include_router(auth.router)
 app.include_router(register.router)
-app.include_router(whatsapp.router)
 app.include_router(credits.router)
 app.include_router(payments.router)
 app.include_router(domains.router)

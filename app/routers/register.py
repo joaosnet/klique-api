@@ -13,8 +13,8 @@ from ..config import ACCESS_TOKEN_EXPIRE_DAYS, GMAIL_EMAIL, GMAIL_PASSWORD
 from ..database import get_profiles_collection, get_users_collection
 from ..dependencies import (
     create_access_token,
-    get_password_hash,
     get_current_user_optional,
+    get_password_hash,
 )
 from ..logger import logger
 from .schemas import (
@@ -27,7 +27,6 @@ from .schemas import (
     confirmCodeResponse,
     verifyEmailRequest,
     verifyEmailResponse,
-    User as UserSchema,
 )
 
 router = APIRouter()

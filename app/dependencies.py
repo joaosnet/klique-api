@@ -2,12 +2,12 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
+from bson import ObjectId
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pwdlib import PasswordHash
 from pymongo.collection import Collection
-from bson import ObjectId
 
 from .database import (
     get_users_collection,
@@ -66,7 +66,7 @@ async def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     if username.startswith('anon_'):
         try:
             user = await db_users.find_one({'_id': ObjectId(username[5:])})
@@ -74,7 +74,7 @@ async def get_current_user(
             raise credentials_exception
     else:
         user = await db_users.find_one({'$or': [{'email': username}, {'phone_number': username}]})
-        
+
     if user is None:
         raise credentials_exception
     return user
@@ -154,12 +154,12 @@ async def authenticate_token(token: str, db_users):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail='Invalid token',
             )
-        
+
         if username.startswith('anon_'):
             user = await db_users.find_one({'_id': ObjectId(username[5:])})
         else:
             user = await db_users.find_one({'$or': [{'email': username}, {'phone_number': username}]})
-            
+
         if user is None:
             return HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

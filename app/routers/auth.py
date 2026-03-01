@@ -37,7 +37,6 @@ from ..database import (
     get_mail_confirmation_collection,
     get_otp_collection,
     get_profiles_collection,
-    get_user_credits_collection,
     get_webauthn_challenges_collection,
 )
 from ..dependencies import (
