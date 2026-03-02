@@ -45,6 +45,11 @@ jobs:
         env:
           VITE_API_URL: https://fotodenatal.me
 
+      - name: Remove compressed assets for Android packaging
+        working-directory: frontend
+        run: |
+          find dist -type f \( -name '*.gz' -o -name '*.br' \) -delete
+
       - name: Install Capacitor CLI
         working-directory: frontend
         run: npm install @capacitor/cli @capacitor/core @capacitor/android --no-save
