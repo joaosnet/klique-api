@@ -1,5 +1,6 @@
 import os
 import warnings
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -64,9 +65,14 @@ async def lifespan(app: FastAPI):
     await setup_scheduler()
     await start_scheduler()
 
+    # Inicializa o ProcessPoolExecutor para bypassar o GIL em tarefas pesadas
+    app.state.process_pool = ProcessPoolExecutor()
+    logger.info('ProcessPoolExecutor (Multiprocessing) global inicializado')
+
     yield
 
     # Encerra os serviços ao finalizar a aplicação
+    app.state.process_pool.shutdown()
     await stop_scheduler()
     await close_db_connection()
 
