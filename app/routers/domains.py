@@ -5,6 +5,7 @@ Cada domínio representa uma área de treino preditivo do usuário,
 como "Dinâmicas de Encontros", "Geopolítica" ou "Negociação Salarial".
 """
 
+import asyncio
 import os
 import shutil
 from datetime import datetime, timezone
@@ -48,50 +49,62 @@ router = APIRouter(prefix='/api/domains', tags=['domains'])
 
 
 async def _compute_domain_stats(domain_id: str, user_id: str) -> DomainStats:
-    """Calcula as estatísticas de um domínio."""
+    """Calcula as estatísticas de um domínio usando consultas concorrentes."""
     cards_col = get_scenario_cards_collection()
     reviews_col = get_reviews_collection()
     logs_col = get_simulation_logs_collection()
 
-    cards_count = await cards_col.count_documents({
+    now = datetime.now(timezone.utc)
+
+    # 1. Obter contagem e IDs concorrentemente
+    cards_count_t = cards_col.count_documents({
         'domain_id': domain_id,
         'user_id': user_id,
     })
-
-    now = datetime.now(timezone.utc)
-    # Buscar IDs dos cards do domínio para cruzar com reviews
-    card_docs = await cards_col.find(
+    card_docs_t = cards_col.find(
         {'domain_id': domain_id, 'user_id': user_id},
         {'_id': 1},
     ).to_list(length=None)
+
+    cards_count, card_docs = await asyncio.gather(cards_count_t, card_docs_t)
+
     card_ids = [str(doc['_id']) for doc in card_docs]
 
     due_today = 0
-    if card_ids:
-        due_today = await reviews_col.count_documents({
-            'card_id': {'$in': card_ids},
-            'user_id': user_id,
-            'next_review_date': {'$lte': now},
-        })
-
-    # Calcular precisão média dos logs
     accuracy = 0.0
-    if card_ids:
-        pipeline = [
-            {'$match': {'domain_id': domain_id, 'user_id': user_id}},
-            {'$group': {'_id': None, 'avg': {'$avg': '$performance_rating'}}},
-        ]
-        cursor = await logs_col.aggregate(pipeline)
-        result = []
-        async for doc in cursor:
-            result.append(doc)
-            if len(result) >= 1:
-                break
-        if result:
-            raw_avg = result[0].get('avg', 0.0)
-            accuracy = round(raw_avg / 5.0, 2)
 
-    # Precisamos do nome — será preenchido pelo caller
+    # 2. Se houver cards, obter logs e revisões pendentes concorrentemente
+    if card_ids:
+
+        async def fetch_due_today():
+            return await reviews_col.count_documents({
+                'card_id': {'$in': card_ids},
+                'user_id': user_id,
+                'next_review_date': {'$lte': now},
+            })
+
+        async def fetch_accuracy():
+            pipeline = [
+                {'$match': {'domain_id': domain_id, 'user_id': user_id}},
+                {
+                    '$group': {
+                        '_id': None,
+                        'avg': {'$avg': '$performance_rating'},
+                    }
+                },
+            ]
+            cursor = await logs_col.aggregate(pipeline)
+            raw_avg = 0.0
+            async for doc in cursor:
+                raw_avg = doc.get('avg', 0.0)
+                break
+            return round(raw_avg / 5.0, 2)
+
+        due_today, accuracy = await asyncio.gather(
+            fetch_due_today(), fetch_accuracy()
+        )
+
+    # O nome do domínio será preenchido pelo caller
     return DomainStats(
         domain_id=domain_id,
         domain_name='',
@@ -148,6 +161,9 @@ async def list_domains(
 
     result = []
     img_col = get_domain_images_collection()
+
+    # Preparar as instâncias do modelo de Domínio primariamente
+    domain_objects = []
     for doc in docs:
         domain_id = str(doc['_id'])
         doc['_id'] = domain_id
@@ -174,7 +190,17 @@ async def list_domains(
                 )
 
         domain = Domain(**doc)
-        stats = await _compute_domain_stats(domain_id, user_id)
+        domain_objects.append((domain_id, domain))
+
+    # Computar estatísticas concorrentemente para eliminar o N+1 fallback block
+    if domain_objects:
+        stats_list = await asyncio.gather(*[
+            _compute_domain_stats(d_id, user_id) for d_id, _ in domain_objects
+        ])
+    else:
+        stats_list = []
+
+    for (domain_id, domain), stats in zip(domain_objects, stats_list):
         stats.domain_name = domain.name
         # Copiar a imagem para o domínio
         result.append(

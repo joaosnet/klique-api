@@ -1,17 +1,18 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import MagicLinkCallback from './pages/MagicLinkCallback';
-import DomainsPage from './pages/DomainsPage';
-import CardSwipePage from './pages/CardSwipePage';
-import TrainingPage from './pages/TrainingPage';
-import DashboardPage from './pages/DashboardPage';
-import ProfilePage from './pages/ProfilePage';
 import BottomNav from './components/Layout/BottomNav';
 import GamifiedLoader from './components/Layout/GamifiedLoader';
 import './index.css';
+
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const MagicLinkCallback = lazy(() => import('./pages/MagicLinkCallback'));
+const DomainsPage = lazy(() => import('./pages/DomainsPage'));
+const CardSwipePage = lazy(() => import('./pages/CardSwipePage'));
+const TrainingPage = lazy(() => import('./pages/TrainingPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 
 function ProtectedRoute({ children }) {
@@ -26,17 +27,19 @@ function ProtectedRoute({ children }) {
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<DomainsPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/magic-login" element={<MagicLinkCallback />} />
-      <Route path="/criar/:domainId" element={<CardSwipePage />} />
-      <Route path="/treinar" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
-      <Route path="/oracle" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/perfil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-[var(--bg-app)]"><GamifiedLoader label="A carregar..." /></div>}>
+      <Routes>
+        <Route path="/" element={<DomainsPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/magic-login" element={<MagicLinkCallback />} />
+        <Route path="/criar/:domainId" element={<CardSwipePage />} />
+        <Route path="/treinar" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
+        <Route path="/oracle" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/perfil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 
