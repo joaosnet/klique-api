@@ -7,6 +7,9 @@ on:
       - 'novaversãocomemailesenha'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -19,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -39,6 +42,8 @@ jobs:
       - name: Build React app
         working-directory: frontend
         run: npm run build
+        env:
+          VITE_API_URL: https://fotodenatal.me
 
       - name: Install Capacitor CLI
         working-directory: frontend
@@ -59,11 +64,14 @@ jobs:
         working-directory: frontend/android
         run: ./gradlew assembleDebug --no-daemon
 
+      - name: Rename APK
+        run: cp frontend/android/app/build/outputs/apk/debug/app-debug.apk frontend/android/app/build/outputs/apk/debug/omniflash.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: omniflash-debug-apk
-          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          path: frontend/android/app/build/outputs/apk/debug/omniflash.apk
           retention-days: 7
 
       - name: Build Release AAB
@@ -76,3 +84,45 @@ jobs:
           name: omniflash-release-aab
           path: frontend/android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 7
+
+      - name: Generate version tag
+        id: version
+        run: echo "tag=v$(date +'%Y.%m.%d')-build.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "OmniFlash ${{ steps.version.outputs.tag }}"
+          body: |
+            ## 🇧🇷 Português
+
+            ### 📱 OmniFlash - Aplicativo Android
+
+            Nova build do aplicativo OmniFlash gerada automaticamente.
+
+            **Como instalar:**
+            1. Baixe o arquivo `omniflash.apk` nos assets abaixo
+            2. No Android, permita instalação de fontes desconhecidas
+            3. Abra o arquivo e instale
+
+            ---
+
+            ## 🇺🇸 English
+
+            ### 📱 OmniFlash - Android App
+
+            New OmniFlash app build generated automatically.
+
+            **How to install:**
+            1. Download the `omniflash.apk` file from the assets below
+            2. On Android, allow installation from unknown sources
+            3. Open the file and install
+
+            ---
+
+            > Build: `${{ github.run_number }}` | Commit: `${{ github.sha }}`
+          files: |
+            frontend/android/app/build/outputs/apk/debug/omniflash.apk
+          draft: false
+          prerelease: false
