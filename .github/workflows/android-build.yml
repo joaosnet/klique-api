@@ -62,7 +62,9 @@ jobs:
 
       - name: Build Debug APK
         working-directory: frontend/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
 
       - name: Rename APK
         run: cp frontend/android/app/build/outputs/apk/debug/app-debug.apk frontend/android/app/build/outputs/apk/debug/omniflash.apk
@@ -76,7 +78,9 @@ jobs:
 
       - name: Build Release AAB
         working-directory: frontend/android
-        run: ./gradlew bundleRelease --no-daemon
+        run: |
+          chmod +x ./gradlew
+          ./gradlew bundleRelease --no-daemon
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
