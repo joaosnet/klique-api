@@ -4,12 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { profileAPI } from '../services/api';
 import { IconLogout } from '../components/Icons/StatIcons';
 import './ProfilePage.css';
+import { useTranslation } from 'react-i18next';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function ProfilePage() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     // Profile data
     const [profile, setProfile] = useState(null);
@@ -46,11 +48,11 @@ export default function ProfilePage() {
         setAvatarMsg('');
         try {
             await profileAPI.generateAvatar(generatePrompt);
-            setAvatarMsg('Avatar a ser gerado em background. Volta em instantes para ver o resultado.');
+            setAvatarMsg(t('profile.avatar_generating'));
             setGeneratePrompt('');
             setAvatarSection(null);
         } catch (e) {
-            setAvatarMsg('Erro ao gerar avatar: ' + (e.message || ''));
+            setAvatarMsg(t('profile.avatar_error') + ': ' + (e.message || ''));
         } finally {
             setAvatarLoading(false);
         }
@@ -66,17 +68,17 @@ export default function ProfilePage() {
             // Refresh profile to get new avatar_url
             const updated = await profileAPI.getMe();
             setProfile(updated);
-            setAvatarMsg(improveToggle ? 'Foto carregada. Melhoria em curso, atualiza em breve.' : 'Avatar atualizado com sucesso.');
+            setAvatarMsg(improveToggle ? t('profile.avatar_success') : t('profile.avatar_success'));
             setAvatarSection(null);
         } catch (e) {
-            setAvatarMsg('Erro ao carregar avatar: ' + (e.message || ''));
+            setAvatarMsg(t('profile.avatar_error') + ': ' + (e.message || ''));
         } finally {
             setAvatarLoading(false);
         }
     };
 
     const handleRemoveAvatar = async () => {
-        if (!window.confirm('Remover avatar?')) return;
+        if (!window.confirm(t('profile.change_avatar'))) return;
         try {
             await profileAPI.removeAvatar();
             setProfile(prev => prev ? { ...prev, avatar_url: null } : prev);
@@ -95,7 +97,7 @@ export default function ProfilePage() {
 
     return (
         <div className="profile-container p-6 pb-24 max-w-md mx-auto fade-in-up mt-8">
-            <h1 className="text-3xl font-title text-center mb-8 text-[var(--text-main)]">Meu Perfil</h1>
+            <h1 className="text-3xl font-title text-center mb-8 text-[var(--text-main)]">{t('profile.title')}</h1>
 
             {/* Avatar card */}
             <div className="profile-card" style={{ flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -123,20 +125,20 @@ export default function ProfilePage() {
                         onClick={() => setAvatarSection(avatarSection === 'generate' ? null : 'generate')}
                         style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #7c3aed', background: avatarSection === 'generate' ? '#7c3aed22' : 'transparent', color: '#a78bfa', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
                     >
-                        Gerar Avatar IA
+                        {t('profile.change_avatar')}
                     </button>
                     <button
                         onClick={() => setAvatarSection(avatarSection === 'upload' ? null : 'upload')}
                         style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border-color)', background: avatarSection === 'upload' ? 'var(--bg-card-inner)' : 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
                     >
-                        Upload Foto
+                        {t('profile.edit')}
                     </button>
                     {avatarUrl && (
                         <button
                             onClick={handleRemoveAvatar}
                             style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #ef444433', background: 'transparent', color: '#ef4444', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
                         >
-                            Remover
+                            {t('profile.cancel')}
                         </button>
                     )}
                 </div>
@@ -147,7 +149,7 @@ export default function ProfilePage() {
                         <textarea
                             value={generatePrompt}
                             onChange={e => setGeneratePrompt(e.target.value)}
-                            placeholder="Descreve o teu avatar ideal... Ex: retrato masculino com estilo cyberpunk, fundo neon azul"
+                            placeholder={t('profile.avatar_prompt')}
                             rows={3}
                             style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 6, padding: '8px 10px', fontSize: 12, outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
                         />
@@ -156,7 +158,7 @@ export default function ProfilePage() {
                             disabled={avatarLoading || !generatePrompt.trim()}
                             style={{ marginTop: 6, width: '100%', padding: '8px 0', borderRadius: 6, background: '#7c3aed', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: (!generatePrompt.trim() || avatarLoading) ? 0.5 : 1 }}
                         >
-                            {avatarLoading ? 'A gerar...' : 'Gerar Avatar'}
+                            {avatarLoading ? t('common.loading') : t('profile.change_avatar')}
                         </button>
                     </div>
                 )}
@@ -171,13 +173,13 @@ export default function ProfilePage() {
                                 onChange={e => setImproveToggle(e.target.checked)}
                                 style={{ accentColor: 'var(--accent)' }}
                             />
-                            Melhorar foto com IA
+                            {t('profile.improve_photo')}
                         </label>
                         {improveToggle && (
                             <input
                                 value={stylePrompt}
                                 onChange={e => setStylePrompt(e.target.value)}
-                                placeholder="Estilo artístico... Ex: anime, retrato cinematográfico, óleo"
+                                placeholder={t('profile.style_prompt')}
                                 style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 6, padding: '7px 10px', fontSize: 12, outline: 'none', boxSizing: 'border-box', marginBottom: 8 }}
                             />
                         )}
@@ -186,14 +188,14 @@ export default function ProfilePage() {
                             disabled={avatarLoading}
                             style={{ width: '100%', padding: '8px 0', borderRadius: 6, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: avatarLoading ? 0.5 : 1 }}
                         >
-                            {avatarLoading ? 'A carregar...' : 'Escolher Foto'}
+                            {avatarLoading ? t('common.loading') : t('profile.edit')}
                         </button>
                         <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileUpload} />
                     </div>
                 )}
 
                 {avatarMsg && (
-                    <p style={{ color: avatarMsg.startsWith('Erro') ? '#ef4444' : '#22c55e', fontSize: 11, textAlign: 'center', margin: '4px 0 0' }}>
+                    <p style={{ color: avatarMsg.startsWith(t('profile.avatar_error')) ? '#ef4444' : '#22c55e', fontSize: 11, textAlign: 'center', margin: '4px 0 0' }}>
                         {avatarMsg}
                     </p>
                 )}
@@ -206,7 +208,7 @@ export default function ProfilePage() {
                     className="w-full flex items-center justify-center space-x-2 p-4 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-colors font-medium text-lg mt-8"
                 >
                     <IconLogout width={20} height={20} />
-                    <span>Sair da Conta</span>
+                    <span>{t('profile.logout')}</span>
                 </button>
             </div>
         </div>

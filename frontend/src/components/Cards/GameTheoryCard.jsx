@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CustomSymbolTemplate } from '../Icons/ThemeIcons';
 // Props:
 //   card: { template_type, probability_heat_score, scenario_context, question,
@@ -11,7 +12,7 @@ import { CustomSymbolTemplate } from '../Icons/ThemeIcons';
 
 const TEMPLATES = {
   if_then: {
-    shortLabel: 'SE / ENTÃO',
+    shortLabel: 'if_then',
     labelWidth: 105,
     color: '#60a5fa',
     darkColor: '#1e3a8a',
@@ -25,7 +26,7 @@ const TEMPLATES = {
     btnBg: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
   },
   payoff_matrix: {
-    shortLabel: 'RECOMPENSA',
+    shortLabel: 'payoff_matrix',
     labelWidth: 105,
     color: '#fbbf24',
     darkColor: '#92400e',
@@ -39,7 +40,7 @@ const TEMPLATES = {
     btnBg: 'linear-gradient(135deg, #b45309, #f59e0b)',
   },
   black_swan: {
-    shortLabel: 'CISNE NEGRO',
+    shortLabel: 'black_swan',
     labelWidth: 115,
     color: '#f87171',
     darkColor: '#7f1d1d',
@@ -59,6 +60,7 @@ function heatColor(score) {
 }
 
 function ContextMenuOverlay({ onClose, children }) {
+  const { t } = useTranslation();
   return (
     <div
       onClick={(e) => { e.stopPropagation(); onClose(); }}
@@ -76,7 +78,7 @@ function ContextMenuOverlay({ onClose, children }) {
           animation: 'scaleUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
         }}
       >
-        <p style={{ color: '#fff', fontSize: 13, textAlign: 'center', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 }}>Ações da Carta</p>
+        <p style={{ color: '#fff', fontSize: 13, textAlign: 'center', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 }}>{t('gameCard.actions')}</p>
 
         {children}
 
@@ -87,7 +89,7 @@ function ContextMenuOverlay({ onClose, children }) {
             background: 'transparent', color: '#ccc', cursor: 'pointer', fontSize: 12, fontWeight: 600, textTransform: 'uppercase'
           }}
         >
-          Cancelar
+          {t('gameCard.cancel')}
         </button>
       </div>
     </div>
@@ -106,6 +108,7 @@ export default function GameTheoryCard({
   customSvg,
 }) {
   const tmpl = TEMPLATES[card.template_type] || TEMPLATES.if_then;
+  const { t } = useTranslation();
   const heat = card.probability_heat_score;
   const hc = heatColor(heat);
   const total = 9; // Temporary mock total, or calculate from somewhere if needed
@@ -207,7 +210,7 @@ export default function GameTheoryCard({
             boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
           }}
         >
-          Guardar no Deck
+          {t('gameCard.save')}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDiscard(); }}
@@ -217,9 +220,9 @@ export default function GameTheoryCard({
             fontSize: 13, fontWeight: 700, letterSpacing: 2,
             textTransform: 'uppercase', fontFamily: '"Inter", system-ui, sans-serif'
           }}
-          title="Descartar"
+          title={t('gameCard.discard')}
         >
-          Descartar Carta
+          {t('gameCard.discard')}
         </button>
       </>
     );
@@ -283,7 +286,7 @@ export default function GameTheoryCard({
           {/* Texto da Carta */}
           <div className="w-full text-white p-3 flex flex-col relative z-10 bg-black flex-grow">
             <h2 className="font-title text-xl tracking-wider leading-none mb-1 uppercase truncate" style={{ color: tmpl.color }}>
-              {tmpl.shortLabel}
+              {t(`gameCard.${tmpl.shortLabel}`)}
             </h2>
             <div className="w-full h-[1px] bg-gray-700 mb-2"></div>
 
@@ -302,7 +305,7 @@ export default function GameTheoryCard({
               color: tmpl.accentColor, textAlign: 'center', fontSize: 9, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase',
               fontFamily: 'Courier New, monospace', marginTop: 'auto', marginBottom: 6, animation: 'card-pulse 2s infinite',
             }}>
-              ◈ Revelar o Oráculo
+              ◈ {t('gameCard.reveal_oracle')}
             </div>
           </div>
         </div>
@@ -317,9 +320,9 @@ export default function GameTheoryCard({
             </div>
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
               <CustomSymbolTemplate type={card.template_type} width={24} height={24} color={tmpl.accentColor} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
-              <h2 className="font-title text-xl tracking-widest text-white uppercase mt-1" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>O Oráculo</h2>
+              <h2 className="font-title text-xl tracking-widest text-white uppercase mt-1" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>{t('gameCard.oracle')}</h2>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontFamily: '"Courier New", monospace', marginTop: 2 }}>
-                {tmpl.shortLabel}
+                {t(`gameCard.${tmpl.shortLabel}`)}
               </p>
             </div>
           </div>
@@ -328,7 +331,7 @@ export default function GameTheoryCard({
 
             <div style={{ background: 'rgba(34,197,94,0.1)', borderLeft: '3px solid #22c55e', borderRadius: '0 8px 8px 0', padding: '10px 12px', marginBottom: 12 }}>
               <p style={{ color: '#4ade80', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontFamily: 'Courier New, monospace', margin: '0 0 4px', fontWeight: 800 }}>
-                ▸ Resultado Provável
+                ▸ {t('gameCard.predicted_outcome')}
               </p>
               <p style={{ color: '#f8fafc', fontSize: 13, lineHeight: 1.6, margin: 0, fontWeight: 500 }}>
                 {card.predicted_outcome}
@@ -337,7 +340,7 @@ export default function GameTheoryCard({
 
             <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 12px', marginBottom: 10, flexGrow: 1 }}>
               <p style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontFamily: 'Courier New, monospace', margin: '0 0 4px', fontWeight: 800 }}>
-                ▸ Análise · Teoria Jogos
+                ▸ {t('gameCard.analysis')}
               </p>
               <p style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 1.6, margin: 0 }}>
                 {card.game_theory_explanation}

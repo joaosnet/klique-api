@@ -3,16 +3,17 @@
 //        onClick: () => void
 
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ThemeIcon } from './../Icons/ThemeIcons';
 
 const THEME_MAP = {
-    dating: { color: '#f472b6', dark: '#831843', grad: '#be185d', label: 'Dinâmicas' },
-    office: { color: '#a78bfa', dark: '#4c1d95', grad: '#7c3aed', label: 'Escritório' },
-    finance: { color: '#fbbf24', dark: '#92400e', grad: '#b45309', label: 'Finanças' },
-    negotiation: { color: '#34d399', dark: '#065f46', grad: '#059669', label: 'Negociação' },
-    geopolitics: { color: '#60a5fa', dark: '#1e3a8a', grad: '#2563eb', label: 'Geopolítica' },
-    social: { color: '#fb923c', dark: '#7c2d12', grad: '#ea580c', label: 'Social' },
-    custom: { color: '#e879f9', dark: '#701a75', grad: '#a21caf', label: 'Custom' },
+    dating: { color: '#f472b6', dark: '#831843', grad: '#be185d', label: 'dating' },
+    office: { color: '#a78bfa', dark: '#4c1d95', grad: '#7c3aed', label: 'office' },
+    finance: { color: '#fbbf24', dark: '#92400e', grad: '#b45309', label: 'finance' },
+    negotiation: { color: '#34d399', dark: '#065f46', grad: '#059669', label: 'negotiation' },
+    geopolitics: { color: '#60a5fa', dark: '#1e3a8a', grad: '#2563eb', label: 'geopolitics' },
+    social: { color: '#fb923c', dark: '#7c2d12', grad: '#ea580c', label: 'social' },
+    custom: { color: '#e879f9', dark: '#701a75', grad: '#a21caf', label: 'custom' },
 };
 
 function getTheme(themeValue) {
@@ -22,7 +23,8 @@ function getTheme(themeValue) {
 }
 
 export default function DomainSVGCard({ domain, stats, onClick }) {
-    const t = getTheme(domain.theme);
+    const themeObj = getTheme(domain.theme);
+    const { t } = useTranslation();
     const cardRef = useRef(null);
     const [tilt, setTilt] = useState({ x: 0, y: 0 });
     const [hovered, setHovered] = useState(false);
@@ -135,9 +137,9 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                     <rect x="12" y="10" width="70" height="18" rx="9" fill={t.color} fillOpacity="0.25" />
                     <rect x="12" y="10" width="70" height="18" rx="9" fill="none" stroke={t.color} strokeOpacity="0.5" strokeWidth="1" />
                     <text x="47" y="22" textAnchor="middle" dominantBaseline="middle"
-                        fill={t.color} fontSize="8" fontFamily="Courier New, monospace"
+                        fill={themeObj.color} fontSize="8" fontFamily="Courier New, monospace"
                         fontWeight="800" letterSpacing="1">
-                        {t.label.toUpperCase()}
+                        {t(`domainCard.${themeObj.label}`).toUpperCase()}
                     </text>
 
                     {/* Domain name */}
@@ -156,8 +158,8 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                     <text x="14" y="105" fill={t.color} fontSize="20" fontFamily="Courier New, monospace" fontWeight="800">
                         {stats?.cards_count ?? 0}
                     </text>
-                    <text x="14" y="118" fill={t.color} fontSize="7" fontFamily="Courier New, monospace" fillOpacity="0.8" letterSpacing="1">
-                        CARDS
+                    <text x="14" y="118" fill={themeObj.color} fontSize="7" fontFamily="Courier New, monospace" fillOpacity="0.8" letterSpacing="1">
+                        {t('domainCard.cards')}
                     </text>
 
                     {/* Due today */}
@@ -166,7 +168,7 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                         {stats?.due_today ?? 0}
                     </text>
                     <text x="82" y="118" fill="#6b7280" fontSize="7" fontFamily="Courier New, monospace" letterSpacing="1">
-                        HOJE
+                        {t('domainCard.due_today')}
                     </text>
 
                     {/* Accuracy */}
@@ -175,7 +177,7 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                         {accuracy !== null ? `${accuracy}%` : '—'}
                     </text>
                     <text x="150" y="118" fill="#6b7280" fontSize="7" fontFamily="Courier New, monospace" letterSpacing="1">
-                        ACERTO
+                        {t('domainCard.accuracy')}
                     </text>
 
                     {/* CTA arrow */}
@@ -203,10 +205,10 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                         {domain.theme}
                     </span>
                     <span style={{
-                        color: t.color, fontSize: 10, fontWeight: 700,
+                        color: themeObj.color, fontSize: 10, fontWeight: 700,
                         fontFamily: 'Courier New, monospace', letterSpacing: 1,
                     }}>
-                        Gerar Cards →
+                        {t('domainCard.generate')} →
                     </span>
                 </div>
             </div>

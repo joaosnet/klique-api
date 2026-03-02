@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.svg';
@@ -7,6 +8,7 @@ import { IconCameraShot, IconTicketPass, IconUserBadge } from '../Icons/ActionIc
 
 export default function Header() {
     const { user, credits, isAuthenticated, logout } = useAuth();
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -26,7 +28,7 @@ export default function Header() {
             <div className="header-container">
                 <Link to="/" className="logo" onClick={closeMobileMenu}>
                     <img src={logo} alt="OmniFlash" className="logo-image" />
-                    <span className="logo-text">OmniFlash</span>
+                    <span className="logo-text">{t('header.omniflash')}</span>
                 </Link>
 
                 {/* Hamburger Button - Mobile Only */}
@@ -48,7 +50,7 @@ export default function Header() {
                         onClick={closeMobileMenu}
                     >
                         <IconCameraShot className="nav-link-icon" width={18} height={18} />
-                        Criar Avatar
+                        {t('header.create_avatar')}
                     </Link>
 
                     {isAuthenticated ? (
@@ -60,7 +62,7 @@ export default function Header() {
                             >
                                 <IconTicketPass className="credits-icon" width={20} height={20} />
                                 <span className="credits-count">{credits.total}</span>
-                                <span className="credits-label">créditos</span>
+                                <span className="credits-label">{t('header.credits')}</span>
                             </Link>
 
                             <div className="user-menu">
@@ -69,17 +71,17 @@ export default function Header() {
                                     {user?.name?.split(' ')[0]}
                                 </span>
                                 <button onClick={handleLogout} className="btn-logout">
-                                    Sair
+                                    {t('header.logout')}
                                 </button>
                             </div>
                         </>
                     ) : (
                         <div className="auth-buttons">
                             <Link to="/login" className="btn-login" onClick={closeMobileMenu}>
-                                Entrar
+                                {t('header.login')}
                             </Link>
                             <Link to="/register" className="btn-register" onClick={closeMobileMenu}>
-                                Cadastrar
+                                {t('header.register')}
                             </Link>
                         </div>
                     )}

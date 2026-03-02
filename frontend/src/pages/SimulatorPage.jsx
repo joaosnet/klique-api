@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SimulatorRoster from '../components/Simulator/SimulatorRoster';
 import SimulatorResults from '../components/Simulator/SimulatorResults';
+import { useTranslation } from 'react-i18next';
 
 // Special entity: Professor Jiang
 const JIANG_ENTITY = {
@@ -32,6 +33,7 @@ function buildUserCard(user) {
 }
 
 export default function SimulatorPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [population, setPopulation] = useState([{ ...JIANG_ENTITY }]);
   const [screen, setScreen] = useState('roster'); // 'roster' | 'results'
@@ -70,9 +72,9 @@ export default function SimulatorPage() {
         className="text-center py-3 flex-shrink-0"
         style={{ background: '#111827', borderBottom: '2px solid #6b21a8' }}
       >
-        <h1 className="font-title text-2xl tracking-widest text-purple-400">SIMULADOR UNIVERSAL</h1>
+        <h1 className="font-title text-2xl tracking-widest text-purple-400">{t('simulator.title')}</h1>
         <p className="text-[10px] text-gray-500 uppercase tracking-widest">
-          Negócios, Política &amp; Sociedade
+          {t('simulator.subtitle')}
         </p>
       </header>
 
@@ -85,11 +87,13 @@ export default function SimulatorPage() {
             onRemove={handleRemove}
             onSimulate={() => setScreen('results')}
             userCard={userCard}
+            t={t}
           />
         ) : (
           <SimulatorResults
             population={allEntities}
             onReset={() => setScreen('roster')}
+            t={t}
           />
         )}
       </main>

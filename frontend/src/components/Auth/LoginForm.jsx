@@ -1,16 +1,20 @@
 import { useState } from 'react';
+
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './LoginForm.css';
 import { getErrorMessage } from '../../utils/errorHandler';
 import { IconUserBadge } from '../Icons/ActionIcons';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginForm() {
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    const { t } = useTranslation();
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -24,7 +28,7 @@ export default function LoginForm() {
             navigate('/');
         } catch (err) {
             setError(
-                getErrorMessage(err, 'Erro ao fazer login. Verifique suas credenciais.')
+                getErrorMessage(err, t('loginForm.error_login', 'Erro ao fazer login. Verifique suas credenciais.'))
             );
         } finally {
             setLoading(false);
@@ -36,8 +40,8 @@ export default function LoginForm() {
             <div className="login-card">
                 <div className="login-header">
                     <IconUserBadge className="login-icon" width={60} height={60} />
-                    <h1>Bem-vindo de volta!</h1>
-                    <p>Entre para criar seus avatares natalinos</p>
+                    <h1>{t('loginForm.welcome')}</h1>
+                    <p>{t('loginForm.subtitle')}</p>
                 </div>
 
                 {error && (
@@ -48,26 +52,26 @@ export default function LoginForm() {
 
                 <form onSubmit={handleSubmit} className="login-form">
                     <div className="form-group">
-                        <label htmlFor="email">Email</label>
+                        <label htmlFor="email">{t('loginForm.email')}</label>
                         <input
                             type="email"
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="seu@email.com"
+                            placeholder={t('loginForm.email_placeholder')}
                             required
                             disabled={loading}
                         />
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="password">Senha</label>
+                        <label htmlFor="password">{t('loginForm.password')}</label>
                         <input
                             type="password"
                             id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
+                            placeholder={t('loginForm.password_placeholder')}
                             required
                             disabled={loading}
                         />
@@ -81,18 +85,18 @@ export default function LoginForm() {
                         {loading ? (
                             <>
                                 <span className="spinner"></span>
-                                Entrando...
+                                {t('loginForm.loading')}
                             </>
                         ) : (
-                            'Entrar'
+                            t('loginForm.submit')
                         )}
                     </button>
                 </form>
 
                 <div className="login-footer">
                     <p>
-                        Não tem uma conta?{' '}
-                        <Link to="/register">Criar conta</Link>
+                        {t('loginForm.no_account')}{' '}
+                        <Link to="/register">{t('loginForm.create_account')}</Link>
                     </p>
                 </div>
             </div>

@@ -1,15 +1,20 @@
+
+import { useTranslation } from 'react-i18next';
 // EntityCard — Unmatched-style card component
 // Props: entity { id, name, power, resources, influence, strategy, image, rank }
 //        showDelete, small, onDelete
 import { IconDelete, IconStrategy } from '../Icons/ActionIcons';
 
+
 const STRATEGIES = {
-  cooperate: { name: 'COOPERADOR', color: '#22c55e', desc: 'Colabora e retalia proporcionalmente.' },
-  defect: { name: 'EXPLORADOR', color: '#ef4444', desc: 'Maximiza ganho individual; trai quando conveniente.' },
-  withdraw: { name: 'ISOLADO', color: '#6b7280', desc: 'Evita interações; neutro em conflitos.' },
+  cooperate: { name: 'entityCard.strategy_cooperate', color: '#22c55e', desc: 'entityCard.strategy_cooperate_desc' },
+  defect: { name: 'entityCard.strategy_defect', color: '#ef4444', desc: 'entityCard.strategy_defect_desc' },
+  withdraw: { name: 'entityCard.strategy_withdraw', color: '#6b7280', desc: 'entityCard.strategy_withdraw_desc' },
 };
 
+
 export default function EntityCard({ entity, showDelete = true, small = false, onDelete }) {
+  const { t } = useTranslation();
   const strat = STRATEGIES[entity.strategy] || STRATEGIES.cooperate;
   const total = entity.power + entity.resources + entity.influence;
   const rank = entity.rank ?? Math.round(total / 3);
@@ -71,17 +76,17 @@ export default function EntityCard({ entity, showDelete = true, small = false, o
             className={`font-title ${titleSize} tracking-wider leading-none mb-1 uppercase truncate`}
             style={{ color: strat.color }}
           >
-            {strat.name}
+            {t(strat.name)}
           </h2>
           <div className="border-t border-gray-700 my-1" />
-          <p className={`${textSize} font-bold text-gray-200 truncate uppercase`}>► {entity.name}</p>
+          <p className={`${textSize} font-bold text-gray-200 truncate uppercase`}> {entity.name}</p>
           <p className={`${textSize} leading-tight text-gray-400 mt-0.5`}>
-            Pod:{entity.power} | Rec:{entity.resources} | Inf:{entity.influence}
+            {t('entityCard.stats', { power: entity.power, resources: entity.resources, influence: entity.influence })}
           </p>
-          <p className={`${textSize} leading-tight text-gray-500 mt-1 italic truncate`}>{strat.desc}</p>
+          <p className={`${textSize} leading-tight text-gray-500 mt-1 italic truncate`}>{t(strat.desc)}</p>
 
           <div className="absolute bottom-1 right-2 text-[7px] text-gray-700 font-bold uppercase tracking-wider">
-            RANK {rank}
+            {t('entityCard.rank')} {rank}
           </div>
         </div>
       </div>

@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next';
+
 export default function MuralPage() {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -10,9 +13,8 @@ export default function MuralPage() {
     >
       <iframe
         src="/mural-static/index.html"
-        title="Mural de Objetivos"
+        title={t('mural.title')}
         style={{
-          flex: 1,
           border: 'none',
           width: '100%',
           height: '100%',

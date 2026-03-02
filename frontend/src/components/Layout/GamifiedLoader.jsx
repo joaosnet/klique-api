@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import './GamifiedLoader.css';
 
-const LORE_TIPS = [
-    "O Oráculo está a calcular as tuas próximas jogadas...",
-    "A analisar padrões nas tuas respostas recentes...",
-    "Domínios de alto nível requerem máxima precisão...",
-    "O teu streak define o teu ritmo de evolução...",
-    "Preparando o terreno para a próxima simulação...",
-    "Sincronizando as tuas sinapses com o servidor central...",
-    "A forjar novas conexões de memória a longo prazo..."
-];
-
 export default function GamifiedLoader({ fullScreen = true, label = null }) {
+    const { t } = useTranslation();
+    const LORE_TIPS = [
+        t('loader.tip1'),
+        t('loader.tip2'),
+        t('loader.tip3'),
+        t('loader.tip4'),
+        t('loader.tip5'),
+        t('loader.tip6'),
+        t('loader.tip7'),
+    ];
     const [tipIndex, setTipIndex] = useState(0);
 
     useEffect(() => {

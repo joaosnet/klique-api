@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { domainsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -10,13 +11,13 @@ import GamifiedLoader from '../components/Layout/GamifiedLoader';
 import { IconDelete, IconEditPen, IconSparkBoost } from '../components/Icons/ActionIcons';
 
 const THEMES = [
-  { value: 'dating', label: 'Dinâmicas de Encontros' },
-  { value: 'office', label: 'Política do Escritório' },
-  { value: 'finance', label: 'Mercado Financeiro' },
-  { value: 'negotiation', label: 'Negociação' },
-  { value: 'geopolitics', label: 'Geopolítica' },
-  { value: 'social', label: 'Dinâmicas Sociais' },
-  { value: 'custom', label: 'Outro (personalizado)' },
+  { value: 'dating', labelKey: 'domains.theme_dating' },
+  { value: 'office', labelKey: 'domains.theme_office' },
+  { value: 'finance', labelKey: 'domains.theme_finance' },
+  { value: 'negotiation', labelKey: 'domains.theme_negotiation' },
+  { value: 'geopolitics', labelKey: 'domains.theme_geopolitics' },
+  { value: 'social', labelKey: 'domains.theme_social' },
+  { value: 'custom', labelKey: 'domains.theme_custom' },
 ];
 
 function HeatBadge({ score }) {
@@ -34,6 +35,7 @@ function NewDomainModal({ onClose, onCreate }) {
   const [customTheme, setCustomTheme] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,7 +47,7 @@ function NewDomainModal({ onClose, onCreate }) {
       await onCreate(name.trim(), finalTheme);
       onClose();
     } catch (err) {
-      setError(getErrorMessage(err, 'Erro ao criar domínio'));
+      setError(getErrorMessage(err, t('domains.create_error')));
     } finally {
       setLoading(false);
     }
@@ -61,21 +63,21 @@ function NewDomainModal({ onClose, onCreate }) {
         onClick={(e) => e.stopPropagation()}
       >
         <h2 style={{ color: 'var(--text-highlight)', fontSize: 18, fontWeight: 700, marginBottom: 20, letterSpacing: 2, textTransform: 'uppercase' }}>
-          Novo Domínio
+          {t('domains.create')}
         </h2>
         <form onSubmit={handleSubmit}>
-          <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Nome do Domínio</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Dinâmicas de Escritório Q4" required
+          <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>{t('domains.name')}</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('domains.name_placeholder')} required
             style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 6, padding: '8px 12px', fontSize: 14, outline: 'none', marginBottom: 16, boxSizing: 'border-box' }}
           />
-          <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Tema</label>
+          <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>{t('domains.theme')}</label>
           <select value={theme} onChange={(e) => setTheme(e.target.value)}
             style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 6, padding: '8px 12px', fontSize: 14, outline: 'none', marginBottom: theme === 'custom' ? 8 : 24, boxSizing: 'border-box' }}
           >
-            {THEMES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            {THEMES.map(theme => <option key={theme.value} value={theme.value}>{t(theme.labelKey)}</option>)}
           </select>
           {theme === 'custom' && (
-            <input value={customTheme} onChange={(e) => setCustomTheme(e.target.value)} placeholder="Descreva o tema..."
+            <input value={customTheme} onChange={(e) => setCustomTheme(e.target.value)} placeholder={t('domains.custom_theme_placeholder')}
               style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 6, padding: '8px 12px', fontSize: 14, outline: 'none', marginBottom: 24, boxSizing: 'border-box' }}
             />
           )}
@@ -84,12 +86,12 @@ function NewDomainModal({ onClose, onCreate }) {
             <button type="button" onClick={onClose}
               style={{ flex: 1, padding: '9px 0', borderRadius: 6, border: '1px solid var(--border-color)', color: 'var(--text-muted)', background: 'transparent', cursor: 'pointer', fontSize: 13 }}
             >
-              Cancelar
+              {t('common.cancel')}
             </button>
             <button type="submit" disabled={loading}
               style={{ flex: 2, padding: '9px 0', borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, letterSpacing: 1, opacity: loading ? 0.6 : 1 }}
             >
-              {loading ? 'Criando...' : 'Criar Domínio'}
+              {loading ? t('domains.creating') : t('domains.create_domain')}
             </button>
           </div>
         </form>
@@ -105,6 +107,7 @@ export default function DomainsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingDomain, setEditingDomain] = useState(null);
+  const { t } = useTranslation();
 
   const loadDomains = async () => {
     setLoading(true);
@@ -130,7 +133,7 @@ export default function DomainsPage() {
   };
 
   const handleDelete = async (domainId) => {
-    if (!window.confirm('Tens a certeza? Esta ação irá apagar o domínio e todos os seus cards.')) return;
+    if (!window.confirm(t('domains.confirm_delete'))) return;
     try {
       await domainsAPI.remove(domainId);
       await loadDomains();
@@ -151,10 +154,10 @@ export default function DomainsPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
           <div>
             <h1 style={{ color: 'var(--text-highlight)', fontSize: 24, fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase', margin: 0 }}>
-              Domínios de Jogo
+              {t('domains.title')}
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
-              Cada domínio é um campo de batalha. Escolhe o teu e treina os reflexos.
+              {t('domains.subtitle')}
             </p>
           </div>
           {isAuthenticated ? (
@@ -162,25 +165,25 @@ export default function DomainsPage() {
               onClick={() => setShowModal(true)}
               style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 700, letterSpacing: 1, cursor: 'pointer', textTransform: 'uppercase' }}
             >
-              + Novo Domínio
+              {t('domains.create')}
             </button>
           ) : (
             <div style={{ background: 'var(--bg-card-inner)', border: '1px solid var(--accent)', borderRadius: 8, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>MODO DEMO</span>
+              <span style={{ color: 'var(--accent)', fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>{t('domains.demo_mode')}</span>
               <Link to="/register" style={{ color: 'var(--text-highlight)', fontSize: 12, fontWeight: 600, textDecoration: 'underline' }}>
-                Criar Conta Grátis →
+                {t('domains.create_account_demo')}
               </Link>
             </div>
           )}
         </div>
 
         {loading ? (
-          <GamifiedLoader label="A carregar domínios..." />
+          <GamifiedLoader label={t('domains.loading')} />
         ) : domains.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: 80 }}>
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><IconSparkBoost width={48} height={48} /></div>
-            <p style={{ color: 'var(--text-muted)', fontSize: 16, marginBottom: 8 }}>Nenhum domínio criado ainda.</p>
-            <p style={{ color: 'var(--border-color)', fontSize: 13 }}>Cria o teu primeiro domínio para começar a treinar.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 16, marginBottom: 8 }}>{t('domains.empty')}</p>
+            <p style={{ color: 'var(--border-color)', fontSize: 13 }}>{t('domains.empty_cta')}</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
@@ -196,14 +199,14 @@ export default function DomainsPage() {
                   <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 4, zIndex: 10 }}>
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditingDomain(domain); }}
-                      title="Editar domínio"
+                      title={t('domains.edit')}
                       style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.6)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, backdropFilter: 'blur(4px)' }}
                     >
                       <IconEditPen width={14} height={14} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(domain.id); }}
-                      title="Apagar domínio"
+                      title={t('domains.delete')}
                       style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.6)', border: '1px solid #ef444433', color: '#ef4444', cursor: 'pointer', fontSize: 13, backdropFilter: 'blur(4px)' }}
                     >
                       <IconDelete width={14} height={14} />

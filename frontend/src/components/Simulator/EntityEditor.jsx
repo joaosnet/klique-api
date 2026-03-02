@@ -1,16 +1,21 @@
+
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import EntityCard from './EntityCard';
 import { IconClose, IconPhoto, IconStrategy } from '../Icons/ActionIcons';
 
+
 const STRATEGY_OPTIONS = [
-  { value: 'cooperate', label: 'Cooperador', desc: 'Colabora; retalia se traído' },
-  { value: 'defect', label: 'Explorador', desc: 'Maximiza ganho individual' },
-  { value: 'withdraw', label: 'Isolado', desc: 'Evita interações; neutro' },
+  { value: 'cooperate', label: 'entityEditor.strategy_cooperate', desc: 'entityEditor.strategy_cooperate_desc' },
+  { value: 'defect', label: 'entityEditor.strategy_defect', desc: 'entityEditor.strategy_defect_desc' },
+  { value: 'withdraw', label: 'entityEditor.strategy_withdraw', desc: 'entityEditor.strategy_withdraw_desc' },
 ];
 
 const DEFAULT_ENTITY = { name: '', power: 3, resources: 3, influence: 3, strategy: 'cooperate', image: null };
 
+
 export default function EntityEditor({ onSave, onClose, initial }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState(initial ? { ...initial } : { ...DEFAULT_ENTITY });
 
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }));
@@ -44,7 +49,7 @@ export default function EntityEditor({ onSave, onClose, initial }) {
         <div className="flex items-center justify-between px-6 py-4"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <h2 className="font-title text-lg tracking-widest text-white">
-            {initial ? 'EDITAR ENTIDADE' : 'NOVA ENTIDADE'}
+            {initial ? t('entityEditor.title_edit') : t('entityEditor.title_new')}
           </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
             <IconClose width={20} height={20} />
@@ -59,12 +64,12 @@ export default function EntityEditor({ onSave, onClose, initial }) {
 
           {/* Name */}
           <div>
-            <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">Nome</label>
+            <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">{t('entityEditor.name')}</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
-              placeholder="Ex: Aliança Pacífica"
+              placeholder={t('entityEditor.name_placeholder')}
               className="w-full rounded-lg px-4 py-2.5 text-sm text-gray-100 placeholder-gray-600 outline-none"
               style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
             />
@@ -72,7 +77,7 @@ export default function EntityEditor({ onSave, onClose, initial }) {
 
           {/* Photo */}
           <div>
-            <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">Foto</label>
+            <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">{t('entityEditor.photo')}</label>
             <div
               className="image-upload-wrapper"
               style={form.image ? { backgroundImage: `url(${form.image})` } : {}}
@@ -81,7 +86,7 @@ export default function EntityEditor({ onSave, onClose, initial }) {
               {!form.image && (
                 <div className="text-center pointer-events-none flex flex-col items-center justify-center">
                   <IconPhoto width={32} height={32} className="mb-2" />
-                  <p className="text-xs text-gray-500">Clique para adicionar</p>
+                  <p className="text-xs text-gray-500">{t('entityEditor.add_photo')}</p>
                 </div>
               )}
             </div>
@@ -90,14 +95,14 @@ export default function EntityEditor({ onSave, onClose, initial }) {
                 onClick={() => set('image', null)}
                 className="text-xs text-red-400 hover:text-red-300 mt-1 transition-colors"
               >
-                Remover foto
+                {t('entityEditor.remove_photo')}
               </button>
             )}
           </div>
 
           {/* Strategy */}
           <div>
-            <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">Estratégia</label>
+            <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">{t('entityEditor.strategy')}</label>
             <div className="grid grid-cols-3 gap-2">
               {STRATEGY_OPTIONS.map(({ value, label }) => (
                 <button
@@ -112,7 +117,7 @@ export default function EntityEditor({ onSave, onClose, initial }) {
                   }
                 >
                   <IconStrategy type={value} width={20} height={20} className={form.strategy !== value ? 'opacity-50 grayscale' : ''} />
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>
@@ -120,13 +125,13 @@ export default function EntityEditor({ onSave, onClose, initial }) {
 
           {/* Sliders */}
           {[
-            { field: 'power', label: 'Poder', color: '#ef4444' },
-            { field: 'resources', label: 'Recursos', color: '#f59e0b' },
-            { field: 'influence', label: 'Influência', color: '#a855f7' },
+            { field: 'power', label: 'entityEditor.power', color: '#ef4444' },
+            { field: 'resources', label: 'entityEditor.resources', color: '#f59e0b' },
+            { field: 'influence', label: 'entityEditor.influence', color: '#a855f7' },
           ].map(({ field, label, color }) => (
             <div key={field}>
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-gray-400 uppercase tracking-wider">{label}</span>
+                <span className="text-gray-400 uppercase tracking-wider">{t(label)}</span>
                 <span className="font-bold text-white">{form[field]}</span>
               </div>
               <input
@@ -142,7 +147,7 @@ export default function EntityEditor({ onSave, onClose, initial }) {
 
           {/* Rank preview */}
           <div className="text-center text-xs text-gray-500 uppercase tracking-wider">
-            Rank estimado:{' '}
+            {t('entityEditor.rank_preview')}{' '}
             <span className="text-purple-400 font-bold text-sm">
               {Math.round((form.power + form.resources + form.influence) / 3)}
             </span>
@@ -156,7 +161,7 @@ export default function EntityEditor({ onSave, onClose, initial }) {
             className="flex-1 py-2.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
             style={{ border: '1px solid rgba(255,255,255,0.1)' }}
           >
-            Cancelar
+            {t('entityEditor.cancel')}
           </button>
           <button
             onClick={handleSave}
@@ -164,7 +169,7 @@ export default function EntityEditor({ onSave, onClose, initial }) {
             className="flex-1 py-2.5 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90 disabled:opacity-40"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
           >
-            Salvar
+            {t('entityEditor.save')}
           </button>
         </div>
       </div>

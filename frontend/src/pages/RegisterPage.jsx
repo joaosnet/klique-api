@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errorHandler';
 import { IconCameraShot, IconSparkBoost } from '../components/Icons/ActionIcons';
+import { useTranslation } from 'react-i18next';
 
 // ── Step 1: Basic Data ───────────────────────────────────────────────────────
 function StepBasicData({ data, onChange, onNext }) {
@@ -11,17 +12,18 @@ function StepBasicData({ data, onChange, onNext }) {
   const [loading, setLoading] = useState(false);
   const [usePasskey, setUsePasskey] = useState(false);
   const { login, registerPasskey, loginWithGoogle } = useAuth();
+  const { t } = useTranslation();
 
   const handleGoogleLogin = async () => {
     setError('');
     setLoading(true);
     try {
       // Mock token for demo, similar to LoginPage
-      alert("Google Login placeholder - Irá criar a conta e pular o passo 1.");
+      alert(t('register.google_placeholder'));
       // await loginWithGoogle("google-token");
       // onNext();
     } catch (err) {
-      setError("Erro no cadastro com Google");
+      setError(t('register.error_google'));
     } finally {
       setLoading(false);
     }
@@ -30,7 +32,7 @@ function StepBasicData({ data, onChange, onNext }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!usePasskey && data.password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.');
+      setError(t('register.error_password_length'));
       return;
     }
     setLoading(true);
@@ -50,13 +52,13 @@ function StepBasicData({ data, onChange, onNext }) {
         try {
           await registerPasskey();
         } catch (pkErr) {
-          console.warn('Registro de passkey cancelado ou falhou, continuando com a conta criada.');
+          console.warn(t('register.error_passkey_cancel'));
         }
       }
 
       onNext();
     } catch (err) {
-      setError(getErrorMessage(err, 'Erro ao cadastrar. Tente novamente.'));
+      setError(getErrorMessage(err, t('register.error_register')));
     } finally {
       setLoading(false);
     }
@@ -83,7 +85,7 @@ function StepBasicData({ data, onChange, onNext }) {
           }}
         >
           <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
-          Google
+          {t('register.google')}
         </button>
         <button
           type="button"
@@ -95,26 +97,26 @@ function StepBasicData({ data, onChange, onNext }) {
           }}
         >
           <span className="text-lg"></span>
-          Apple
+          {t('register.apple')}
         </button>
       </div>
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center"><div className="w-full border-t" style={{ borderColor: 'var(--border-color)' }}></div></div>
-        <div className="relative flex justify-center text-xs uppercase"><span className="px-2 tracking-tighter" style={{ background: 'var(--bg-card)', color: 'var(--text-muted)' }}>ou use seu email</span></div>
+        <div className="relative flex justify-center text-xs uppercase"><span className="px-2 tracking-tighter" style={{ background: 'var(--bg-card)', color: 'var(--text-muted)' }}>{t('register.or_email')}</span></div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {['name', 'email'].map((field) => (
           <div key={field}>
             <label className="block text-[10px] uppercase tracking-widest mb-1.5 ml-1" style={{ color: 'var(--text-muted)' }}>
-              {field === 'name' ? 'Nome' : 'Email'}
+              {field === 'name' ? t('registerForm.full_name') : t('registerForm.email')}
             </label>
             <input
               type={field === 'name' ? 'text' : 'email'}
               value={data[field]}
               onChange={(e) => onChange(field, e.target.value)}
-              placeholder={field === 'email' ? 'seu@email.com' : 'Seu nome'}
+              placeholder={field === 'email' ? t('registerForm.email_placeholder') : t('registerForm.full_name_placeholder')}
               required
               className="w-full rounded-lg px-4 py-3 text-sm placeholder-gray-500 outline-none focus:ring-1 ring-purple-500"
               style={inputStyle}
@@ -124,12 +126,12 @@ function StepBasicData({ data, onChange, onNext }) {
 
         {!usePasskey && (
           <div>
-            <label className="block text-[10px] uppercase tracking-widest mb-1.5 ml-1" style={{ color: 'var(--text-muted)' }}>Senha</label>
+            <label className="block text-[10px] uppercase tracking-widest mb-1.5 ml-1" style={{ color: 'var(--text-muted)' }}>{t('registerForm.password')}</label>
             <input
               type="password"
               value={data.password}
               onChange={(e) => onChange('password', e.target.value)}
-              placeholder="Mínimo 6 caracteres"
+              placeholder={t('registerForm.password_placeholder')}
               required={!usePasskey}
               className="w-full rounded-lg px-4 py-3 text-sm placeholder-gray-500 outline-none focus:ring-1 ring-purple-500"
               style={inputStyle}
@@ -139,8 +141,8 @@ function StepBasicData({ data, onChange, onNext }) {
 
         <div className="flex items-center justify-between p-3 rounded-lg mt-2" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
           <div>
-            <span className="block text-sm text-orange-400 font-semibold mb-0.5">Criar Passkey (Biometria)</span>
-            <span className="block text-xs text-orange-200/70">Login sem senha, mais rápido e seguro.</span>
+            <span className="block text-sm text-orange-400 font-semibold mb-0.5">{t('register.passkey_title')}</span>
+            <span className="block text-xs text-orange-200/70">{t('register.passkey_desc')}</span>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" checked={usePasskey} onChange={(e) => setUsePasskey(e.target.checked)} className="sr-only peer" />
@@ -159,7 +161,7 @@ function StepBasicData({ data, onChange, onNext }) {
           className="w-full mt-6 py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90 disabled:opacity-50"
           style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
         >
-          {loading ? 'Aguarde...' : 'Criar Conta & Continuar →'}
+          {loading ? t('common.loading') : t('register.submit_continue')}
         </button>
       </form>
     </div>
@@ -204,22 +206,23 @@ function StepPrisonersDilemma({ onNext }) {
   const [chosen, setChosen] = useState(null);
   const [revealed, setRevealed] = useState(false);
   const [cpuChoice] = useState(() => (Math.random() > 0.4 ? 'cooperate' : 'defect'));
+  const { t } = useTranslation();
 
   const outcome = chosen ? OUTCOMES[chosen][cpuChoice] : null;
 
   return (
     <div>
       <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-        Você e um estranho estão presos. Cada um decide{' '}
-        <strong style={{ color: 'var(--text-main)' }}>sem saber a escolha do outro</strong>.
+        {t('register.dilemma_intro')}
+        <strong style={{ color: 'var(--text-main)' }}>{t('register.dilemma_strong')}</strong>
       </p>
 
       {!revealed ? (
         <div className="space-y-3">
           {[
-            { key: 'cooperate', label: 'COLABORAR', desc: 'Confio no outro. Juntos podemos ganhar.', color: '#22c55e' },
-            { key: 'defect', label: 'EXPLORAR', desc: 'Vou trair. Maximizo meu ganho individual.', color: '#ef4444' },
-            { key: 'isolate', label: 'ISOLAR', desc: 'Me retiro. Não arrisquei, não ganhei.', color: '#6b7280' },
+            { key: 'cooperate', label: t('register.dilemma_cooperate'), desc: t('register.dilemma_cooperate_desc'), color: '#22c55e' },
+            { key: 'defect', label: t('register.dilemma_defect'), desc: t('register.dilemma_defect_desc'), color: '#ef4444' },
+            { key: 'isolate', label: t('register.dilemma_isolate'), desc: t('register.dilemma_isolate_desc'), color: '#6b7280' },
           ].map(({ key, label, desc, color }) => (
             <button
               key={key}
@@ -237,17 +240,17 @@ function StepPrisonersDilemma({ onNext }) {
           <div className="rounded-xl p-5" style={{ border: `1px solid ${outcome.color}40`, background: `${outcome.color}10` }}>
             <div className="flex justify-between items-center mb-3">
               <div className="text-center">
-                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Você</div>
+                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{t('register.dilemma_you')}</div>
                 <div className="font-title text-sm" style={{ color: outcome.color }}>
-                  {chosen === 'cooperate' ? 'COLABORAR' : chosen === 'defect' ? 'EXPLORAR' : 'ISOLAR'}
+                  {chosen === 'cooperate' ? t('register.dilemma_cooperate') : chosen === 'defect' ? t('register.dilemma_defect') : t('register.dilemma_isolate')}
                 </div>
                 <div className="font-title text-3xl mt-1" style={{ color: 'var(--text-main)' }}>{outcome.you}</div>
               </div>
-              <div className="font-title text-2xl" style={{ color: 'var(--text-muted)' }}>VS</div>
+              <div className="font-title text-2xl" style={{ color: 'var(--text-muted)' }}>{t('register.dilemma_vs')}</div>
               <div className="text-center">
-                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>CPU</div>
+                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{t('register.dilemma_cpu')}</div>
                 <div className="font-title text-sm" style={{ color: 'var(--text-main)' }}>
-                  {cpuChoice === 'cooperate' ? 'COLABORAR' : 'EXPLORAR'}
+                  {cpuChoice === 'cooperate' ? t('register.dilemma_cooperate') : t('register.dilemma_defect')}
                 </div>
                 <div className="font-title text-3xl mt-1" style={{ color: 'var(--text-main)' }}>{outcome.other}</div>
               </div>
@@ -259,9 +262,9 @@ function StepPrisonersDilemma({ onNext }) {
           </div>
           <div className="rounded-lg p-4 text-xs"
             style={{ background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)' }}>
-            <span className="text-purple-300 font-semibold">Nash Equilibrium:</span>{' '}
+            <span className="text-purple-300 font-semibold">{t('register.dilemma_nash')}</span>{' '}
             <span style={{ color: 'var(--text-muted)' }}>
-            Quando ambos exploram — ninguém tem incentivo de mudar sozinho, mesmo que cooperar fosse melhor para todos.
+            {t('register.dilemma_nash_desc')}
             </span>
           </div>
           <button
@@ -269,7 +272,7 @@ function StepPrisonersDilemma({ onNext }) {
             className="w-full py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
           >
-            Entendi — Criar meu Card →
+            {t('register.continue_card')}
           </button>
         </div>
       )}
@@ -290,6 +293,7 @@ function StepBattleCardCreator({ onNext }) {
   const [answers, setAnswers] = useState({});
   const [photoBase64, setPhotoBase64] = useState(null);
   const allAnswered = AI_QUESTIONS.every((q) => answers[q.id]);
+  const { t } = useTranslation();
 
   const handlePhoto = (e) => {
     const file = e.target.files[0];
@@ -303,7 +307,7 @@ function StepBattleCardCreator({ onNext }) {
     <div className="space-y-5">
       <div>
         <label className="block text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
-          Foto (opcional)
+          {t('registerForm.avatar_label')}
         </label>
         <div className="image-upload-wrapper"
           style={photoBase64 ? { backgroundImage: `url(${photoBase64})` } : {}}>
@@ -311,7 +315,7 @@ function StepBattleCardCreator({ onNext }) {
           {!photoBase64 && (
             <div className="text-center pointer-events-none">
               <div className="text-2xl mb-1" style={{ display: 'flex', justifyContent: 'center' }}><IconCameraShot width={24} height={24} /></div>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Clique para adicionar foto</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('registerForm.avatar_change')}</p>
             </div>
           )}
         </div>
@@ -319,9 +323,9 @@ function StepBattleCardCreator({ onNext }) {
 
       {AI_QUESTIONS.map((q) => (
         <div key={q.id}>
-          <p className="text-sm mb-2" style={{ color: 'var(--text-main)' }}>{q.q}</p>
+          <p className="text-sm mb-2" style={{ color: 'var(--text-main)' }}>{t(`registerForm.${q.id}_question`, q.q)}</p>
           <div className="flex flex-col gap-2">
-            {q.opts.map((opt) => (
+            {q.opts.map((opt, idx) => (
               <button
                 key={opt}
                 type="button"
@@ -333,7 +337,7 @@ function StepBattleCardCreator({ onNext }) {
                     : { background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }
                 }
               >
-                {opt}
+                {t(`registerForm.${q.id}_opt_${idx+1}`, opt)}
               </button>
             ))}
           </div>
@@ -346,7 +350,7 @@ function StepBattleCardCreator({ onNext }) {
         className="w-full py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
       >
-        Gerar Card de Batalha →
+        {t('register.generate_card')}
       </button>
     </div>
   );
@@ -362,11 +366,12 @@ const STRATEGY_MAP = {
 function StepFinalCard({ name, cardData, onFinish }) {
   const strat = STRATEGY_MAP[cardData?.answers?.style] || { name: 'ESTRATEGISTA', color: '#a855f7' };
   const photo = cardData?.photoBase64;
+  const { t } = useTranslation();
 
   return (
     <div className="flex flex-col items-center gap-6">
       <p className="text-sm text-center" style={{ color: 'var(--text-muted)' }}>
-        Seu Card de Batalha foi criado. Ele aparecerá automaticamente no Simulador.
+        {t('register.card_created')}
       </p>
 
       <div className="unmatched-card w-48 sm:w-56">
@@ -382,7 +387,7 @@ function StepFinalCard({ name, cardData, onFinish }) {
             )}
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
             <div className="absolute top-2 left-2 bg-purple-700 text-white font-title text-xs px-2 py-0.5 rounded">
-              RANK 3
+              {t('register.card_rank')}
             </div>
             <div className="absolute bottom-[-10px] right-2 z-20 w-8 h-8 rounded-full bg-black border-2 border-white flex items-center justify-center shadow-lg">
               <span className="font-title text-white text-xs">150</span>
@@ -393,19 +398,19 @@ function StepFinalCard({ name, cardData, onFinish }) {
               {strat.name}
             </h2>
             <div className="border-t border-gray-700 my-1" />
-            <p className="text-[10px] font-bold text-gray-200 truncate uppercase">► {name || 'Jogador'}</p>
-            <p className="text-[9px] leading-tight text-gray-400 mt-1">Pod:50 | Rec:50 | Inf:50</p>
+            <p className="text-[10px] font-bold text-gray-200 truncate uppercase">► {name || t('register.card_player')}</p>
+            <p className="text-[9px] leading-tight text-gray-400 mt-1">{t('register.card_stats')}</p>
           </div>
         </div>
       </div>
 
       <div className="w-full rounded-xl p-5 space-y-3"
         style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
-        <h3 className="font-title text-sm tracking-widest" style={{ color: 'var(--text-main)' }}>STATS INICIAIS</h3>
+        <h3 className="font-title text-sm tracking-widest" style={{ color: 'var(--text-main)' }}>{t('register.card_stats_title')}</h3>
         {[
-          { label: 'Poder', value: 50, color: '#ef4444' },
-          { label: 'Recursos', value: 50, color: '#f59e0b' },
-          { label: 'Influência', value: 50, color: '#a855f7' },
+          { label: t('register.card_power'), value: 50, color: '#ef4444' },
+          { label: t('register.card_resources'), value: 50, color: '#f59e0b' },
+          { label: t('register.card_influence'), value: 50, color: '#a855f7' },
         ].map(({ label, value, color }) => (
           <div key={label}>
             <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
@@ -424,7 +429,7 @@ function StepFinalCard({ name, cardData, onFinish }) {
         className="w-full py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:scale-105 pulse-glow"
         style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
       >
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><IconSparkBoost width={16} height={16} /> Entrar no Simulador</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><IconSparkBoost width={16} height={16} /> {t('register.enter_simulator')}</span>
       </button>
     </div>
   );
@@ -475,10 +480,10 @@ export default function RegisterPage() {
   const handleChange = (field, value) => setFormData((d) => ({ ...d, [field]: value }));
 
   const STEP_TITLES = {
-    1: { title: 'CRIAR CONTA', sub: 'Comece sua jornada estratégica.' },
-    2: { title: 'TUTORIAL', sub: 'Aprenda o Dilema do Prisioneiro na prática.' },
-    3: { title: 'SEU CARD', sub: 'Responda 5 perguntas para gerar sua carta.' },
-    4: { title: 'PRONTO!', sub: 'Seu card de batalha foi gerado.' },
+    1: { title: t('register.title'), sub: t('register.subtitle') },
+    2: { title: t('register.tutorial_title'), sub: t('register.tutorial_subtitle') },
+    3: { title: t('register.card_title'), sub: t('register.card_subtitle') },
+    4: { title: t('register.ready_title'), sub: t('register.ready_subtitle') },
   };
 
   const { title, sub } = STEP_TITLES[step];
@@ -518,9 +523,9 @@ export default function RegisterPage() {
 
         {step === 1 && (
           <p className="text-center text-sm mt-4" style={{ color: 'var(--text-muted)' }}>
-            Já tem conta?{' '}
+            {t('register.has_account')}{' '}
             <Link to="/login" className="text-purple-400 hover:text-purple-300 transition-colors">
-              Entrar
+              {t('register.login')}
             </Link>
           </p>
         )}

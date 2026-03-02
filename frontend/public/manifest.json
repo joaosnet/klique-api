@@ -1,7 +1,7 @@
 {
   "name": "OmniFlash",
   "short_name": "OmniFlash",
-  "description": "Simulador Universal de Teoria dos Jogos — Geopolítica, Negócios & Estratégia",
+  "description": "Universal Game Theory Simulator — Geopolitics, Business & Strategy",
   "theme_color": "#12121a",
   "background_color": "#12121a",
   "display": "standalone",
@@ -29,9 +29,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Simulador",
-      "short_name": "Simulador",
-      "description": "Abrir o Simulador de Teoria dos Jogos",
+      "name": "Simulator",
+      "short_name": "Simulator",
+      "description": "Open Game Theory Simulator",
       "url": "/simulador",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errorHandler';
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
@@ -24,7 +26,7 @@ export default function LoginPage() {
       await loginWithPasskey(email);
       navigate('/dominios');
     } catch (err) {
-      setError(getErrorMessage(err, 'Erro na autenticação por passkey.'));
+      setError(getErrorMessage(err, t('login.error_credentials')));
     } finally {
       setLoading(false);
     }
@@ -38,7 +40,7 @@ export default function LoginPage() {
       await login(email, password);
       navigate('/dominios');
     } catch (err) {
-      setError(getErrorMessage(err, 'Email ou senha incorretos.'));
+      setError(getErrorMessage(err, t('login.error_credentials')));
     } finally {
       setLoading(false);
     }
@@ -52,7 +54,7 @@ export default function LoginPage() {
       await authAPI.requestOTP(phone);
       setOtpSent(true);
     } catch (err) {
-      setError(getErrorMessage(err, 'Erro ao enviar código. Verifique o número.'));
+      setError(getErrorMessage(err, t('login.error_otp_send')));
     } finally {
       setLoading(false);
     }
@@ -66,7 +68,7 @@ export default function LoginPage() {
       await loginWithOTP(phone, otp);
       navigate('/dominios');
     } catch (err) {
-      setError(getErrorMessage(err, 'Código inválido ou expirado.'));
+      setError(getErrorMessage(err, t('login.error_otp_verify')));
     } finally {
       setLoading(false);
     }
@@ -80,7 +82,7 @@ export default function LoginPage() {
       await authAPI.requestMagicLink(email);
       alert('Link enviado! Verifique seu e-mail.');
     } catch (err) {
-      setError(getErrorMessage(err, 'Erro ao enviar link.'));
+      setError(getErrorMessage(err, t('login.error_magic_link')));
     } finally {
       setLoading(false);
     }
@@ -94,9 +96,9 @@ export default function LoginPage() {
     try {
       // Mock token for demo
       // await loginWithGoogle("google-token");
-      alert("Google Login placeholder");
+      alert(t('login.google_placeholder'));
     } catch (err) {
-      setError(getErrorMessage(err, "Erro no login com Google"));
+      setError(getErrorMessage(err, t('login.error_google')));
     } finally {
       setLoading(false);
     }
@@ -108,7 +110,7 @@ export default function LoginPage() {
       await lazyRegister();
       navigate('/dominios');
     } catch (err) {
-      setError(getErrorMessage(err, "Erro ao iniciar sessão convidado"));
+      setError(getErrorMessage(err, t('login.error_guest')));
     } finally {
       setLoading(false);
     }
@@ -129,10 +131,10 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="font-title text-2xl tracking-widest text-purple-400">
-            OMNIFLASH
+            {t('login.omniflash')}
           </Link>
           <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mt-1">
-            Teoria dos Jogos · Geopolítica
+            {t('login.subtitle')}
           </p>
         </div>
 
@@ -146,9 +148,9 @@ export default function LoginPage() {
           }}
         >
           <h1 className="font-title text-2xl tracking-wider text-[var(--text-main)] mb-1 uppercase">
-            {method === 'otp' ? 'WhatsApp' : method === 'magic' ? 'Magic Link' : 'Entrar'}
+            {method === 'otp' ? t('login.whatsapp') : method === 'magic' ? t('login.magic_link') : t('login.sign_in')}
           </h1>
-          <p className="text-[var(--text-muted)] text-sm mb-6">Escolha como deseja acessar sua conta.</p>
+          <p className="text-[var(--text-muted)] text-sm mb-6">{t('login.choose_method')}</p>
 
           {error && (
             <div
@@ -167,44 +169,44 @@ export default function LoginPage() {
               style={{ border: '1px solid var(--border-color)' }}
             >
               <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
-              Google
+              {t('login.google')}
             </button>
             <button
               type="button"
               className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-[var(--text-main)] transition-all hover:bg-[var(--bg-card-inner)]"
               style={{ border: '1px solid var(--border-color)' }}
             >
-              <span className="text-lg"></span>
-              Apple
+              <span className="text-lg"></span>
+              {t('login.apple')}
             </button>
           </div>
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--border-color)]"></div></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-[var(--bg-card)] px-2 text-[var(--text-muted)] tracking-tighter">ou continue com</span></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-[var(--bg-card)] px-2 text-[var(--text-muted)] tracking-tighter">{t('login.or_continue_with')}</span></div>
           </div>
 
           {method === 'password' && (
             <form onSubmit={handlePasswordLogin} className="space-y-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">Email</label>
+                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">{t('login.email')}</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
+                  placeholder={t('login.email_placeholder')}
                   required
                   className="w-full rounded-lg px-4 py-3 text-sm placeholder-[var(--text-muted)/50] outline-none focus:ring-1 ring-purple-500"
                   style={inputStyle}
                 />
               </div>
               <div>
-                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">Senha</label>
+                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">{t('login.password')}</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder={t('login.password_placeholder')}
                   required
                   className="w-full rounded-lg px-4 py-3 text-sm placeholder-[var(--text-muted)/50] outline-none focus:ring-1 ring-purple-500"
                   style={inputStyle}
@@ -216,7 +218,7 @@ export default function LoginPage() {
                 className="w-full py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
               >
-                {loading ? 'Aguarde...' : 'Entrar'}
+                {loading ? t('login.signing_in') : t('login.sign_in')}
               </button>
             </form>
           )}
@@ -224,12 +226,12 @@ export default function LoginPage() {
           {method === 'otp' && (
             <form onSubmit={otpSent ? handleOTPVerify : handleOTPRequest} className="space-y-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">Telefone (WhatsApp)</label>
+                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">{t('login.phone_whatsapp')}</label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="5511999999999"
+                  placeholder={t('login.phone_placeholder')}
                   required
                   disabled={otpSent}
                   className="w-full rounded-lg px-4 py-3 text-sm placeholder-[var(--text-muted)/50] outline-none focus:ring-1 ring-purple-500"
@@ -238,12 +240,12 @@ export default function LoginPage() {
               </div>
               {otpSent && (
                 <div>
-                  <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">Código</label>
+                  <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">{t('login.code')}</label>
                   <input
                     type="text"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
-                    placeholder="123456"
+                    placeholder={t('login.code_placeholder')}
                     required
                     maxLength={6}
                     className="w-full rounded-lg px-4 py-3 text-sm text-center text-xl font-bold tracking-widest outline-none focus:ring-1 ring-purple-500"
@@ -257,21 +259,21 @@ export default function LoginPage() {
                 className="w-full py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}
               >
-                {loading ? 'Aguarde...' : otpSent ? 'Verificar Código' : 'Receber via WhatsApp'}
+                {loading ? t('login.signing_in') : otpSent ? t('login.verify_code') : t('login.receive_via_whatsapp')}
               </button>
-              {otpSent && <button type="button" onClick={() => setOtpSent(false)} className="w-full text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">Alterar número</button>}
+              {otpSent && <button type="button" onClick={() => setOtpSent(false)} className="w-full text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">{t('login.change_number')}</button>}
             </form>
           )}
 
           {method === 'magic' && (
             <form onSubmit={handleMagicLinkRequest} className="space-y-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">Email</label>
+                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">{t('login.email')}</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
+                  placeholder={t('login.email_placeholder')}
                   required
                   className="w-full rounded-lg px-4 py-3 text-sm placeholder-[var(--text-muted)/50] outline-none focus:ring-1 ring-purple-500"
                   style={inputStyle}
@@ -283,7 +285,7 @@ export default function LoginPage() {
                 className="w-full py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}
               >
-                {loading ? 'Enviando...' : 'Enviar Link Mágico'}
+                {loading ? t('login.sending') : t('login.send_magic_link')}
               </button>
             </form>
           )}
@@ -291,12 +293,12 @@ export default function LoginPage() {
           {method === 'passkey' && (
             <form onSubmit={handlePasskeyLogin} className="space-y-4">
               <div>
-                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">Email</label>
+                <label className="block text-[10px] uppercase tracking-widest text-[var(--text-muted)] mb-1.5 ml-1">{t('login.email')}</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
+                  placeholder={t('login.email_placeholder')}
                   required
                   className="w-full rounded-lg px-4 py-3 text-sm placeholder-[var(--text-muted)/50] outline-none focus:ring-1 ring-purple-500"
                   style={inputStyle}
@@ -308,17 +310,17 @@ export default function LoginPage() {
                 className="w-full py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:opacity-90 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
               >
-                {loading ? 'Aguarde...' : 'Entrar com Passkey'}
+                {loading ? t('login.signing_in') : t('login.sign_in_passkey')}
               </button>
             </form>
           )}
 
           {/* Alternative Methods */}
           <div className="mt-8 flex flex-wrap justify-center gap-4 border-t border-[var(--border-color)] pt-6">
-            <button onClick={() => setMethod('password')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'password' ? 'text-purple-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>Senha</button>
-            <button onClick={() => setMethod('otp')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'otp' ? 'text-green-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>WhatsApp</button>
-            <button onClick={() => setMethod('magic')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'magic' ? 'text-blue-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>E-mail</button>
-            <button onClick={() => setMethod('passkey')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'passkey' ? 'text-orange-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>Passkey</button>
+            <button onClick={() => setMethod('password')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'password' ? 'text-purple-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>{t('login.method_password')}</button>
+            <button onClick={() => setMethod('otp')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'otp' ? 'text-green-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>{t('login.method_whatsapp')}</button>
+            <button onClick={() => setMethod('magic')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'magic' ? 'text-blue-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>{t('login.method_email')}</button>
+            <button onClick={() => setMethod('passkey')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'passkey' ? 'text-orange-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>{t('login.method_passkey')}</button>
           </div>
 
           <button
@@ -326,13 +328,13 @@ export default function LoginPage() {
             className="w-full mt-6 py-2 rounded-lg text-[10px] uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all hover:bg-[var(--bg-card-inner)]"
             style={{ border: '1px dashed var(--border-color)' }}
           >
-            Iniciar sem cadastro (Progresso temporário)
+            {t('login.start_without_account')}
           </button>
 
           <p className="text-center text-sm text-[var(--text-muted)] mt-6">
-            Não tem conta?{' '}
+            {t('login.no_account')}{' '}
             <Link to="/register" className="text-purple-400 hover:text-purple-300 transition-colors">
-              Cadastre-se
+              {t('login.sign_up')}
             </Link>
           </p>
         </div>

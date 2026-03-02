@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import './ImageComparator.css';
 
 export default function ImageComparator({ beforeImage, afterImage }) {
+    const { t } = useTranslation();
     const [sliderPosition, setSliderPosition] = useState(50);
     const [isDragging, setIsDragging] = useState(false);
     const containerRef = useRef(null);
@@ -78,7 +80,7 @@ export default function ImageComparator({ beforeImage, afterImage }) {
                 <div className="comparator-background">
                     <img
                         src={afterImage}
-                        alt="Depois"
+                        alt={t('avatar.generated')}
                         className="comparator-image"
                     />
                 </div>
@@ -94,7 +96,7 @@ export default function ImageComparator({ beforeImage, afterImage }) {
                     <div className="comparator-crop-container">
                         <img
                             src={beforeImage}
-                            alt="Antes"
+                            alt={t('avatar.original')}
                             className="comparator-image fixed-scale"
                         />
                     </div>
@@ -116,8 +118,8 @@ export default function ImageComparator({ beforeImage, afterImage }) {
 
                 {/* Labels */}
                 <div className="comparator-labels">
-                    <span className="label-before">Antes</span>
-                    <span className="label-after">Depois</span>
+                    <span className="label-before">{t('avatar.original')}</span>
+                    <span className="label-after">{t('avatar.generated')}</span>
                 </div>
             </div>
         </div>

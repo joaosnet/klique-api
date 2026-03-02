@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import ThemeSettingsModal from './ThemeSettingsModal';
 
-const NAV_LINKS = [
-  { to: '/dominios', label: 'Domínios', public: true, guestOnly: false },
-  { to: '/treinar', label: 'Treinar', public: false, guestOnly: false },
-  { to: '/oracle', label: 'Dashboard', public: false, guestOnly: false },
+const NAV_LINKS_KEYS = [
+  { to: '/dominios', labelKey: 'navbar.domains', public: true, guestOnly: false },
+  { to: '/treinar', labelKey: 'navbar.train', public: false, guestOnly: false },
+  { to: '/oracle', labelKey: 'navbar.dashboard', public: false, guestOnly: false },
 ];
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -43,7 +45,7 @@ export default function Navbar() {
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map(({ to, label, public: pub, guestOnly = false }) => {
+          {NAV_LINKS_KEYS.map(({ to, labelKey, public: pub, guestOnly = false }) => {
             if (!pub && !isAuthenticated) return null;
             if (guestOnly && isAuthenticated) return null;
             return (
@@ -56,7 +58,7 @@ export default function Navbar() {
                   background: isActive(to) ? 'var(--bg-card-inner)' : 'transparent',
                 }}
               >
-                {label}
+                {t(labelKey)}
               </Link>
             );
           })}
@@ -85,7 +87,7 @@ export default function Navbar() {
                 className="px-3 py-1.5 text-xs uppercase tracking-wider rounded border transition-colors"
                 style={{ borderColor: 'var(--accent-dark)', color: 'var(--accent-light)' }}
               >
-                Sair
+                {t('navbar.logout')}
               </button>
             </>
           ) : (
@@ -95,14 +97,14 @@ export default function Navbar() {
                 className="px-3 py-1.5 text-xs uppercase tracking-wider transition-colors"
                 style={{ color: 'var(--text-main)' }}
               >
-                Entrar
+                {t('navbar.login')}
               </Link>
               <Link
                 to="/register"
                 className="px-3 py-1.5 text-xs uppercase tracking-wider rounded transition-colors"
                 style={{ background: 'var(--accent)', color: '#fff' }}
               >
-                Cadastrar
+                {t('navbar.register')}
               </Link>
             </>
           )}
@@ -134,7 +136,7 @@ export default function Navbar() {
           )}
 
           {/* Links */}
-          {NAV_LINKS.map(({ to, label, public: pub, guestOnly = false }) => {
+          {NAV_LINKS_KEYS.map(({ to, labelKey, public: pub, guestOnly = false }) => {
             if (!pub && !isAuthenticated) return null;
             if (guestOnly && isAuthenticated) return null;
             return (
@@ -149,7 +151,7 @@ export default function Navbar() {
                   border: isActive(to) ? 'none' : '1px solid var(--border-color)',
                 }}
               >
-                {label}
+                {t(labelKey)}
               </Link>
             );
           })}
@@ -161,7 +163,7 @@ export default function Navbar() {
               className="px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
               style={{ background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
             >
-              ⚙️ Ajustes Visuais
+              ⚙️ {t('navbar.visual_settings')}
             </button>
 
             {isAuthenticated ? (
@@ -170,7 +172,7 @@ export default function Navbar() {
                 className="px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
                 style={{ background: 'var(--bg-card)', color: 'var(--accent)', border: '1px solid var(--accent-dark)' }}
               >
-                Sair
+                {t('navbar.logout')}
               </button>
             ) : (
               <>
@@ -180,7 +182,7 @@ export default function Navbar() {
                   className="px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
                   style={{ background: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}
                 >
-                  Entrar
+                  {t('navbar.login')}
                 </Link>
                 <Link
                   to="/register"
@@ -188,7 +190,7 @@ export default function Navbar() {
                   className="px-6 py-3 rounded-full text-sm font-bold tracking-widest uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
                   style={{ background: 'var(--accent)', color: '#fff', border: 'none' }}
                 >
-                  Cadastrar
+                  {t('navbar.register')}
                 </Link>
               </>
             )}

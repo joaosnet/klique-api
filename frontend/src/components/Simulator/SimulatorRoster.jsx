@@ -1,38 +1,43 @@
+
+import { useTranslation } from 'react-i18next';
 import EntityCard from './EntityCard';
 import EntityEditor from './EntityEditor';
 import { useState } from 'react';
 import { IconDeckCard, IconSparkBoost } from '../Icons/ActionIcons';
 
+
 const PRESETS = {
   corporativo: {
-    label: 'Mercado',
+    label: 'simulatorRoster.preset_market',
     entities: [
-      { name: 'Startup Inovadora',    power: 2, resources: 2, influence: 4, strategy: 'cooperate', image: null },
-      { name: 'Monopólio Tech',        power: 5, resources: 5, influence: 5, strategy: 'defect',    image: null },
-      { name: 'Pequena Empresa',       power: 1, resources: 2, influence: 1, strategy: 'cooperate', image: null },
-      { name: 'Empresa Conservadora',  power: 3, resources: 4, influence: 2, strategy: 'withdraw',  image: null },
+      { name: 'simulatorRoster.startup_innovative',    power: 2, resources: 2, influence: 4, strategy: 'cooperate', image: null },
+      { name: 'simulatorRoster.tech_monopoly',        power: 5, resources: 5, influence: 5, strategy: 'defect',    image: null },
+      { name: 'simulatorRoster.small_business',       power: 1, resources: 2, influence: 1, strategy: 'cooperate', image: null },
+      { name: 'simulatorRoster.conservative_company',  power: 3, resources: 4, influence: 2, strategy: 'withdraw',  image: null },
     ],
   },
   guerra: {
-    label: 'Guerra Fria',
+    label: 'simulatorRoster.preset_coldwar',
     entities: [
-      { name: 'Potência Nuclear', power: 5, resources: 5, influence: 4, strategy: 'defect',    image: null },
-      { name: 'Aliança Pacífica', power: 3, resources: 4, influence: 5, strategy: 'cooperate', image: null },
-      { name: 'Nação Neutra',     power: 2, resources: 3, influence: 2, strategy: 'withdraw',  image: null },
+      { name: 'simulatorRoster.nuclear_power', power: 5, resources: 5, influence: 4, strategy: 'defect',    image: null },
+      { name: 'simulatorRoster.peace_alliance', power: 3, resources: 4, influence: 5, strategy: 'cooperate', image: null },
+      { name: 'simulatorRoster.neutral_nation',     power: 2, resources: 3, influence: 2, strategy: 'withdraw',  image: null },
     ],
   },
   eleicao: {
-    label: 'Eleição',
+    label: 'simulatorRoster.preset_election',
     entities: [
-      { name: 'Populista',          power: 3, resources: 2, influence: 5, strategy: 'defect',    image: null },
-      { name: 'Tecnocrata',         power: 2, resources: 4, influence: 3, strategy: 'cooperate', image: null },
-      { name: 'Partido Tradicional',power: 4, resources: 5, influence: 4, strategy: 'withdraw',  image: null },
-      { name: 'Candidato Radical',  power: 4, resources: 2, influence: 3, strategy: 'defect',    image: null },
+      { name: 'simulatorRoster.populist',          power: 3, resources: 2, influence: 5, strategy: 'defect',    image: null },
+      { name: 'simulatorRoster.technocrat',         power: 2, resources: 4, influence: 3, strategy: 'cooperate', image: null },
+      { name: 'simulatorRoster.traditional_party',power: 4, resources: 5, influence: 4, strategy: 'withdraw',  image: null },
+      { name: 'simulatorRoster.radical_candidate',  power: 4, resources: 2, influence: 3, strategy: 'defect',    image: null },
     ],
   },
 };
 
+
 export default function SimulatorRoster({ population, onAdd, onRemove, onSimulate, userCard }) {
+  const { t } = useTranslation();
   const [showEditor, setShowEditor] = useState(false);
 
   const loadPreset = (key) => {
@@ -58,9 +63,9 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
       <div className="flex items-end justify-between mb-4 flex-shrink-0 pb-3"
            style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div>
-          <h2 className="font-title text-xl text-yellow-500 tracking-wider">ENTIDADES PARTICIPANTES</h2>
+          <h2 className="font-title text-xl text-yellow-500 tracking-wider">{t('simulatorRoster.title')}</h2>
           <p className="text-xs text-gray-400 uppercase tracking-widest mt-0.5">
-            Cartas no Deck:{' '}
+            {t('simulatorRoster.cards_in_deck')}{' '}
             <span className="text-white font-bold">{population.length}</span>
           </p>
         </div>
@@ -72,7 +77,7 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
               className="px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider transition-colors text-gray-300 hover:text-white hover:bg-gray-800"
               style={{ border: '1px solid rgba(255,255,255,0.1)' }}
             >
-              Presets ▾
+              {t('simulatorRoster.presets')} ▼
             </button>
             <div className="absolute right-0 top-full mt-1 hidden group-hover:block z-20 min-w-max rounded-lg shadow-xl"
                  style={{ background: '#1a1a2e', border: '1px solid rgba(168,85,247,0.3)' }}>
@@ -82,7 +87,7 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
                   onClick={() => loadPreset(key)}
                   className="block w-full text-left px-4 py-2 text-xs text-gray-300 hover:text-white hover:bg-purple-900/30 transition-colors"
                 >
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>
@@ -93,7 +98,7 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
             className="px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider text-white transition-colors hover:opacity-90"
             style={{ background: 'rgba(168,85,247,0.2)', border: '1px solid #a855f7' }}
           >
-            + Entidade
+            {t('simulatorRoster.add')}
           </button>
         </div>
       </div>
@@ -109,9 +114,9 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
               <IconDeckCard className="opacity-70" width={34} height={34} />
             </div>
             <div>
-              <p className="text-gray-400 text-sm">Nenhuma entidade no deck.</p>
+              <p className="text-gray-400 text-sm">{t('simulatorRoster.empty')}</p>
               <p className="text-gray-600 text-xs mt-1">
-                Adicione entidades ou carregue um preset para simular.
+                {t('simulatorRoster.empty_hint')}
               </p>
             </div>
             <button
@@ -119,7 +124,7 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
               className="px-4 py-2 rounded-lg text-xs uppercase tracking-wider text-purple-400 transition-colors hover:bg-purple-900/20"
               style={{ border: '1px solid rgba(168,85,247,0.3)' }}
             >
-              Carregar Preset: Mercado
+              {t('simulatorRoster.load_preset_market')}
             </button>
           </div>
         ) : (
@@ -132,7 +137,7 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
                   className="text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full"
                   style={{ background: 'rgba(168,85,247,0.15)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)' }}
                 >
-                  Você
+                  {t('simulatorRoster.you')}
                 </span>
               </div>
             )}
@@ -159,7 +164,7 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
           className="w-full py-3 rounded-xl font-title tracking-widest text-sm uppercase text-white transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           style={{ background: canSimulate ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : undefined }}
         >
-          {canSimulate ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><IconSparkBoost width={16} height={16} /> SIMULAR INTERAÇÕES</span> : `Adicione pelo menos 2 entidades (${population.length}/2)`}
+          {canSimulate ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><IconSparkBoost width={16} height={16} /> {t('simulatorRoster.start')}</span> : t('simulatorRoster.min_entities', { count: population.length })}
         </button>
       </div>
 

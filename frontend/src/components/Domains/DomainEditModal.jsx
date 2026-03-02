@@ -1,14 +1,15 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { domainsAPI } from '../../services/api';
 
 const THEMES = [
-  { value: 'dating', label: 'Dinâmicas de Encontros' },
-  { value: 'office', label: 'Política do Escritório' },
-  { value: 'finance', label: 'Mercado Financeiro' },
-  { value: 'negotiation', label: 'Negociação' },
-  { value: 'geopolitics', label: 'Geopolítica' },
-  { value: 'social', label: 'Dinâmicas Sociais' },
-  { value: 'custom', label: 'Outro (personalizado)' },
+  { value: 'dating', labelKey: 'domains.theme_dating' },
+  { value: 'office', labelKey: 'domains.theme_office' },
+  { value: 'finance', labelKey: 'domains.theme_finance' },
+  { value: 'negotiation', labelKey: 'domains.theme_negotiation' },
+  { value: 'geopolitics', labelKey: 'domains.theme_geopolitics' },
+  { value: 'social', labelKey: 'domains.theme_social' },
+  { value: 'custom', labelKey: 'domains.theme_custom' },
 ];
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -44,6 +45,7 @@ const labelStyle = {
  *   onClose()  - chamado ao fechar
  */
 export default function DomainEditModal({ domain, onSave, onClose }) {
+  const { t } = useTranslation();
   const isCustomTheme = !THEMES.find(t => t.value === domain.theme || t.value === 'custom');
   const initialTheme = THEMES.find(t => t.value === domain.theme) ? domain.theme : 'custom';
 
@@ -75,16 +77,16 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
     try {
       if (imgAction === 'generate') {
         await domainsAPI.regenerateImage(domain.id);
-        setImgMsg('Regeneração iniciada. A imagem aparecerá em breve.');
+        setImgMsg(t('domainEdit.generating'));
       } else if (imgAction === 'improve' && stylePrompt) {
         await domainsAPI.improveImage(domain.id, stylePrompt);
-        setImgMsg('Melhoria iniciada. A imagem aparecerá em breve.');
+        setImgMsg(t('domainEdit.improving'));
       } else if (imgAction === 'remove') {
         await domainsAPI.removeImage(domain.id);
-        setImgMsg('Imagem removida.');
+        setImgMsg(t('domainEdit.image_removed'));
       }
     } catch (e) {
-      setImgMsg('Erro: ' + (e.message || 'Falhou'));
+      setImgMsg(t('domainEdit.error_image_process') + ': ' + (e.message || t('domainEdit.error_failed')));
     } finally {
       setImgLoading(false);
     }
@@ -97,9 +99,9 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
     setImgMsg('');
     try {
       await domainsAPI.uploadImage(domain.id, file);
-      setImgMsg('Imagem carregada com sucesso.');
+      setImgMsg(t('domainEdit.image_uploaded_success'));
     } catch (err) {
-      setImgMsg('Erro ao carregar imagem.');
+      setImgMsg(t('domainEdit.error_image_upload'));
     } finally {
       setImgLoading(false);
     }
@@ -117,7 +119,7 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
       onSave(updated);
       onClose();
     } catch (e) {
-      setError(e.response?.data?.detail || e.message || 'Erro ao guardar.');
+      setError(e.response?.data?.detail || e.message || t('domainEdit.error_save'));
     } finally {
       setSaving(false);
     }
@@ -142,37 +144,37 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ color: 'var(--text-highlight)', fontSize: 16, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
-            Editar Domínio
+            {t('domainEdit.edit_title')}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20 }}>✕</button>
         </div>
 
         {/* Name */}
-        <label style={labelStyle}>Nome do Domínio</label>
+        <label style={labelStyle}>{t('domainEdit.name')}</label>
         <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
 
         {/* Theme */}
-        <label style={{ ...labelStyle, marginTop: 12 }}>Tema</label>
+        <label style={{ ...labelStyle, marginTop: 12 }}>{t('domainEdit.theme')}</label>
         <select
           value={theme}
           onChange={e => setTheme(e.target.value)}
           style={{ ...inputStyle, marginBottom: theme === 'custom' ? 8 : 0 }}
         >
-          {THEMES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          {THEMES.map(theme => <option key={theme.value} value={theme.value}>{t(theme.labelKey)}</option>)}
         </select>
 
         {theme === 'custom' && (
           <input
             value={customTheme}
             onChange={e => setCustomTheme(e.target.value)}
-            placeholder="Descreve o tema..."
+            placeholder={t('domainEdit.name_placeholder')}
             style={{ ...inputStyle, marginTop: 4 }}
           />
         )}
 
         {/* Image section */}
         <div style={{ marginTop: 20, borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>Imagem do Domínio</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>{t('domainEdit.image_section')}</p>
 
           {currentImageUrl && (
             <div style={{ marginBottom: 10, borderRadius: 8, overflow: 'hidden', height: 90 }}>
@@ -181,7 +183,7 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
           )}
           {!currentImageUrl && (
             <div style={{ height: 60, borderRadius: 8, background: 'var(--bg-card-inner)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Sem imagem</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('domainEdit.no_image')}</span>
             </div>
           )}
 
@@ -191,28 +193,28 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
               disabled={imgLoading}
               style={{ padding: '7px 4px', borderRadius: 6, border: '1px solid #7c3aed', background: imgAction === 'generate' ? '#7c3aed22' : 'transparent', color: '#a78bfa', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
             >
-              Gerar com IA
+              {t('domainEdit.generate_ai')}
             </button>
             <button
               onClick={() => setImgAction(imgAction === 'improve' ? null : 'improve')}
               disabled={imgLoading}
               style={{ padding: '7px 4px', borderRadius: 6, border: '1px solid #06b6d4', background: imgAction === 'improve' ? '#06b6d422' : 'transparent', color: '#67e8f9', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
             >
-              Melhorar com IA
+              {t('domainEdit.improve_ai')}
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={imgLoading}
               style={{ padding: '7px 4px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
             >
-              Upload
+              {t('domainEdit.upload')}
             </button>
             <button
               onClick={() => setImgAction('remove')}
               disabled={imgLoading || !currentImageUrl}
               style={{ padding: '7px 4px', borderRadius: 6, border: '1px solid #ef444466', background: 'transparent', color: '#ef4444', fontSize: 11, cursor: 'pointer', fontWeight: 600, opacity: currentImageUrl ? 1 : 0.4 }}
             >
-              Remover
+              {t('domainEdit.remove')}
             </button>
           </div>
 
@@ -221,7 +223,7 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
               <input
                 value={stylePrompt}
                 onChange={e => setStylePrompt(e.target.value)}
-                placeholder="Ex: estilo anime, minimalista, cyberpunk..."
+                placeholder={t('domainEdit.style_prompt_placeholder')}
                 style={{ ...inputStyle, flex: 1 }}
               />
               <button
@@ -229,7 +231,7 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
                 disabled={imgLoading || !stylePrompt}
                 style={{ padding: '8px 12px', borderRadius: 6, background: '#06b6d4', border: 'none', color: '#fff', fontSize: 11, cursor: 'pointer', fontWeight: 700, opacity: (!stylePrompt || imgLoading) ? 0.5 : 1 }}
               >
-                {imgLoading ? '...' : 'Aplicar'}
+                {imgLoading ? '...' : t('domainEdit.apply')}
               </button>
             </div>
           )}
@@ -240,12 +242,12 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
               disabled={imgLoading}
               style={{ marginTop: 8, width: '100%', padding: '8px 0', borderRadius: 6, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: imgLoading ? 0.6 : 1 }}
             >
-              {imgLoading ? 'A processar...' : 'Confirmar ação de imagem'}
+              {imgLoading ? t('domainEdit.processing') : t('domainEdit.confirm_image_action')}
             </button>
           )}
 
           {imgMsg && (
-            <p style={{ color: imgMsg.startsWith('Erro') ? '#ef4444' : '#22c55e', fontSize: 12, marginTop: 6 }}>
+            <p style={{ color: imgMsg.startsWith(t('domainEdit.error_prefix')) ? '#ef4444' : '#22c55e', fontSize: 12, marginTop: 6 }}>
               {imgMsg}
             </p>
           )}
@@ -260,14 +262,14 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
             onClick={onClose}
             style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}
           >
-            Cancelar
+            {t('domainEdit.cancel')}
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
             style={{ flex: 2, padding: '10px 0', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, letterSpacing: 1, opacity: (saving || !name.trim()) ? 0.6 : 1 }}
           >
-            {saving ? 'A guardar...' : 'Guardar Domínio'}
+            {saving ? t('domainEdit.saving') : t('domainEdit.save')}
           </button>
         </div>
       </div>

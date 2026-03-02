@@ -2,6 +2,7 @@
 // Props: count: number — total cards due for review today
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const PILE_COLORS = ['#7c3aed', '#5b21b6', '#4c1d95'];
 const CARD_W = 260;
@@ -9,6 +10,7 @@ const CARD_H = 160;
 
 export default function DeckPileDisplay({ count, onStart }) {
     const [hovered, setHovered] = useState(false);
+    const { t } = useTranslation();
 
     const offsets = [
         { dx: 0, dy: 0, rot: 0, z: 3 },
@@ -86,14 +88,14 @@ export default function DeckPileDisplay({ count, onStart }) {
                                         </text>
                                         <text x="20" y="68" fill="#fff" fontSize="9" fontFamily="Courier New, monospace"
                                             letterSpacing="3" opacity="0.7">
-                                            CARTAS PARA TREINAR HOJE
+                                            {t('deckPile.cards')}
                                         </text>
 
                                         {/* Oracle label */}
                                         <rect x="16" y="10" width="80" height="16" rx="8" fill="#fff" fillOpacity="0.12" />
                                         <text x="56" y="21" fill="#fff" fontSize="7.5" fontFamily="Courier New, monospace"
                                             fontWeight="700" letterSpacing="1.5" textAnchor="middle" dominantBaseline="middle">
-                                            ORACLE DECK
+                                            {t('deckPile.oracle')}
                                         </text>
 
                                         {/* Start CTA */}
@@ -102,7 +104,7 @@ export default function DeckPileDisplay({ count, onStart }) {
                                         <text x={CARD_W / 2} y={CARD_H - 19} fill="#fff" fontSize="10"
                                             fontFamily="Courier New, monospace" fontWeight="800" letterSpacing="2.5"
                                             textAnchor="middle" dominantBaseline="middle">
-                                            INICIAR TREINO →
+                                            {t('deckPile.start')} →
                                         </text>
                                     </>
                                 )}
@@ -118,7 +120,7 @@ export default function DeckPileDisplay({ count, onStart }) {
                 textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
                 textAlign: 'center', margin: 0,
             }}>
-                Clica no deck para começar a sessão de treino
+                {t('deckPile.cta')}
             </p>
         </div>
     );

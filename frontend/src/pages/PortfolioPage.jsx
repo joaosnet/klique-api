@@ -1,4 +1,5 @@
 import { IconSparkBoost } from '../components/Icons/ActionIcons';
+import { useTranslation } from 'react-i18next';
 
 const PORTFOLIO_DATA = {
   name: 'João Duarte',
@@ -50,6 +51,7 @@ const PORTFOLIO_DATA = {
 };
 
 export default function PortfolioPage() {
+  const { t } = useTranslation();
   const d = PORTFOLIO_DATA;
 
   return (
@@ -72,14 +74,14 @@ export default function PortfolioPage() {
             <IconSparkBoost width={36} height={36} />
           </div>
           <h1 className="font-title text-4xl sm:text-5xl tracking-widest text-white mb-3">{d.name.toUpperCase()}</h1>
-          <p className="text-purple-300 text-lg mb-3">{d.headline}</p>
-          <p className="text-gray-400 max-w-lg mx-auto">{d.tagline}</p>
+          <p className="text-purple-300 text-lg mb-3">{t('portfolio.title')}</p>
+          <p className="text-gray-400 max-w-lg mx-auto">{t('portfolio.subtitle')}</p>
 
           <div className="flex justify-center gap-4 mt-6">
             <a href={`mailto:${d.email}`}
                className="px-5 py-2 rounded-lg text-xs uppercase tracking-wider text-white transition-all hover:opacity-80"
                style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>
-              Contato
+              {t('portfolio.contact')}
             </a>
             <a href={d.github} target="_blank" rel="noreferrer"
                className="px-5 py-2 rounded-lg text-xs uppercase tracking-wider text-gray-300 hover:text-white transition-colors"
@@ -95,7 +97,7 @@ export default function PortfolioPage() {
         <section>
           <h2 className="font-title text-2xl tracking-widest text-white mb-8"
               style={{ borderBottom: '2px solid #6b21a8', paddingBottom: '0.5rem' }}>
-            EXPERIÊNCIAS
+            {t('portfolio.experiences')}
           </h2>
           <div className="space-y-6">
             {d.experiences.map((exp, i) => (
@@ -119,7 +121,7 @@ export default function PortfolioPage() {
         <section>
           <h2 className="font-title text-2xl tracking-widest text-white mb-8"
               style={{ borderBottom: '2px solid #6b21a8', paddingBottom: '0.5rem' }}>
-            PROJETOS
+            {t('portfolio.projects')}
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {d.projects.map((proj, i) => (
@@ -147,7 +149,7 @@ export default function PortfolioPage() {
         <section>
           <h2 className="font-title text-2xl tracking-widest text-white mb-8"
               style={{ borderBottom: '2px solid #6b21a8', paddingBottom: '0.5rem' }}>
-            HABILIDADES
+            {t('portfolio.skills')}
           </h2>
           <div className="grid sm:grid-cols-2 gap-5">
             {d.skills.map((group) => (
@@ -173,12 +175,12 @@ export default function PortfolioPage() {
 
         {/* ── Contact ── */}
         <section className="text-center py-8">
-          <h2 className="font-title text-2xl tracking-widest text-white mb-4">CONTATO</h2>
-          <p className="text-gray-400 mb-6">Vamos construir algo juntos?</p>
+          <h2 className="font-title text-2xl tracking-widest text-white mb-4">{t('portfolio.contact')}</h2>
+          <p className="text-gray-400 mb-6">{t('portfolio.invite')}</p>
           <a href={`mailto:${d.email}`}
              className="inline-block px-8 py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:scale-105"
              style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>
-            Enviar mensagem
+            {t('portfolio.send_message')}
           </a>
         </section>
       </div>

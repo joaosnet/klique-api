@@ -1,45 +1,47 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import './OnboardingTutorial.css';
 
 const TUTORIAL_STEPS = [
     {
         id: 1,
         target: '[data-tutorial="camera"]',
-        title: 'Tire ou escolha uma foto',
-        description: 'Capture uma selfie ou escolha uma foto da galeria',
+        title: 'onboarding.step1_title',
+        description: 'onboarding.step1_desc',
         position: 'bottom',
     },
     {
         id: 2,
         target: '[data-tutorial="templates"]',
-        title: 'Escolha um tema',
-        description: 'Selecione o personagem natalino que você quer virar',
+        title: 'onboarding.step2_title',
+        description: 'onboarding.step2_desc',
         position: 'top',
     },
     {
         id: 3,
         target: '[data-tutorial="generate"]',
-        title: 'Gere sua imagem',
-        description: 'Clique para transformar sua foto',
+        title: 'onboarding.step3_title',
+        description: 'onboarding.step3_desc',
         position: 'top',
     },
     {
         id: 4,
         target: '[data-tutorial="comparator"]',
-        title: 'Compare o resultado',
-        description: 'Arraste o slider para ver o antes e depois',
+        title: 'onboarding.step4_title',
+        description: 'onboarding.step4_desc',
         position: 'bottom',
     },
     {
         id: 5,
         target: '[data-tutorial="download"]',
-        title: 'Baixe ou compartilhe',
-        description: 'Salve sua criação ou compartilhe nas redes!',
+        title: 'onboarding.step5_title',
+        description: 'onboarding.step5_desc',
         position: 'top',
     },
 ];
 
 export default function OnboardingTutorial({ onComplete, currentStep = 1 }) {
+    const { t } = useTranslation();
     const [step, setStep] = useState(currentStep);
     const [targetRect, setTargetRect] = useState(null);
     const [isVisible, setIsVisible] = useState(true);
@@ -151,17 +153,17 @@ export default function OnboardingTutorial({ onComplete, currentStep = 1 }) {
             <div className="onboarding-tooltip" style={tooltipStyle}>
                 <div className="tooltip-content">
                     <div className="tooltip-step">
-                        Passo {step} de {TUTORIAL_STEPS.length}
+                        {t('onboarding.step', { step, total: TUTORIAL_STEPS.length })}
                     </div>
-                    <h3 className="tooltip-title">{currentStepData.title}</h3>
-                    <p className="tooltip-description">{currentStepData.description}</p>
+                    <h3 className="tooltip-title">{t(currentStepData.title)}</h3>
+                    <p className="tooltip-description">{t(currentStepData.description)}</p>
 
                     <div className="tooltip-actions">
                         <button className="btn-skip" onClick={handleSkip}>
-                            Pular
+                            {t('onboarding.skip')}
                         </button>
                         <button className="btn-next" onClick={handleNext}>
-                            {step === TUTORIAL_STEPS.length ? 'Começar!' : 'Próximo'}
+                            {step === TUTORIAL_STEPS.length ? t('onboarding.get_started') : t('onboarding.next')}
                         </button>
                     </div>
                 </div>

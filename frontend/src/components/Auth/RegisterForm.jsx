@@ -5,6 +5,8 @@ import './RegisterForm.css';
 import { getErrorMessage } from '../../utils/errorHandler';
 import { IconGiftQuest } from '../Icons/ActionIcons';
 
+import { useTranslation } from 'react-i18next';
+
 export default function RegisterForm() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -14,18 +16,19 @@ export default function RegisterForm() {
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
         if (password !== confirmPassword) {
-            setError('As senhas não coincidem');
+            setError(t('registerForm.error_password_match', 'As senhas não coincidem'));
             return;
         }
 
         if (password.length < 6) {
-            setError('A senha deve ter no mínimo 6 caracteres');
+            setError(t('registerForm.error_password_length', 'A senha deve ter no mínimo 6 caracteres'));
             return;
         }
 
@@ -34,11 +37,11 @@ export default function RegisterForm() {
         try {
             await authAPI.register(name, email, password);
             navigate('/login', {
-                state: { message: 'Conta criada! Faça login para continuar.' }
+                state: { message: t('registerForm.success', 'Conta criada! Faça login para continuar.') }
             });
         } catch (err) {
             setError(
-                getErrorMessage(err, 'Erro ao criar conta. Tente novamente.')
+                getErrorMessage(err, t('registerForm.error_create', 'Erro ao criar conta. Tente novamente.'))
             );
         } finally {
             setLoading(false);
@@ -50,8 +53,8 @@ export default function RegisterForm() {
             <div className="register-card">
                 <div className="register-header">
                     <IconGiftQuest className="register-icon" width={58} height={58} />
-                    <h1>Criar Conta</h1>
-                    <p>Ganhe 1 crédito grátis ao se cadastrar!</p>
+                    <h1>{t('registerForm.title')}</h1>
+                    <p>{t('registerForm.subtitle')}</p>
                 </div>
 
                 {error && (
@@ -62,52 +65,52 @@ export default function RegisterForm() {
 
                 <form onSubmit={handleSubmit} className="register-form">
                     <div className="form-group">
-                        <label htmlFor="name">Nome</label>
+                        <label htmlFor="name">{t('registerForm.full_name')}</label>
                         <input
                             type="text"
                             id="name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="Seu nome"
+                            placeholder={t('registerForm.full_name_placeholder')}
                             required
                             disabled={loading}
                         />
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="email">Email</label>
+                        <label htmlFor="email">{t('registerForm.email')}</label>
                         <input
                             type="email"
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="seu@email.com"
+                            placeholder={t('registerForm.email_placeholder')}
                             required
                             disabled={loading}
                         />
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="password">Senha</label>
+                        <label htmlFor="password">{t('registerForm.password')}</label>
                         <input
                             type="password"
                             id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
+                            placeholder={t('registerForm.password_placeholder')}
                             required
                             disabled={loading}
                         />
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="confirmPassword">Confirmar Senha</label>
+                        <label htmlFor="confirmPassword">{t('registerForm.confirm_password')}</label>
                         <input
                             type="password"
                             id="confirmPassword"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="••••••••"
+                            placeholder={t('registerForm.confirm_password_placeholder')}
                             required
                             disabled={loading}
                         />
@@ -121,12 +124,12 @@ export default function RegisterForm() {
                         {loading ? (
                             <>
                                 <span className="spinner"></span>
-                                Criando conta...
+                                {t('registerForm.loading')}
                             </>
                         ) : (
                             <>
                                 <IconGiftQuest width={20} height={20} />
-                                Criar Conta Grátis
+                                {t('registerForm.submit')}
                             </>
                         )}
                     </button>
@@ -134,8 +137,8 @@ export default function RegisterForm() {
 
                 <div className="register-footer">
                     <p>
-                        Já tem uma conta?{' '}
-                        <Link to="/login">Fazer login</Link>
+                        {t('registerForm.has_account')}{' '}
+                        <Link to="/login">{t('registerForm.login_link')}</Link>
                     </p>
                 </div>
             </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { oracleAPI } from '../services/api';
 import GamifiedLoader from '../components/Layout/GamifiedLoader';
@@ -115,6 +116,7 @@ export default function OracleDashboardPage() {
   const [radar, setRadar] = useState([]);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+    const { t } = useTranslation();
 
   useEffect(() => {
     const load = async () => {
@@ -137,7 +139,7 @@ export default function OracleDashboardPage() {
   }, []);
 
   if (loading) {
-    <GamifiedLoader label="A carregar o Oráculo..." />
+    return <GamifiedLoader label={t('oracle.loading')} />;
   }
 
   return (
@@ -146,21 +148,21 @@ export default function OracleDashboardPage() {
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <h1 style={{ color: '#e9d5ff', fontSize: 24, fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase', margin: 0 }}>
-            Dashboard do Estrategista
+            {t('oracle.title')}
           </h1>
           <p style={{ color: '#6b7280', fontSize: 13, marginTop: 4 }}>
-            O teu estado de jogo em tempo real.
+            {t('oracle.subtitle')}
           </p>
         </div>
 
         {/* Stats row */}
         {overview && (
           <div style={{ display: 'flex', gap: 12, marginBottom: '2rem', flexWrap: 'wrap' }}>
-            <StatCard label="Domínios" value={overview.total_domains} color="#a78bfa" />
-            <StatCard label="Cards Totais" value={overview.total_cards} color="#7c3aed" />
-            <StatCard label="Vence Hoje" value={overview.due_today} color={overview.due_today > 0 ? '#f59e0b' : '#6b7280'} />
-            <StatCard label="Semana" value={overview.weekly_trained} color="#22c55e" suffix=" treinos" />
-            <StatCard label="Streak" value={overview.streak_days} color="#f97316" suffix=" dias" />
+            <StatCard label={t('oracle.stats.domains')} value={overview.total_domains} color="#a78bfa" />
+            <StatCard label={t('oracle.stats.total_cards')} value={overview.total_cards} color="#7c3aed" />
+            <StatCard label={t('oracle.stats.due_today')} value={overview.due_today} color={overview.due_today > 0 ? '#f59e0b' : '#6b7280'} />
+            <StatCard label={t('oracle.stats.week')} value={overview.weekly_trained} color="#22c55e" suffix={t('oracle.stats.trainings_suffix')} />
+            <StatCard label={t('oracle.stats.streak')} value={overview.streak_days} color="#f97316" suffix={t('oracle.stats.days_suffix')} />
           </div>
         )}
 
@@ -175,7 +177,7 @@ export default function OracleDashboardPage() {
               marginBottom: '2rem',
             }}
           >
-            Treinar {overview.due_today} Cenário{overview.due_today !== 1 ? 's' : ''} Vencidos →
+            {t('oracle.analyze', { count: overview.due_today })}
           </button>
         )}
 
@@ -184,13 +186,13 @@ export default function OracleDashboardPage() {
           {/* Radar */}
           <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44', borderRadius: 12, padding: '1.25rem' }}>
             <h3 style={{ color: '#e9d5ff', fontSize: 14, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16, margin: '0 0 1rem 0' }}>
-              Radar de Proficiência
+              {t('oracle.radar')}
             </h3>
             {radar.length > 0 ? (
               <RadarChart entries={radar} />
             ) : (
               <p style={{ color: '#4b5563', fontSize: 13, textAlign: 'center', padding: '2rem 0' }}>
-                Treina em pelo menos 1 domínio para ver o radar.
+                {t('oracle.no_data')}
               </p>
             )}
           </div>
@@ -198,13 +200,13 @@ export default function OracleDashboardPage() {
           {/* Activity */}
           <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44', borderRadius: 12, padding: '1.25rem' }}>
             <h3 style={{ color: '#e9d5ff', fontSize: 14, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 1rem 0' }}>
-              Actividade — 7 Dias
+              {t('oracle.activity_7days')}
             </h3>
             {activity.some((e) => e.count > 0) ? (
               <ActivityBar entries={activity} />
             ) : (
               <p style={{ color: '#4b5563', fontSize: 13, textAlign: 'center', padding: '2rem 0' }}>
-                Sem actividade de treino esta semana.
+                {t('oracle.no_activity')}
               </p>
             )}
           </div>
@@ -213,14 +215,16 @@ export default function OracleDashboardPage() {
           {radar.length > 0 && (
             <div style={{ background: '#1a1a2e', border: '1px solid #2d2d44', borderRadius: 12, padding: '1.25rem', gridColumn: '1 / -1' }}>
               <h3 style={{ color: '#e9d5ff', fontSize: 14, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', margin: '0 0 1rem 0' }}>
-                Por Domínio
+                {t('oracle.per_domain')}
               </h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #2d2d44' }}>
                       {['Domínio', 'Treinos', 'Precisão', ''].map((h) => (
-                        <th key={h} style={{ color: '#6b7280', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '0 8px 8px', textAlign: 'left' }}>{h}</th>
+                        <th key={h} style={{ color: '#6b7280', fontSize: 10, letterSpacing: 1, textTransform: 'uppercase', padding: '0 8px 8px', textAlign: 'left' }}>
+                          {h === 'Domínio' ? t('oracle.domain') : h === 'Treinos' ? t('oracle.trainings') : h === 'Precisão' ? t('oracle.accuracy') : ''}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -240,7 +244,7 @@ export default function OracleDashboardPage() {
                               color: '#7c3aed', cursor: 'pointer', fontSize: 11, padding: '3px 8px',
                             }}
                           >
-                            + Cards
+                            {t('oracle.add_cards')}
                           </button>
                         </td>
                       </tr>

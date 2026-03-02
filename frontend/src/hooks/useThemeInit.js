@@ -1,16 +1,16 @@
 import { useEffect } from 'react';
 
 const COLORS = {
-    'Roxo (Padrão)': { value: '#7c3aed', light: '#a855f7', dark: '#6b21a8' },
-    'Azul': { value: '#2563eb', light: '#3b82f6', dark: '#1d4ed8' },
-    'Verde': { value: '#16a34a', light: '#22c55e', dark: '#15803d' },
-    'Laranja': { value: '#ea580c', light: '#f97316', dark: '#c2410c' },
-    'Rosa': { value: '#db2777', light: '#ec4899', dark: '#be185d' },
+    'Purple (Default)': { value: '#7c3aed', light: '#a855f7', dark: '#6b21a8' },
+    'Blue': { value: '#2563eb', light: '#3b82f6', dark: '#1d4ed8' },
+    'Green': { value: '#16a34a', light: '#22c55e', dark: '#15803d' },
+    'Orange': { value: '#ea580c', light: '#f97316', dark: '#c2410c' },
+    'Pink': { value: '#db2777', light: '#ec4899', dark: '#be185d' },
 };
 
 function getAccentObj(hexValue) {
     const found = Object.values(COLORS).find(c => c.value === hexValue);
-    return found || COLORS['Roxo (Padrão)'];
+    return found || COLORS['Purple (Default)'];
 }
 
 /** Returns system preference: 'dark' or 'light' */

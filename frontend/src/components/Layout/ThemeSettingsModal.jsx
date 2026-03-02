@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import '../../pages/ToggleTheme.css';
 
-const COLORS = [
-    { name: 'Roxo (Padrão)', value: '#7c3aed', light: '#a855f7', dark: '#6b21a8' },
-    { name: 'Azul', value: '#2563eb', light: '#3b82f6', dark: '#1d4ed8' },
-    { name: 'Verde', value: '#16a34a', light: '#22c55e', dark: '#15803d' },
-    { name: 'Laranja', value: '#ea580c', light: '#f97316', dark: '#c2410c' },
-    { name: 'Rosa', value: '#db2777', light: '#ec4899', dark: '#be185d' },
-];
-
 export default function ThemeSettingsModal({ onClose }) {
+    const { t, i18n } = useTranslation();
     const [theme, setTheme] = useState(localStorage.getItem('app_theme') || 'auto');
     const [accent, setAccent] = useState(localStorage.getItem('app_accent') || '#7c3aed');
+
+    const COLORS = [
+        { name: t('colors.purple_default'), value: '#7c3aed', light: '#a855f7', dark: '#6b21a8' },
+        { name: t('colors.blue'), value: '#2563eb', light: '#3b82f6', dark: '#1d4ed8' },
+        { name: t('colors.green'), value: '#16a34a', light: '#22c55e', dark: '#15803d' },
+        { name: t('colors.orange'), value: '#ea580c', light: '#f97316', dark: '#c2410c' },
+        { name: t('colors.pink'), value: '#db2777', light: '#ec4899', dark: '#be185d' },
+    ];
 
     useEffect(() => {
         // Escuta a tecla ESC
@@ -59,7 +61,7 @@ export default function ThemeSettingsModal({ onClose }) {
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
                     <h2 style={{ color: 'var(--text-highlight)', fontSize: 18, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
-                        Configuração Visual
+                        {t('visual.config_title')}
                     </h2>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 24 }}>
                         &times;
@@ -79,7 +81,7 @@ export default function ThemeSettingsModal({ onClose }) {
                     return (
                         <div style={{ marginBottom: 24 }}>
                             <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
-                                Modo
+                                {t('visual.mode')}
                             </label>
 
                             <div className={`day-night-toggle flex items-center gap-2`} title="Modo Visual">
@@ -117,7 +119,7 @@ export default function ThemeSettingsModal({ onClose }) {
                 {/* Accent Color */}
                 <div>
                     <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
-                        Cor de Destaque
+                        {t('visual.accent_color')}
                     </label>
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                         {COLORS.map((c) => (
@@ -136,6 +138,45 @@ export default function ThemeSettingsModal({ onClose }) {
                                 }}
                             />
                         ))}
+                    </div>
+                </div>
+
+                {/* Language Selector */}
+                <div style={{ marginTop: 24 }}>
+                    <label style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+                        {t('visual.language')}
+                    </label>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <button
+                            onClick={() => i18n.changeLanguage('en')}
+                            title="English"
+                            style={{
+                                width: 36, height: 36, borderRadius: '50%', cursor: 'pointer',
+                                background: '#2563eb', color: '#fff', fontSize: 12, fontWeight: 700,
+                                border: i18n.language?.startsWith('en') ? '3px solid var(--text-main)' : '2px solid transparent',
+                                outline: i18n.language?.startsWith('en') ? '2px solid #2563eb' : 'none',
+                                outlineOffset: 2,
+                                transition: 'transform 0.2s',
+                                transform: i18n.language?.startsWith('en') ? 'scale(1.1)' : 'scale(1)'
+                            }}
+                        >
+                            EN
+                        </button>
+                        <button
+                            onClick={() => i18n.changeLanguage('pt')}
+                            title="Português"
+                            style={{
+                                width: 36, height: 36, borderRadius: '50%', cursor: 'pointer',
+                                background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700,
+                                border: i18n.language?.startsWith('pt') ? '3px solid var(--text-main)' : '2px solid transparent',
+                                outline: i18n.language?.startsWith('pt') ? '2px solid #16a34a' : 'none',
+                                outlineOffset: 2,
+                                transition: 'transform 0.2s',
+                                transform: i18n.language?.startsWith('pt') ? 'scale(1.1)' : 'scale(1)'
+                            }}
+                        >
+                            PT
+                        </button>
                     </div>
                 </div>
             </div>

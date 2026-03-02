@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import './DashboardStyles.css';
 import {
   Chart as ChartJS,
@@ -54,6 +55,7 @@ const DOMAIN_THEMES = [
 
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [activeMenu, setActiveMenu] = useState('dashboard');
 
   const [examDate, setExamDate] = useState(() => {
@@ -238,9 +240,9 @@ export default function DashboardPage() {
   };
 
   const hoursChartData = {
-    labels: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+    labels: t('dashboard.chart_days', { returnObjects: true }),
     datasets: [{
-      label: 'Horas',
+      label: t('dashboard.chart_hours'),
       data: weeklyHours,
       borderColor: '#f8d12f',
       backgroundColor: 'rgba(248, 209, 47, 0.1)',
@@ -273,8 +275,8 @@ export default function DashboardPage() {
                 <IconLogo width={32} height={32} />
               </div>
               <div className="dash-logo-text">
-                <h1>OmniFlash</h1>
-                <span>Meus Estudos</span>
+                <h1>{t('dashboard.title')}</h1>
+                <span>{t('dashboard.subtitle')}</span>
               </div>
             </div>
 
@@ -283,13 +285,13 @@ export default function DashboardPage() {
                 className={`dash-nav-btn ${activeMenu === 'dashboard' ? 'active' : ''}`}
                 onClick={() => setActiveMenu('dashboard')}
               >
-                Dashboard
+                {t('dashboard.title')}
               </button>
               <button
                 className={`dash-nav-btn ${activeMenu === 'materias' ? 'active' : ''}`}
                 onClick={() => setActiveMenu('materias')}
               >
-                Domínios
+                {t('dashboard.domains')}
               </button>
             </nav>
 
@@ -303,53 +305,53 @@ export default function DashboardPage() {
               <div className="dash-countdown-container">
                 <h2 className="dash-section-title justify-center">
                   <span className="dash-title-icon"><IconTime width={24} height={24} className="inline-block" /></span>
-                  Contagem Regressiva
+                  {t('dashboard.countdown')}
                 </h2>
-                <p className="dash-countdown-subtitle">Defina sua data-alvo abaixo</p>
+                <p className="dash-countdown-subtitle">{t('dashboard.set_target_date')}</p>
 
                 <div className="dash-countdown-grid">
                   <div className="dash-countdown-item">
                     <div className="dash-countdown-value">{timeRemaining.years}</div>
-                    <div className="dash-countdown-label">Anos</div>
+                    <div className="dash-countdown-label">{t('dashboard.years')}</div>
                   </div>
                   <div className="dash-countdown-separator">:</div>
                   <div className="dash-countdown-item">
                     <div className="dash-countdown-value">{timeRemaining.months}</div>
-                    <div className="dash-countdown-label">Meses</div>
+                    <div className="dash-countdown-label">{t('dashboard.months')}</div>
                   </div>
                   <div className="dash-countdown-separator">:</div>
                   <div className="dash-countdown-item">
                     <div className="dash-countdown-value">{timeRemaining.weeks}</div>
-                    <div className="dash-countdown-label">Semanas</div>
+                    <div className="dash-countdown-label">{t('dashboard.weeks')}</div>
                   </div>
                   <div className="dash-countdown-separator">:</div>
                   <div className="dash-countdown-item">
                     <div className="dash-countdown-value">{timeRemaining.days}</div>
-                    <div className="dash-countdown-label">Dias</div>
+                    <div className="dash-countdown-label">{t('dashboard.days')}</div>
                   </div>
                   <div className="dash-countdown-separator">:</div>
                   <div className="dash-countdown-item">
                     <div className="dash-countdown-value">{String(timeRemaining.hours).padStart(2, '0')}</div>
-                    <div className="dash-countdown-label">Horas</div>
+                    <div className="dash-countdown-label">{t('dashboard.hours')}</div>
                   </div>
                   <div className="dash-countdown-separator">:</div>
                   <div className="dash-countdown-item">
                     <div className="dash-countdown-value">{String(timeRemaining.minutes).padStart(2, '0')}</div>
-                    <div className="dash-countdown-label">Minutos</div>
+                    <div className="dash-countdown-label">{t('dashboard.minutes')}</div>
                   </div>
                   <div className="dash-countdown-separator">:</div>
                   <div className="dash-countdown-item">
                     <div className="dash-countdown-value">{String(timeRemaining.seconds).padStart(2, '0')}</div>
-                    <div className="dash-countdown-label">Segundos</div>
+                    <div className="dash-countdown-label">{t('dashboard.seconds')}</div>
                   </div>
                 </div>
 
                 <div className="dash-total-days">
-                  <span>{timeRemaining.totalDays.toLocaleString()}</span> dias restantes
+                  <span>{timeRemaining.totalDays.toLocaleString()}</span> {t('dashboard.days_remaining')}
                 </div>
 
                 <div className="dash-exam-date-config">
-                  <label>Data-Alvo:</label>
+                  <label>{t('dashboard.target_date')}</label>
                   <input
                     type="date"
                     value={examDate}
@@ -364,52 +366,52 @@ export default function DashboardPage() {
                   <div className="dash-stat-icon study"><IconStudy width={28} height={28} className="drop-shadow-lg" /></div>
                   <div className="dash-stat-info">
                     <span className="dash-stat-value">{totalHours.toFixed(1)}</span>
-                    <span className="dash-stat-label">Horas Estudadas</span>
+                    <span className="dash-stat-label">{t('dashboard.cards_reviewed')}</span>
                   </div>
-                  <div className="dash-stat-trend up">Meta: 500h</div>
+                  <div className="dash-stat-trend up">{t('dashboard.goal_hours')}</div>
                 </div>
                 <div className="dash-stat-card">
                   <div className="dash-stat-icon questions"><IconQuestions width={28} height={28} className="drop-shadow-lg" /></div>
                   <div className="dash-stat-info">
                     <span className="dash-stat-value">{totalQuestions}</span>
-                    <span className="dash-stat-label">Questões Resolvidas</span>
+                    <span className="dash-stat-label">{t('dashboard.questions_answered')}</span>
                   </div>
-                  <div className="dash-stat-trend up">Meta: 3000</div>
+                  <div className="dash-stat-trend up">{t('dashboard.goal_questions')}</div>
                 </div>
                 <div className="dash-stat-card">
                   <div className="dash-stat-icon accuracy"><IconTarget width={28} height={28} className="drop-shadow-lg" /></div>
                   <div className="dash-stat-info">
                     <span className="dash-stat-value">{avgAccuracy}%</span>
-                    <span className="dash-stat-label">Taxa de Acerto</span>
+                    <span className="dash-stat-label">{t('dashboard.accuracy')}</span>
                   </div>
-                  <div className="dash-stat-trend up">Meta: 80%</div>
+                  <div className="dash-stat-trend up">{t('dashboard.goal_accuracy')}</div>
                 </div>
                 <div className="dash-stat-card">
                   <div className="dash-stat-icon progress"><IconProgress width={28} height={28} className="drop-shadow-lg" /></div>
                   <div className="dash-stat-info">
                     <span className="dash-stat-value">{avgProgress}%</span>
-                    <span className="dash-stat-label">Progresso Geral</span>
+                    <span className="dash-stat-label">{t('dashboard.progress')}</span>
                   </div>
-                  <div className="dash-stat-trend">Conteúdo</div>
+                  <div className="dash-stat-trend">{t('dashboard.content')}</div>
                 </div>
               </div>
 
               {/* Charts Section */}
               <div className="dash-charts-grid">
                 <div className="dash-chart-container" style={{ height: 350 }}>
-                  <h3 className="dash-chart-title"><IconProgress width={18} height={18} /> Progresso por Domínio</h3>
+                  <h3 className="dash-chart-title"><IconProgress width={18} height={18} /> {t('dashboard.progress_by_domain')}</h3>
                   <div style={{ height: 250 }}>
                     {domainsLoading ? (
-                      <GamifiedLoader label="A carregar domínios..." fullScreen={false} />
+                      <GamifiedLoader label={t('dashboard.loading')} fullScreen={false} />
                     ) : activeDomainIds.length === 0 ? (
-                      <p style={{ color: 'var(--dash-text-secondary)', textAlign: 'center', paddingTop: 80 }}>Nenhum domínio criado ainda.</p>
+                      <p style={{ color: 'var(--dash-text-secondary)', textAlign: 'center', paddingTop: 80 }}>{t('dashboard.no_data')}</p>
                     ) : (
                       <Bar data={progressChartData} options={progressChartOptions} />
                     )}
                   </div>
                 </div>
                 <div className="dash-chart-container" style={{ height: 350 }}>
-                  <h3 className="dash-chart-title"><IconTime width={18} height={18} /> Horas de Estudo (Semana)</h3>
+                  <h3 className="dash-chart-title"><IconTime width={18} height={18} /> {t('dashboard.weekly_study_hours')}</h3>
                   <div style={{ height: 250 }}>
                     <Line data={hoursChartData} options={hoursChartOptions} />
                   </div>
@@ -420,13 +422,13 @@ export default function DashboardPage() {
               <div className="dash-study-log">
                 <h3 className="dash-section-title">
                   <span className="dash-title-icon"><IconLog width={24} height={24} className="inline-block" /></span>
-                  Registrar Estudo
+                  {t('dashboard.log_study')}
                 </h3>
                 <div className="dash-log-form">
                   <div className="dash-form-group">
-                    <label>Domínio</label>
+                    <label>{t('dashboard.domain')}</label>
                     {domainsLoading ? (
-                      <select disabled><option>Carregando...</option></select>
+                      <select disabled><option>{t('dashboard.loading')}</option></select>
                     ) : (
                       <select
                         value={logForm.subject}
@@ -439,7 +441,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                   <div className="dash-form-group">
-                    <label>Horas</label>
+                    <label>{t('dashboard.hours')}</label>
                     <input
                       type="number"
                       min="0.5" step="0.5"
@@ -448,7 +450,7 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div className="dash-form-group">
-                    <label>Questões</label>
+                    <label>{t('dashboard.questions')}</label>
                     <input
                       type="number" min="0"
                       value={logForm.questions}
@@ -456,7 +458,7 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div className="dash-form-group">
-                    <label>Acertos</label>
+                    <label>{t('dashboard.correct')}</label>
                     <input
                       type="number" min="0"
                       value={logForm.correct}
@@ -464,7 +466,7 @@ export default function DashboardPage() {
                     />
                   </div>
                   <button onClick={logStudy} className="dash-btn-primary" disabled={domainsLoading || domains.length === 0}>
-                    Registrar
+                    {t('dashboard.log_study')}
                   </button>
                 </div>
               </div>
@@ -475,16 +477,16 @@ export default function DashboardPage() {
             <section className="dash-section active">
               <h2 className="dash-section-title justify-center">
                 <span className="dash-title-icon"><IconStudy width={24} height={24} className="inline-block" /></span>
-                Progresso por Domínio
+                {t('dashboard.progress_by_domain')}
               </h2>
 
               {domainsLoading ? (
-                <GamifiedLoader label="A carregar domínios..." fullScreen={false} />
+                <GamifiedLoader label={t('dashboard.loading')} fullScreen={false} />
               ) : domains.length === 0 ? (
                 <div style={{ textAlign: 'center', paddingTop: 80 }}>
                   <IconSparkBoost width={48} height={48} style={{ marginBottom: 16 }} />
-                  <p style={{ color: 'var(--dash-text-secondary)', fontSize: 16, marginBottom: 8 }}>Nenhum domínio criado ainda.</p>
-                  <p style={{ color: 'var(--dash-text-secondary)', fontSize: 13 }}>Crie domínios na página de Domínios para acompanhar seu progresso aqui.</p>
+                  <p style={{ color: 'var(--dash-text-secondary)', fontSize: 16, marginBottom: 8 }}>{t('dashboard.no_data')}</p>
+                  <p style={{ color: 'var(--dash-text-secondary)', fontSize: 13 }}>{t('dashboard.create_domains_hint')}</p>
                 </div>
               ) : (
                 <div className="dash-materias-grid">
@@ -500,15 +502,15 @@ export default function DashboardPage() {
                         <div className="dash-materia-stats">
                           <div className="dash-materia-stat">
                             <span className="dash-stat-num">{data.hours.toFixed(1)}</span>
-                            <span className="dash-stat-txt">horas</span>
+                            <span className="dash-stat-txt">{t('dashboard.hours')}</span>
                           </div>
                           <div className="dash-materia-stat">
                             <span className="dash-stat-num">{data.questions}</span>
-                            <span className="dash-stat-txt">questões</span>
+                            <span className="dash-stat-txt">{t('dashboard.questions')}</span>
                           </div>
                           <div className="dash-materia-stat">
                             <span className="dash-stat-num">{accuracy}%</span>
-                            <span className="dash-stat-txt">acerto</span>
+                            <span className="dash-stat-txt">{t('dashboard.accuracy')}</span>
                           </div>
                         </div>
                         <div className="dash-materia-progress">

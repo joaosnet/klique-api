@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { srsAPI } from '../services/api';
 import GamifiedLoader from '../components/Layout/GamifiedLoader';
 import GameTheoryCard from '../components/Cards/GameTheoryCard';
@@ -6,15 +7,16 @@ import DeckPileDisplay from '../components/Cards/DeckPileDisplay';
 import { IconSparkBoost } from '../components/Icons/ActionIcons';
 
 const RATING_LABELS = [
-  { rating: 0, label: 'Sem ideia', color: '#ef4444' },
-  { rating: 1, label: 'Quase nada', color: '#f97316' },
-  { rating: 2, label: 'Errei feio', color: '#f59e0b' },
-  { rating: 3, label: 'Com dificuldade', color: '#eab308' },
-  { rating: 4, label: 'Quase perfeito', color: '#84cc16' },
-  { rating: 5, label: 'Acertei em cheio', color: '#22c55e' },
+  { rating: 0, label: 'training.rating_0', color: '#ef4444' },
+  { rating: 1, label: 'training.rating_1', color: '#f97316' },
+  { rating: 2, label: 'training.rating_2', color: '#f59e0b' },
+  { rating: 3, label: 'training.rating_3', color: '#eab308' },
+  { rating: 4, label: 'training.rating_4', color: '#84cc16' },
+  { rating: 5, label: 'training.rating_5', color: '#22c55e' },
 ];
 
 export default function TrainingPage() {
+  const { t } = useTranslation();
   const [dueCards, setDueCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -66,7 +68,7 @@ export default function TrainingPage() {
   const progress = dueCards.length > 0 ? (currentIndex / dueCards.length) * 100 : 0;
 
   if (loading) {
-    <GamifiedLoader label="A carregar fila de treino..." />
+    return <GamifiedLoader label={t('training.loading')} />;
   }
 
   if (done) {
@@ -74,24 +76,24 @@ export default function TrainingPage() {
       <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: '2rem' }}>
         <div style={{ textAlign: 'center' }}><IconSparkBoost width={56} height={56} /></div>
         <h2 style={{ color: '#e9d5ff', fontSize: 22, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
-          Treino Concluído
+          {t('training.finish')}
         </h2>
         <p style={{ color: '#6b7280', fontSize: 14, textAlign: 'center', maxWidth: 320 }}>
-          Todos os {dueCards.length || 0} cenários de hoje foram revistos. O Oráculo actualiza o teu calendário.
+          {t('training.results', { count: dueCards.length || 0 })}
         </p>
         {stats && (
           <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: '#7c3aed', fontSize: 28, fontWeight: 800 }}>{stats.total_trained}</div>
-              <div style={{ color: '#6b7280', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>Total Treinado</div>
+              <div style={{ color: '#6b7280', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>{t('training.cards_reviewed')}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: '#f59e0b', fontSize: 28, fontWeight: 800 }}>{stats.streak_days}</div>
-              <div style={{ color: '#6b7280', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>Dias Streak</div>
+              <div style={{ color: '#6b7280', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>{t('training.streak')}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: '#22c55e', fontSize: 28, fontWeight: 800 }}>{stats.cards_mastered}</div>
-              <div style={{ color: '#6b7280', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>Dominados</div>
+              <div style={{ color: '#6b7280', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>{t('training.mastered')}</div>
             </div>
           </div>
         )}
@@ -105,11 +107,11 @@ export default function TrainingPage() {
         {/* Header */}
         <div style={{ marginBottom: '1.25rem' }}>
           <h1 style={{ color: 'var(--text-highlight)', fontSize: 20, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
-            Simulação Diária
+            {t('training.title')}
           </h1>
           {started && (
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4 }}>
-              {currentIndex + 1} de {dueCards.length} cenários
+              {t('training.progress', { current: currentIndex + 1, total: dueCards.length })}
             </p>
           )}
         </div>
@@ -136,7 +138,7 @@ export default function TrainingPage() {
                 {revealed && (
                   <div style={{ marginTop: 16 }}>
                     <p style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10, textAlign: 'center' }}>
-                      Como acertaste na tua previsão?
+                      {t('training.rating_prompt')}
                     </p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                       {RATING_LABELS.map(({ rating, label, color }) => (
@@ -151,7 +153,7 @@ export default function TrainingPage() {
                           }}
                         >
                           <div style={{ fontSize: 16, marginBottom: 2 }}>{rating}</div>
-                          {label}
+                          {t(label)}
                         </button>
                       ))}
                     </div>

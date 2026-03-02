@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { paymentsAPI } from '../../services/api';
 import './BuyCredits.css';
 import { getErrorMessage } from '../../utils/errorHandler';
@@ -13,6 +14,7 @@ import {
 
 export default function BuyCredits() {
     const [unitPrice, setUnitPrice] = useState(1.00);
+    const { t } = useTranslation();
     const [quantity, setQuantity] = useState(5);
     const [loading, setLoading] = useState(false);
     const [payment, setPayment] = useState(null);
@@ -71,7 +73,7 @@ export default function BuyCredits() {
             setPayment(result);
         } catch (err) {
             setError(
-                getErrorMessage(err, 'Erro ao criar pagamento. Tente novamente.')
+                getErrorMessage(err, t('buyCredits.error'))
             );
         } finally {
             setLoading(false);
@@ -81,7 +83,7 @@ export default function BuyCredits() {
     const handleCopyPix = async () => {
         if (payment?.copy_paste) {
             await navigator.clipboard.writeText(payment.copy_paste);
-            alert('Código PIX copiado!');
+            alert(t('buyCredits.pixCopied'));
         }
     };
 
@@ -96,7 +98,7 @@ export default function BuyCredits() {
                 if (status.status === 'approved') {
                     await refreshCredits();
                     setPayment(null);
-                    alert('Pagamento confirmado! Seus créditos foram adicionados.');
+                    alert(t('buyCredits.success'));
                 }
             } catch (err) {
                 console.error('Erro ao verificar pagamento:', err);
@@ -119,13 +121,13 @@ export default function BuyCredits() {
             <div className="buy-credits-card">
                 <div className="card-header">
                     <IconGiftQuest className="card-icon" width={56} height={56} />
-                    <h2>Comprar Créditos</h2>
-                    <p>Defina o valor e a quantidade de créditos</p>
+                    <h2>{t('buyCredits.title')}</h2>
+                    <p>{t('buyCredits.subtitle')}</p>
                 </div>
 
                 <div className="current-balance">
-                    <span className="balance-label">Saldo atual:</span>
-                    <span className="balance-value">{credits.total} créditos</span>
+                    <span className="balance-label">{t('buyCredits.currentBalance')}</span>
+                    <span className="balance-value">{credits.total} {t('buyCredits.credits')}</span>
                 </div>
 
                 {error && (
@@ -139,7 +141,7 @@ export default function BuyCredits() {
                         <div className="amount-selector">
 
                             <div className="input-group">
-                                <label>Quanto você quer pagar por crédito?</label>
+                                <label>{t('buyCredits.amountLabel')}</label>
                                 <div className="amount-input-wrapper">
                                     <span className="currency">R$</span>
                                     <input
@@ -151,13 +153,13 @@ export default function BuyCredits() {
                                         step="0.01"
                                         disabled={loading}
                                     />
-                                    <span className="unit-label">/crédito</span>
+                                    <span className="unit-label">{t('buyCredits.unitLabel')}</span>
                                 </div>
-                                <small>Mínimo R$ {MIN_PRICE.toFixed(2)}</small>
+                                <small>{t('buyCredits.minPrice', { min: MIN_PRICE.toFixed(2) })}</small>
                             </div>
 
                             <div className="input-group" style={{ marginTop: '20px' }}>
-                                <label>Quantos créditos você quer?</label>
+                                <label>{t('buyCredits.quantityLabel')}</label>
                                 <div className="amount-input-wrapper">
                                     <span className="currency">#</span>
                                     <input
@@ -173,7 +175,7 @@ export default function BuyCredits() {
                             </div>
 
                             <div className="total-preview" style={{ marginTop: '30px', textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '12px' }}>
-                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Total a pagar</div>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{t('buyCredits.totalLabel')}</div>
                                 <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--christmas-green)' }}>
                                     R$ {totalAmount.toFixed(2)}
                                 </div>
@@ -183,7 +185,7 @@ export default function BuyCredits() {
                         <div className="credits-preview">
                             <IconSparkBoost className="preview-icon" width={22} height={22} />
                             <span className="preview-text">
-                                Você receberá <strong>{quantity} créditos</strong>
+                                {t('buyCredits.receivePreview', { quantity })}
                             </span>
                         </div>
 
@@ -195,7 +197,7 @@ export default function BuyCredits() {
                             {loading ? (
                                 <>
                                     <span className="spinner"></span>
-                                    Gerando PIX...
+                                    {t('buyCredits.buying')}
                                 </>
                             ) : (
                                 <>

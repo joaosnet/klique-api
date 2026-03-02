@@ -1,11 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import './BottomNav.css';
 import { useAuth } from '../../context/AuthContext';
 import { IconDomains, IconTrain, IconDashboard, IconVisual, IconProfile } from '../Icons/NavIcons';
 
 export default function BottomNav() {
     const { isAuthenticated } = useAuth();
+    const { t } = useTranslation();
 
     if (!isAuthenticated) return null;
 
@@ -16,7 +18,7 @@ export default function BottomNav() {
                     {({ isActive }) => (
                         <>
                             <IconDomains active={isActive} width={24} height={24} />
-                            <span>Domínios</span>
+                            <span>{t('nav.domains')}</span>
                         </>
                     )}
                 </NavLink>
@@ -25,7 +27,7 @@ export default function BottomNav() {
                     {({ isActive }) => (
                         <>
                             <IconTrain active={isActive} width={24} height={24} />
-                            <span>Treinar</span>
+                            <span>{t('nav.train')}</span>
                         </>
                     )}
                 </NavLink>
@@ -34,7 +36,7 @@ export default function BottomNav() {
                     {({ isActive }) => (
                         <>
                             <IconDashboard active={isActive} width={24} height={24} />
-                            <span>Dashboard</span>
+                            <span>{t('nav.dashboard')}</span>
                         </>
                     )}
                 </NavLink>
@@ -43,7 +45,7 @@ export default function BottomNav() {
                     {({ isActive }) => (
                         <>
                             <IconVisual active={isActive} width={24} height={24} />
-                            <span>Visual</span>
+                            <span>{t('nav.visual')}</span>
                         </>
                     )}
                 </NavLink>
@@ -52,7 +54,7 @@ export default function BottomNav() {
                     {({ isActive }) => (
                         <>
                             <IconProfile active={isActive} width={24} height={24} />
-                            <span>Perfil</span>
+                            <span>{t('nav.profile')}</span>
                         </>
                     )}
                 </NavLink>

@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cardsAPI } from '../../services/api';
 
 const TEMPLATES = [
-  { value: 'if_then', label: 'SE / ENTÃO', color: '#3b82f6' },
-  { value: 'payoff_matrix', label: 'RECOMPENSA', color: '#f59e0b' },
-  { value: 'black_swan', label: 'CISNE NEGRO', color: '#ef4444' },
+  { value: 'if_then', labelKey: 'cardEdit.type_if_then', color: '#3b82f6' },
+  { value: 'payoff_matrix', labelKey: 'cardEdit.type_payoff', color: '#f59e0b' },
+  { value: 'black_swan', labelKey: 'cardEdit.type_black_swan', color: '#ef4444' },
 ];
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -45,6 +46,7 @@ function heatColor(score) {
  * Modo "edit": cardId é string; o modal persiste alterações via API e chama onSave(updatedCard)
  */
 export default function CardEditModal({ card, cardId, onSave, onClose }) {
+  const { t } = useTranslation();
   const [templateType, setTemplateType] = useState(card.template_type || 'if_then');
   const [scenarioContext, setScenarioContext] = useState(card.scenario_context || '');
   const [question, setQuestion] = useState(card.question || '');
@@ -75,16 +77,16 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
     try {
       if (action === 'generate') {
         await cardsAPI.regenerateImage(cardId);
-        setImgMsg('Geração iniciada. A imagem aparecerá em breve.');
+        setImgMsg(t('cardEdit.gen_started'));
       } else if (action === 'improve' && prompt) {
         await cardsAPI.improveImage(cardId, prompt);
-        setImgMsg('Melhoria iniciada. A imagem aparecerá em breve.');
+        setImgMsg(t('cardEdit.generating'));
       } else if (action === 'remove') {
         await cardsAPI.removeImage(cardId);
-        setImgMsg('Imagem removida.');
+        setImgMsg(t('cardEdit.image_removed'));
       }
     } catch (e) {
-      setImgMsg('Erro ao processar imagem: ' + (e.message || ''));
+      setImgMsg(t('cardEdit.error_image_process') + ': ' + (e.message || ''));
     } finally {
       setImgLoading(false);
     }
@@ -97,16 +99,16 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
       // Pre-save: just store the file for later
       setPendingFile(file);
       setImgAction('upload');
-      setImgMsg(`Ficheiro selecionado: ${file.name}`);
+      setImgMsg(`${t('cardEdit.file_selected')} ${file.name}`);
       return;
     }
     setImgLoading(true);
     setImgMsg('');
     try {
       await cardsAPI.uploadImage(cardId, file);
-      setImgMsg('Imagem carregada com sucesso.');
+      setImgMsg(t('cardEdit.image_removed'));
     } catch (err) {
-      setImgMsg('Erro ao carregar imagem.');
+      setImgMsg(t('cardEdit.error_image_upload'));
     } finally {
       setImgLoading(false);
     }
@@ -150,13 +152,13 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
       }
       onClose();
     } catch (e) {
-      setError(e.message || 'Erro ao guardar.');
+      setError(e.message || t('cardEdit.error_save'));
     } finally {
       setSaving(false);
     }
   };
 
-  const tmpl = TEMPLATES.find(t => t.value === templateType) || TEMPLATES[0];
+  const tmpl = TEMPLATES.find(tp => tp.value === templateType) || TEMPLATES[0];
 
   return (
     <div
@@ -177,57 +179,57 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ color: 'var(--text-highlight)', fontSize: 16, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
-            {cardId ? 'Editar Card' : 'Criar Card'}
+            {cardId ? t('cardEdit.edit_card') : t('cardEdit.create_card')}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20 }}>✕</button>
         </div>
 
         {/* Template type */}
-        <label style={labelStyle}>Tipo de Template</label>
+        <label style={labelStyle}>{t('cardEdit.template_type')}</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-          {TEMPLATES.map(t => (
+          {TEMPLATES.map(tmpl => (
             <button
-              key={t.value}
-              onClick={() => setTemplateType(t.value)}
+              key={tmpl.value}
+              onClick={() => setTemplateType(tmpl.value)}
               style={{
                 flex: 1, padding: '6px 4px', borderRadius: 6, fontSize: 10, fontWeight: 700,
                 letterSpacing: 1, textTransform: 'uppercase', cursor: 'pointer',
-                border: `1px solid ${t.color}`,
-                background: templateType === t.value ? t.color + '33' : 'transparent',
-                color: t.color,
+                border: `1px solid ${tmpl.color}`,
+                background: templateType === tmpl.value ? tmpl.color + '33' : 'transparent',
+                color: tmpl.color,
               }}
             >
-              {t.label}
+              {t(tmpl.labelKey)}
             </button>
           ))}
         </div>
 
         {/* Text fields */}
-        <label style={labelStyle}>Contexto / Cenário</label>
+        <label style={labelStyle}>{t('cardEdit.context_scenario')}</label>
         <textarea rows={3} value={scenarioContext} onChange={e => setScenarioContext(e.target.value)} style={inputStyle} />
 
-        <label style={labelStyle}>Questão Tática</label>
+        <label style={labelStyle}>{t('cardEdit.tactical_question')}</label>
         <textarea rows={2} value={question} onChange={e => setQuestion(e.target.value)} style={inputStyle} />
 
-        <label style={labelStyle}>Resultado Previsto</label>
+        <label style={labelStyle}>{t('cardEdit.expected_outcome')}</label>
         <textarea rows={2} value={predictedOutcome} onChange={e => setPredictedOutcome(e.target.value)} style={inputStyle} />
 
-        <label style={labelStyle}>Análise · Teoria dos Jogos</label>
+        <label style={labelStyle}>{t('cardEdit.analysis')}</label>
         <textarea rows={3} value={gameTheoryExplanation} onChange={e => setGameTheoryExplanation(e.target.value)} style={inputStyle} />
 
-        <label style={labelStyle}>Heat Score: <span style={{ color: heatColor(heatScore), fontWeight: 700 }}>{heatScore}</span></label>
+        <label style={labelStyle}>{t('cardEdit.heat_score')} <span style={{ color: heatColor(heatScore), fontWeight: 700 }}>{heatScore}</span></label>
         <input
           type="range" min={0} max={100} value={heatScore}
           onChange={e => setHeatScore(Number(e.target.value))}
           style={{ width: '100%', accentColor: heatColor(heatScore), marginBottom: 4 }}
         />
 
-        <label style={labelStyle}>Ideia de Imagem (hint para IA)</label>
+        <label style={labelStyle}>{t('cardEdit.image_hint')}</label>
         <input value={visualPrompt} onChange={e => setVisualPrompt(e.target.value)} style={{ ...inputStyle, resize: 'none' }} />
 
         {/* Image section */}
         <div style={{ marginTop: 20, borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
-          <p style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>Imagem do Card</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>{t('cardEdit.card_image')}</p>
 
           {currentImageUrl && (
             <div style={{ marginBottom: 10, borderRadius: 8, overflow: 'hidden', maxHeight: 100 }}>
@@ -236,7 +238,7 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
           )}
           {!currentImageUrl && (
             <div style={{ height: 60, borderRadius: 8, background: 'var(--bg-card-inner)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
-              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Sem imagem</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{t('cardEdit.no_image')}</span>
             </div>
           )}
 
@@ -244,30 +246,26 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
             <button
               onClick={() => { setImgAction('generate'); if (cardId) executeImageAction('generate'); }}
               disabled={imgLoading}
-              style={{ padding: '8px 4px', borderRadius: 6, border: '1px solid #7c3aed', background: imgAction === 'generate' ? '#7c3aed22' : 'transparent', color: '#a78bfa', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
             >
-              Gerar com IA
+              {t('cardEdit.generate_ai')}
             </button>
             <button
               onClick={() => setImgAction(imgAction === 'improve' ? null : 'improve')}
               disabled={imgLoading}
-              style={{ padding: '8px 4px', borderRadius: 6, border: '1px solid #06b6d4', background: imgAction === 'improve' ? '#06b6d422' : 'transparent', color: '#67e8f9', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
             >
-              Melhorar com IA
+              {t('cardEdit.improve_ai')}
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={imgLoading}
-              style={{ padding: '8px 4px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-muted)', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
             >
-              Upload
+              {t('cardEdit.upload')}
             </button>
             <button
               onClick={() => { setImgAction('remove'); if (cardId) executeImageAction('remove'); }}
               disabled={imgLoading || !currentImageUrl}
-              style={{ padding: '8px 4px', borderRadius: 6, border: '1px solid #ef444466', background: 'transparent', color: '#ef4444', fontSize: 11, cursor: 'pointer', fontWeight: 600, opacity: currentImageUrl ? 1 : 0.4 }}
             >
-              Remover
+              {t('cardEdit.remove')}
             </button>
           </div>
 
@@ -277,16 +275,15 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
               <input
                 value={stylePrompt}
                 onChange={e => setStylePrompt(e.target.value)}
-                placeholder="Ex: estilo anime, minimalista, cyberpunk..."
+                placeholder={t('cardEdit.style_placeholder')}
                 style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
               />
               {cardId && (
                 <button
                   onClick={() => executeImageAction('improve', stylePrompt)}
                   disabled={imgLoading || !stylePrompt}
-                  style={{ padding: '8px 12px', borderRadius: 6, background: '#06b6d4', border: 'none', color: '#fff', fontSize: 11, cursor: 'pointer', fontWeight: 700, opacity: (!stylePrompt || imgLoading) ? 0.5 : 1 }}
                 >
-                  {imgLoading ? '...' : 'Aplicar'}
+                  {imgLoading ? '...' : t('cardEdit.apply')}
                 </button>
               )}
             </div>
@@ -312,16 +309,14 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <button
             onClick={onClose}
-            style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}
           >
-            Cancelar
+            {t('cardEdit.cancel')}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{ flex: 2, padding: '10px 0', borderRadius: 8, border: 'none', background: tmpl.color, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, letterSpacing: 1, opacity: saving ? 0.6 : 1 }}
           >
-            {saving ? 'A guardar...' : 'Guardar Card'}
+            {saving ? t('cardEdit.saving') : t('cardEdit.save_card')}
           </button>
         </div>
       </div>

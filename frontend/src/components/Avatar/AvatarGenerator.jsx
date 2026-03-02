@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
 import { christmasAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +19,7 @@ import {
 import './AvatarGenerator.css';
 
 export default function AvatarGenerator() {
+    const { t } = useTranslation();
     const [categories, setCategories] = useState({});
     const [currentCategory, setCurrentCategory] = useState('populares');
     const [selectedImage, setSelectedImage] = useState(null);
@@ -56,7 +58,7 @@ export default function AvatarGenerator() {
                 }
             } catch (err) {
                 console.error('Erro ao buscar templates:', err);
-                setError('Não foi possível carregar os templates.');
+                setError(t('avatar.error_templates'));
             }
         };
         fetchTemplates();
@@ -84,10 +86,10 @@ export default function AvatarGenerator() {
 
         } catch (err) {
             console.error('Erro ao acessar a câmera:', err);
-            let msg = 'Não foi possível acessar a câmera.';
-            if (err.name === 'NotAllowedError') msg = 'Acesso à câmera negado. Por favor, permita o acesso.';
-            else if (err.name === 'NotFoundError') msg = 'Nenhuma câmera encontrada.';
-            setError(msg + ' Tente fazer o upload.');
+            let msg = t('avatar.error_camera');
+            if (err.name === 'NotAllowedError') msg = t('avatar.error_camera_permission');
+            else if (err.name === 'NotFoundError') msg = t('avatar.error_camera_notfound');
+            setError(msg + ' ' + t('avatar.try_upload'));
             setCameraActive(false);
         }
     };
@@ -125,11 +127,11 @@ export default function AvatarGenerator() {
     };
 
     const categoryLabels = {
-        'todos': 'Todos',
-        'populares': 'Populares',
-        'classico': 'Clássico',
-        'divertido': 'Divertido',
-        'papai-noel': 'Papai Noel'
+        'todos': t('avatar.category_all'),
+        'populares': t('avatar.category_popular'),
+        'classico': t('avatar.category_classic'),
+        'divertido': t('avatar.category_funny'),
+        'papai-noel': t('avatar.category_santa')
     };
 
 
@@ -168,7 +170,7 @@ export default function AvatarGenerator() {
                             });
                             resolve(compressedFile);
                         } else {
-                            reject(new Error('Falha ao comprimir imagem'));
+                            reject(new Error(t('avatar.error_compress')));
                         }
                     },
                     'image/jpeg',
@@ -176,18 +178,18 @@ export default function AvatarGenerator() {
                 );
             };
 
-            img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+            img.onerror = () => reject(new Error(t('avatar.error_load_image')));
             img.src = URL.createObjectURL(file);
         });
     };
 
     const processFile = async (file) => {
         if (file.size > 10 * 1024 * 1024) {
-            setError('Imagem muito grande. Máximo 10MB.');
+            setError(t('avatar.error_large_image'));
             return;
         }
         if (!file.type.startsWith('image/')) {
-            setError('Por favor, envie apenas um arquivo de imagem.');
+            setError(t('avatar.error_file_type'));
             return;
         }
 
@@ -240,13 +242,13 @@ export default function AvatarGenerator() {
 
     const handleGenerate = async () => {
         if (!selectedImage || !selectedTemplate) {
-            setError('Selecione uma imagem e um template');
+            setError(t('avatar.error_select_image_template'));
             return;
         }
 
         setError('');
         setProcessing(true);
-        setProgress({ message: 'Iniciando...', percent: 0 });
+        setProgress({ message: t('avatar.generating'), percent: 0 });
 
         try {
             const resultData = await christmasAPI.generateAvatar(
@@ -277,7 +279,7 @@ export default function AvatarGenerator() {
                 // Redireciona para página de créditos se faltar saldo
                 navigate('/credits');
             } else {
-                setError(err.message || 'Erro ao gerar avatar');
+                setError(err.message || t('avatar.error_generate'));
             }
         } finally {
             setProcessing(false);
@@ -294,7 +296,7 @@ export default function AvatarGenerator() {
         }
 
         const link = document.createElement('a');
-        link.download = 'avatar-omniflash.png';
+        link.download = t('avatar.download_filename');
         link.href = result;
         link.click();
     };
@@ -333,7 +335,7 @@ export default function AvatarGenerator() {
             return;
         }
 
-        const text = `Ficou incrível meu avatar!\n\nFiz no OmniFlash, cria o seu também aqui: ${window.location.href}`;
+        const text = t('avatar.share_whatsapp', { url: window.location.href });
 
         // Tenta usar o Web Share API nativo (Mobile Android/iOS)
         if (navigator.share && result) {
@@ -369,7 +371,7 @@ export default function AvatarGenerator() {
             return;
         }
 
-        const text = `Ficou incrível meu avatar!\n\nFiz no OmniFlash, cria o seu também aqui: ${window.location.href}`;
+        const text = t('avatar.share_instagram', { url: window.location.href });
 
         // Tenta usar o Web Share API nativo
         if (navigator.share && result) {
@@ -392,7 +394,7 @@ export default function AvatarGenerator() {
         handleDownload();
 
         navigator.clipboard.writeText(text).then(() => {
-            alert('Imagem baixada e texto copiado!\n\nAgora é só abrir o Instagram e postar no Story ou Feed.');
+            alert(t('avatar.copied_instagram'));
             window.open('https://instagram.com', '_blank');
         }).catch(() => {
             window.open('https://instagram.com', '_blank');
@@ -414,8 +416,8 @@ export default function AvatarGenerator() {
 
             <div className="generator-container">
                 <div className="generator-header">
-                    <h1>Torne-se um ícone de Natal!</h1>
-                    <p>Crie sua foto de perfil para Instagram ou WhatsApp.</p>
+                    <h1>{t('avatar.title')}</h1>
+                    <p>{t('avatar.subtitle')}</p>
                 </div>
 
                 <div className="editor-card">
@@ -476,15 +478,15 @@ export default function AvatarGenerator() {
                                                     }}
                                                 >
                                                     <IconCameraShot className="capture-icon" width={22} height={22} />
-                                                    Tirar Foto
+                                                    {t('avatar.take_photo')}
                                                 </button>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="upload-placeholder">
                                             <IconCameraShot className="upload-icon" width={62} height={62} />
-                                            <p>Clique para enviar sua foto</p>
-                                            <span className="upload-hint">ou arraste e solte aqui</span>
+                                            <p>{t('avatar.upload_click')}</p>
+                                            <span className="upload-hint">{t('avatar.upload_drag')}</span>
                                             <div style={{ marginTop: '20px' }}>
                                                 {!cameraActive && (
                                                     <button
@@ -493,7 +495,7 @@ export default function AvatarGenerator() {
                                                         style={{ background: 'var(--christmas-green)', color: 'white', border: 'none' }}
                                                     >
                                                         <IconCameraShot width={16} height={16} />
-                                                        Usar Câmera
+                                                        {t('avatar.use_camera')}
                                                     </button>
                                                 )}
                                             </div>
@@ -514,7 +516,7 @@ export default function AvatarGenerator() {
                                     <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10 }}>
                                         <button onClick={(e) => { e.stopPropagation(); handleReset(); }} className="btn-secondary">
                                             <IconResetCycle width={16} height={16} />
-                                            Trocar Foto
+                                            {t('avatar.change')}
                                         </button>
                                     </div>
                                 )}
@@ -524,7 +526,7 @@ export default function AvatarGenerator() {
                                     <div className="processing-overlay">
                                         <div className="processing-content">
                                             <IconSparkBoost className="processing-icon" width={56} height={56} />
-                                            <p className="processing-message">{progress.message || 'Preparando magia...'}</p>
+                                            <p className="processing-message">{progress.message || t('avatar.preparing_magic')}</p>
                                             <div className="progress-bar">
                                                 <div
                                                     className="progress-fill"
@@ -543,23 +545,23 @@ export default function AvatarGenerator() {
                             <div className="share-buttons-grid">
                                 <button onClick={handleDownload} className="btn-action download">
                                     <IconDownloadDrop className="icon" width={20} height={20} />
-                                    <span className="label">Baixar Imagem</span>
+                                    <span className="label">{t('avatar.download')}</span>
                                 </button>
 
                                 <button onClick={handleShareWhatsApp} className="btn-action whatsapp">
                                     <IconWhatsappQuest className="icon" width={20} height={20} />
-                                    <span className="label">WhatsApp</span>
+                                    <span className="label">{t('avatar.whatsapp')}</span>
                                 </button>
 
                                 <button onClick={handleShareInstagram} className="btn-action instagram">
                                     <IconInstagramOrb className="icon" width={20} height={20} />
-                                    <span className="label">Instagram</span>
+                                    <span className="label">{t('avatar.instagram')}</span>
                                 </button>
                             </div>
 
                             <button onClick={handleReset} className="btn-action reset">
                                 <IconResetCycle className="icon" width={18} height={18} />
-                                Fazer Outro
+                                {t('avatar.create_another')}
                             </button>
                         </div>
                     ) : (
@@ -613,7 +615,7 @@ export default function AvatarGenerator() {
                                     />
                                     <span className="checkbox-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                         <IconCutBlade width={14} height={14} />
-                                        Remover fundo da imagem
+                                        {t('avatar.remove_bg')}
                                     </span>
                                 </label>
                             </div>
@@ -627,11 +629,11 @@ export default function AvatarGenerator() {
                                 {processing ? (
                                     <>
                                         <span className="spinner"></span>
-                                        Processando...
+                                        {t('avatar.generating')}
                                     </>
                                 ) : (
                                     <>
-                                        <IconSparkBoost width={16} height={16} /> Gerar Avatar {isAuthenticated && `(${credits.total} créditos)`}
+                                        <IconSparkBoost width={16} height={16} /> {t('avatar.generate')} {isAuthenticated && `(${credits.total} ${t('avatar.credits')})`}
                                     </>
                                 )}
                             </button>

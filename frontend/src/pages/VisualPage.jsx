@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import DomainSVGCard from '../components/Cards/DomainSVGCard';
 import GamifiedLoader from '../components/Layout/GamifiedLoader';
@@ -6,15 +7,19 @@ import { domainsAPI } from '../services/api';
 import './ToggleTheme.css';
 import './VisualPage.css';
 
-const COLORS = [
-  { name: 'Roxo (Padrao)', value: '#7c3aed', light: '#a855f7', dark: '#6b21a8' },
-  { name: 'Azul', value: '#2563eb', light: '#3b82f6', dark: '#1d4ed8' },
-  { name: 'Verde', value: '#16a34a', light: '#22c55e', dark: '#15803d' },
-  { name: 'Laranja', value: '#ea580c', light: '#f97316', dark: '#c2410c' },
-  { name: 'Rosa', value: '#db2777', light: '#ec4899', dark: '#be185d' },
-];
+// COLORS agora é uma função que retorna os nomes traduzidos
+function getColors(t) {
+  return [
+    { name: t('colors.purple_default'), value: '#7c3aed', light: '#a855f7', dark: '#6b21a8' },
+    { name: t('colors.blue'), value: '#2563eb', light: '#3b82f6', dark: '#1d4ed8' },
+    { name: t('colors.green'), value: '#16a34a', light: '#22c55e', dark: '#15803d' },
+    { name: t('colors.orange'), value: '#ea580c', light: '#f97316', dark: '#c2410c' },
+    { name: t('colors.pink'), value: '#db2777', light: '#ec4899', dark: '#be185d' },
+  ];
+}
 
 export default function VisualPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [theme, setTheme] = useState(localStorage.getItem('app_theme') || 'auto');
   const [accent, setAccent] = useState(localStorage.getItem('app_accent') || '#7c3aed');
@@ -31,7 +36,7 @@ export default function VisualPage() {
         const data = await domainsAPI.list();
         setDomains(Array.isArray(data) ? data : []);
       } catch (e) {
-        setError(e?.message || 'Nao foi possivel carregar os decks.');
+        setError(e?.message || t('visual.error_load_decks'));
       } finally {
         setLoading(false);
       }
@@ -60,11 +65,12 @@ export default function VisualPage() {
   };
 
   const themeState = theme === 'light' ? 0 : theme === 'auto' ? 1 : 2;
+  const COLORS = getColors(t);
 
   const getThemeName = (state) => {
-    if (state === 0) return 'light';
-    if (state === 1) return 'auto';
-    return 'dark';
+    if (state === 0) return t('visual.theme_light');
+    if (state === 1) return t('visual.theme_auto');
+    return t('visual.theme_dark');
   };
 
   const cycleTheme = () => {
@@ -85,17 +91,17 @@ export default function VisualPage() {
 
       <div className="visual-page__content">
         <header className="visual-page__header">
-          <h1>Visual do App</h1>
-          <p>Personaliza o tema e acompanha como os teus decks e cartas aparecem no aplicativo.</p>
+          <h1>{t('visual.title')}</h1>
+          <p>{t('visual.subtitle')}</p>
         </header>
 
-        <section className="visual-grid" aria-label="Configuracao visual e decks">
+        <section className="visual-grid" aria-label={t('visual.aria_label')}>
           <article className="visual-panel visual-panel--settings">
-            <h2>Aparencia Geral</h2>
+            <h2>{t('visual.appearance')}</h2>
 
             <div className="visual-field">
-              <label>Modo</label>
-              <div className="day-night-toggle" title="Modo Visual">
+              <label>{t('visual.mode')}</label>
+              <div className="day-night-toggle" title={t('visual.mode')}>
                 <span className="visual-mode-label">{getThemeName(themeState)}</span>
                 <div className={`toggle-track theme-${getThemeName(themeState)}`} onClick={cycleTheme}>
                   <div className="toggle-bg-color" />
@@ -116,7 +122,7 @@ export default function VisualPage() {
             </div>
 
             <div className="visual-field">
-              <label>Cor de Destaque</label>
+              <label>{t('visual.accent_color')}</label>
               <div className="visual-accent-grid">
                 {COLORS.map((c) => (
                   <button
@@ -129,32 +135,54 @@ export default function VisualPage() {
                 ))}
               </div>
             </div>
+
+            <div className="visual-field">
+              <label>{t('visual.language')}</label>
+              <div className="visual-accent-grid">
+                <button
+                  onClick={() => i18n.changeLanguage('en')}
+                  title="English"
+                  className={`visual-accent ${i18n.language?.startsWith('en') ? 'is-active' : ''}`}
+                  style={{ background: '#2563eb', color: '#fff', fontSize: 12, fontWeight: 700 }}
+                >
+                  EN
+                </button>
+                <button
+                  onClick={() => i18n.changeLanguage('pt')}
+                  title="Português"
+                  className={`visual-accent ${i18n.language?.startsWith('pt') ? 'is-active' : ''}`}
+                  style={{ background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700 }}
+                >
+                  PT
+                </button>
+              </div>
+            </div>
           </article>
 
           <article className="visual-panel visual-panel--decks">
-            <h2>Decks e Cartas</h2>
+            <h2>{t('visual.decks_cards')}</h2>
 
             <div className="visual-stats">
               <div>
                 <strong>{stats.totalDecks}</strong>
-                <span>Decks</span>
+                <span>{t('visual.decks')}</span>
               </div>
               <div>
                 <strong>{stats.totalCards}</strong>
-                <span>Cartas</span>
+                <span>{t('visual.cards')}</span>
               </div>
               <div>
                 <strong>{stats.dueToday}</strong>
-                <span>Hoje</span>
+                <span>{t('common.today')}</span>
               </div>
             </div>
 
             {loading ? (
-              <GamifiedLoader label="A carregar visual dos decks..." />
+              <GamifiedLoader label={t('visual.loading_decks')} />
             ) : error ? (
               <p className="visual-feedback visual-feedback--error">{error}</p>
             ) : domains.length === 0 ? (
-              <p className="visual-feedback">Cria o teu primeiro dominio para ver as cartas e o estilo dos decks aqui.</p>
+              <p className="visual-feedback">{t('visual.empty_decks')}</p>
             ) : (
               <div className="visual-domain-grid">
                 {domains.slice(0, 4).map(({ domain, stats: domainStats }) => (

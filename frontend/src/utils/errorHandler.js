@@ -1,4 +1,5 @@
-export function getErrorMessage(err, defaultMessage = 'Ocorreu um erro inesperado. Tente novamente.') {
+export function getErrorMessage(err, defaultMessage) {
+    if (!defaultMessage) defaultMessage = 'An unexpected error occurred. Try again.';
     if (!err || !err.response || !err.response.data) {
         return defaultMessage;
     }

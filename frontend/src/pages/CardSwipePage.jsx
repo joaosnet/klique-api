@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { domainsAPI, cardsAPI, modelsAPI } from '../services/api';
 import GameTheoryCard from '../components/Cards/GameTheoryCard';
@@ -22,6 +23,7 @@ function heatColor(score) {
 }
 
 export default function CardSwipePage() {
+    const { t } = useTranslation();
   const { domainId } = useParams();
   const navigate = useNavigate();
 
@@ -113,10 +115,10 @@ export default function CardSwipePage() {
       if (result?.card) {
         setCard(result.card);
       } else {
-        setError('Resposta inesperada da IA. Tente novamente.');
+        setError(t('training.unexpectedResponse'));
       }
     } catch (e) {
-      setError(e.message || 'Erro ao gerar cenário. Verifica a ligação.');
+      setError(e.message || t('training.generationError'));
     } finally {
       setGenerating(false);
       setProgress(null);
@@ -226,7 +228,7 @@ export default function CardSwipePage() {
   };
 
   const handleDeleteCard = async (cardId) => {
-    if (!window.confirm('Tens a certeza que queres apagar este card?')) return;
+    if (!window.confirm(t('cards.confirmDelete'))) return;
     try {
       await cardsAPI.remove(cardId);
       setSavedCards(prev => prev.filter(c => c.id !== cardId));
@@ -248,15 +250,15 @@ export default function CardSwipePage() {
       <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ maxWidth: 400, width: '100%', textAlign: 'center', background: 'var(--bg-card)', padding: '2rem', borderRadius: 16, border: '1px solid var(--border-color)' }}>
           <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><IconDeckCard width={56} height={56} /></div>
-          <h2 style={{ color: 'var(--text-highlight)', fontSize: 22, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Demo Concluída</h2>
+          <h2 style={{ color: 'var(--text-highlight)', fontSize: 22, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>{t('training.demoCompleteTitle')}</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.7, marginBottom: 28 }}>
-            Treinaste com cenários de Teoria dos Jogos. Com a tua conta podes gerar cards ilimitados para qualquer domínio da tua vida.
+            {t('training.demoCompleteDescription')}
           </p>
           <Link to="/register" style={{ display: 'block', width: '100%', padding: '14px 0', borderRadius: 10, boxSizing: 'border-box', background: 'var(--accent)', color: '#fff', textAlign: 'center', fontWeight: 800, fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12, textDecoration: 'none' }}>
-            Activar o Oráculo Completo →
+            {t('training.activateOracle')}
           </Link>
           <button onClick={() => navigate('/')} style={{ display: 'block', width: '100%', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}>
-            Voltar à página inicial
+            {t('common.backToHome')}
           </button>
         </div>
       </div>
@@ -271,7 +273,7 @@ export default function CardSwipePage() {
         {/* Header */}
         <div style={{ marginBottom: '1.25rem' }}>
           <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, padding: 0, marginBottom: 6 }}>
-            ← Domínios
+            ← {t('cards.domains')}
           </button>
           {domain && (
             <h1 style={{ color: 'var(--text-highlight)', fontSize: 20, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
@@ -289,12 +291,12 @@ export default function CardSwipePage() {
                   onClick={() => setShowCreateView(false)}
                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, padding: 0, display: 'flex', alignItems: 'center', gap: 6, opacity: 0.8 }}
                 >
-                  <span style={{ fontSize: 16 }}>←</span> Voltar ao Deck
+                  <span style={{ fontSize: 16 }}>←</span> {t('cards.backToDeck')}
                 </button>
               </div>
             )}
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: '1rem', textAlign: 'center' }}>
-              Cria as tuas próprias cartas ou usa o Oráculo para as gerar
+              {t('cards.createOrUseOracle')}
             </p>
 
             {/* Main Create Button */}
@@ -304,7 +306,7 @@ export default function CardSwipePage() {
                 disabled={generating}
                 style={{ width: '100%', padding: '16px 0', borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 800, letterSpacing: 1, cursor: generating ? 'default' : 'pointer', textTransform: 'uppercase', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', transition: 'transform 0.2s', transform: generating ? 'scale(0.98)' : 'scale(1)' }}
               >
-                Criar Carta Manualmente
+                {t('cards.createManual')}
               </button>
             </div>
 
@@ -316,7 +318,7 @@ export default function CardSwipePage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <IconSparkBoost width={16} height={16} />
-                  <span>Usar o Oráculo (Inteligência Artificial)</span>
+                  <span>{t('training.useOracle')}</span>
                 </div>
                 <span style={{ transform: showAITools ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>▼</span>
               </button>
@@ -326,7 +328,7 @@ export default function CardSwipePage() {
             {showAITools && (
               <div style={{ background: 'var(--bg-card)', padding: '1rem', borderRadius: 12, border: '1px solid var(--border-color)', marginBottom: '2rem', animation: 'fadeIn 0.3s ease-out' }}>
                 <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: '1rem' }}>
-                  A IA vai gerar um cenário baseado no domínio atual e no contexto que forneceres. Depois poderás deslizar para guardar (direita) ou descartar (esquerda).
+                  {t('training.oracleDescription')}
                 </p>
 
                 {/* Context input */}
@@ -334,7 +336,7 @@ export default function CardSwipePage() {
                   <input
                     value={context}
                     onChange={(e) => setContext(e.target.value)}
-                    placeholder="Sub-tema ou contexto específico (opcional)..."
+                    placeholder={t('training.contextPlaceholder')}
                     style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
@@ -342,15 +344,15 @@ export default function CardSwipePage() {
                 {/* Custom SVG Background Generator */}
                 {isAuthenticated && (
                   <div style={{ marginBottom: '1.25rem', padding: '12px', background: 'var(--bg-card-inner)', borderRadius: 8, border: '1px dashed var(--accent)' }}>
-                    <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-highlight)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><IconSparkBoost width={14} height={14} /> Criar Modelo de Carta Visual</p>
-                    <p style={{ margin: '0 0 10px 0', fontSize: 11, color: 'var(--text-muted)' }}>Muda o design de fundo enviando uma imagem de referência.</p>
+                    <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-highlight)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><IconSparkBoost width={14} height={14} /> {t('cards.createVisualModel')}</p>
+                    <p style={{ margin: '0 0 10px 0', fontSize: 11, color: 'var(--text-muted)' }}>{t('cards.changeBackground')}</p>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                       <button
                         onClick={() => svgFileInputRef.current?.click()}
                         disabled={generatingSvg}
                         style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '6px 12px', borderRadius: 6, fontSize: 12, cursor: generatingSvg ? 'default' : 'pointer', fontWeight: 600, transition: 'all 0.2s', flexShrink: 0 }}
                       >
-                        {generatingSvg ? 'A Processar...' : '↑ Enviar Imagem'}
+                        {generatingSvg ? t('common.processing') : t('cards.uploadImage')}
                       </button>
                       <input
                         type="file"
@@ -361,8 +363,8 @@ export default function CardSwipePage() {
                       />
                       {customSvg && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 700 }}>✓ Aplicado</span>
-                          <button onClick={() => setCustomSvg(null)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 11, cursor: 'pointer', padding: 0 }}>Remover</button>
+                          <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 700 }}>✓ {t('cards.applied')}</span>
+                          <button onClick={() => setCustomSvg(null)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 11, cursor: 'pointer', padding: 0 }}>{t('cards.remove')}</button>
                         </div>
                       )}
                     </div>
@@ -378,7 +380,7 @@ export default function CardSwipePage() {
                       onChange={e => setGenerateImage(e.target.checked)}
                       style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
                     />
-                    Gerar imagem descritiva com IA ao salvar o card
+                    {t('cards.generateImageOnSave')}
                   </label>
                 )}
 
@@ -388,7 +390,7 @@ export default function CardSwipePage() {
                   disabled={generating}
                   style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--accent)', background: generating ? 'var(--bg-card-inner)' : 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, letterSpacing: 1, cursor: generating ? 'default' : 'pointer', textTransform: 'uppercase', transition: 'background 0.2s' }}
                 >
-                  {generating ? (progress ? `${progress.message} (${progress.percent}%)` : 'A Gerar...') : 'Gerar Novo Cenário com IA'}
+                  {generating ? (progress ? `${progress.message} (${progress.percent}%)` : t('training.generating')) : t('training.generateNewScenario')}
                 </button>
 
                 {error && (
@@ -402,7 +404,7 @@ export default function CardSwipePage() {
             {/* Pending image action badge */}
             {pendingImageAction && (
               <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: '#7c3aed22', border: '1px solid #7c3aed44', color: '#a78bfa', fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Ação pendente: {pendingImageAction.type === 'generate' ? 'Gerar com IA' : pendingImageAction.type === 'improve' ? `Melhorar (${pendingImageAction.stylePrompt})` : pendingImageAction.type === 'upload' ? 'Upload de ficheiro' : pendingImageAction.type}</span>
+                <span>{t('cards.pendingAction')}: {pendingImageAction.type === 'generate' ? t('cards.generateWithAI') : pendingImageAction.type === 'improve' ? t('cards.improve', { style: pendingImageAction.stylePrompt }) : pendingImageAction.type === 'upload' ? t('cards.uploadFile') : pendingImageAction.type}</span>
                 <button onClick={() => setPendingImageAction(null)} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>&times;</button>
               </div>
             )}
@@ -418,14 +420,14 @@ export default function CardSwipePage() {
                       style={{ background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', borderRadius: 6, padding: '6px 14px', fontSize: 11, cursor: 'pointer', letterSpacing: 1, fontWeight: 600 }}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                        <IconEditPen width={14} height={14} /> Editar Cena
+                        <IconEditPen width={14} height={14} /> {t('cardEdit.editScene')}
                       </span>
                     </button>
                   </div>
                 )}
 
                 <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 16, textAlign: 'center' }}>
-                  Desliza para a direita para guardar · Esquerda para descartar
+                  {t('cards.swipeInstruction')}
                 </p>
 
                 <GameTheoryCard
@@ -443,7 +445,7 @@ export default function CardSwipePage() {
             {!card && !generating && (
               <div style={{ textAlign: 'center', marginTop: 60, color: 'var(--text-muted)' }}>
                 <p style={{ marginBottom: 16, opacity: 0.75, display: 'flex', justifyContent: 'center' }}><IconDeckCard width={44} height={44} /></p>
-                <p style={{ fontSize: 14 }}>Cria as tuas próprias cartas ou usa o Oráculo.</p>
+                <p style={{ fontSize: 14 }}>{t('cards.createOrUseOracle')}</p>
               </div>
             )}
           </div>
@@ -462,14 +464,14 @@ export default function CardSwipePage() {
                     onClick={() => { setShowFabMenu(false); setShowCreateView(true); }}
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
                   >
-                    <span>Gerar Oráculo AI</span>
+                    {t('training.generateOracleAI')}
                     <IconSparkBoost width={16} height={16} />
                   </button>
                   <button
                     onClick={() => { setShowFabMenu(false); handleCreateManual(); }}
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
                   >
-                    <span>Criar Manualmente</span>
+                    {t('cards.createManual')}
                     <IconEditPen width={16} height={16} />
                   </button>
                 </div>
@@ -501,11 +503,11 @@ export default function CardSwipePage() {
             </div>
 
             {loadingCards ? (
-              <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: 40 }}>A carregar cards...</p>
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: 40 }}>{t('common.loading')}</p>
             ) : (
               <>
                 <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 20, textAlign: 'center' }}>
-                  Pressiona a carta (ou clica botão direito) para ver opções
+                  {t('cards.cardOptionsInstruction')}
                 </p>
                 <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 w-full px-2 sm:px-0 sm:flex-wrap sm:justify-center sm:gap-6 sm:overflow-visible sm:pb-0" style={{ scrollPadding: '1rem', WebkitOverflowScrolling: 'touch' }}>
                   {savedCards.map((c, idx) => {
@@ -528,7 +530,7 @@ export default function CardSwipePage() {
                                   marginBottom: 8
                                 }}
                               >
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconEditPen width={15} height={15} /> Editar Carta</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconEditPen width={15} height={15} /> {t('cardEdit.editCard')}</span>
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); document.body.click(); handleDeleteCard(c.id); }}
@@ -538,7 +540,7 @@ export default function CardSwipePage() {
                                   fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1
                                 }}
                               >
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconDelete width={15} height={15} /> Apagar Carta</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconDelete width={15} height={15} /> {t('cardEdit.deleteCard')}</span>
                               </button>
                             </>
                           }
@@ -557,15 +559,15 @@ export default function CardSwipePage() {
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem', backdropFilter: 'blur(4px)' }} onClick={handleModalDismiss}>
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--accent)', borderRadius: 16, padding: '2rem', maxWidth: 380, width: '100%' }} onClick={(e) => e.stopPropagation()}>
               <div style={{ textAlign: 'center', marginBottom: 12, display: 'flex', justifyContent: 'center' }}><IconSparkBoost width={40} height={40} /></div>
-              <h2 style={{ color: 'var(--text-highlight)', fontSize: 20, fontWeight: 800, textAlign: 'center', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Gostou da análise?</h2>
+              <h2 style={{ color: 'var(--text-highlight)', fontSize: 20, fontWeight: 800, textAlign: 'center', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>{t('training.likeAnalysis')}</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', lineHeight: 1.7, marginBottom: 24 }}>
-                Cria a tua conta gratuita para salvar este card no teu deck, treinar com repetição espaçada e gerar cenários personalizados para qualquer domínio.
+                {t('training.ctaDescription')}
               </p>
               <Link to="/register" style={{ display: 'block', padding: '13px 0', borderRadius: 10, background: 'var(--accent)', color: '#fff', textAlign: 'center', fontWeight: 800, fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10, textDecoration: 'none' }}>
-                Criar Conta Grátis
+                {t('training.createAccount')}
               </Link>
               <button onClick={handleModalDismiss} style={{ width: '100%', padding: '11px 0', borderRadius: 10, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' }}>
-                {demoIndex < DEMO_CARDS.length ? 'Explorar Próximo Card' : 'Ver Conclusão da Demo'}
+                {demoIndex < DEMO_CARDS.length ? t('training.exploreNextCard') : t('training.seeDemoConclusion')}
               </button>
             </div>
           </div>

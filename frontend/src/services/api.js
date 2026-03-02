@@ -289,7 +289,7 @@ export const cardsAPI = {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || 'Erro ao gerar card');
+            throw new Error(errorData.detail || 'Error generating card');
         }
 
         return _readSSEStream(response, onProgress);

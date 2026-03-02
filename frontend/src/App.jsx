@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import BottomNav from './components/Layout/BottomNav';
 import GamifiedLoader from './components/Layout/GamifiedLoader';
@@ -18,9 +19,10 @@ const VisualPage = lazy(() => import('./pages/VisualPage'));
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
+  const { t } = useTranslation();
 
   if (loading) {
-    return <GamifiedLoader label="Carregando..." />;
+    return <GamifiedLoader label={t('common.loading')} />;
   }
 
   return isAuthenticated ? children : <Navigate to="/login" replace />;
@@ -28,7 +30,7 @@ function ProtectedRoute({ children }) {
 
 function AppRoutes() {
   return (
-    <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-[var(--bg-app)]"><GamifiedLoader label="A carregar..." /></div>}>
+    <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-[var(--bg-app)]"><GamifiedLoader /></div>}>
       <Routes>
         <Route path="/" element={<DomainsPage />} />
         <Route path="/login" element={<LoginPage />} />
