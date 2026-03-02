@@ -92,8 +92,10 @@
     "error_otp_verify": "Código inválido ou expirado.",
     "error_magic_link": "Erro ao enviar link.",
     "error_google": "Erro no login com Google",
+    "error_apple": "Erro no login com Apple",
     "error_guest": "Erro ao iniciar sessão convidado",
-    "google_placeholder": "Google Login placeholder"
+    "google_placeholder": "Google Login placeholder",
+    "apple_placeholder": "Apple Login placeholder"
   },
   "register": {
     "omniflash": "OMNIFLASH",
@@ -113,6 +115,8 @@
     "signing_up": "Aguarde...",
     "password_min_error": "A senha deve ter pelo menos 6 caracteres.",
     "google_placeholder": "Google Login placeholder - Irá criar a conta e pular o passo 1.",
+    "apple_placeholder": "Apple Login placeholder - Irá criar a conta e pular o passo 1.",
+    "error_apple": "Erro no login com Apple",
     "passwords_mismatch": "As senhas não coincidem",
     "password_min_chars": "A senha deve ter no mínimo 6 caracteres",
     "account_created": "Conta criada! Faça login para continuar.",

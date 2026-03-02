@@ -92,8 +92,10 @@
     "error_otp_verify": "Invalid or expired code.",
     "error_magic_link": "Error sending link.",
     "error_google": "Error logging in with Google",
+    "error_apple": "Error logging in with Apple",
     "error_guest": "Error starting guest session",
-    "google_placeholder": "Google Login placeholder"
+    "google_placeholder": "Google Login placeholder",
+    "apple_placeholder": "Apple Login placeholder"
   },
   "register": {
     "omniflash": "OMNIFLASH",
@@ -113,6 +115,8 @@
     "signing_up": "Please wait...",
     "password_min_error": "Password must be at least 6 characters.",
     "google_placeholder": "Google Login placeholder - Will create the account and skip step 1.",
+    "apple_placeholder": "Apple Login placeholder - Will create the account and skip step 1.",
+    "error_apple": "Error logging in with Apple",
     "passwords_mismatch": "Passwords do not match",
     "password_min_chars": "Password must be at least 6 characters",
     "account_created": "Account created! Log in to continue.",

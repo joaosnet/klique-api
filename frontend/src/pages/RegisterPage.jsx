@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errorHandler';
 import { IconCameraShot, IconSparkBoost } from '../components/Icons/ActionIcons';
+import { IconGoogle, IconApple } from '../components/Icons/AuthIcons';
 import { useTranslation } from 'react-i18next';
 
 // ── Step 1: Basic Data ───────────────────────────────────────────────────────
@@ -24,6 +25,18 @@ function StepBasicData({ data, onChange, onNext }) {
       // onNext();
     } catch {
       setError(t('register.error_google'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      alert(t('register.apple_placeholder'));
+    } catch {
+      setError(t('register.error_apple'));
     } finally {
       setLoading(false);
     }
@@ -84,11 +97,12 @@ function StepBasicData({ data, onChange, onNext }) {
             background: 'transparent',
           }}
         >
-          <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
+          <IconGoogle className="w-4 h-4" />
           {t('register.google')}
         </button>
         <button
           type="button"
+          onClick={handleAppleLogin}
           className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all"
           style={{
             color: 'var(--text-main)',
@@ -96,7 +110,7 @@ function StepBasicData({ data, onChange, onNext }) {
             background: 'transparent',
           }}
         >
-          <span className="text-lg"></span>
+          <IconApple className="w-4 h-4" />
           {t('register.apple')}
         </button>
       </div>

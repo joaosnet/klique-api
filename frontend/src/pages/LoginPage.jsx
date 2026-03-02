@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errorHandler';
+import { IconPasswordLock, IconWhatsApp, IconEmailMagic, IconPasskeyBadge, IconGoogle, IconApple } from '../components/Icons/AuthIcons';
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -104,6 +105,18 @@ export default function LoginPage() {
     }
   };
 
+  const handleAppleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      alert(t('login.apple_placeholder'));
+    } catch (err) {
+      setError(getErrorMessage(err, t('login.error_apple')));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLazyRegister = async () => {
     setLoading(true);
     try {
@@ -168,15 +181,16 @@ export default function LoginPage() {
               className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-[var(--text-main)] transition-all hover:bg-[var(--bg-card-inner)]"
               style={{ border: '1px solid var(--border-color)' }}
             >
-              <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
+              <IconGoogle className="w-4 h-4" />
               {t('login.google')}
             </button>
             <button
               type="button"
+              onClick={handleAppleLogin}
               className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-[var(--text-main)] transition-all hover:bg-[var(--bg-card-inner)]"
               style={{ border: '1px solid var(--border-color)' }}
             >
-              <span className="text-lg"></span>
+              <IconApple className="w-4 h-4" />
               {t('login.apple')}
             </button>
           </div>
@@ -317,10 +331,22 @@ export default function LoginPage() {
 
           {/* Alternative Methods */}
           <div className="mt-8 flex flex-wrap justify-center gap-4 border-t border-[var(--border-color)] pt-6">
-            <button onClick={() => setMethod('password')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'password' ? 'text-purple-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>{t('login.method_password')}</button>
-            <button onClick={() => setMethod('otp')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'otp' ? 'text-green-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>{t('login.method_whatsapp')}</button>
-            <button onClick={() => setMethod('magic')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'magic' ? 'text-blue-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>{t('login.method_email')}</button>
-            <button onClick={() => setMethod('passkey')} className={`text-[10px] uppercase tracking-widest transition-colors ${method === 'passkey' ? 'text-orange-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>{t('login.method_passkey')}</button>
+            <button onClick={() => setMethod('password')} className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest transition-colors ${method === 'password' ? 'text-purple-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>
+              <IconPasswordLock className="w-3.5 h-3.5" />
+              {t('login.method_password')}
+            </button>
+            <button onClick={() => setMethod('otp')} className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest transition-colors ${method === 'otp' ? 'text-green-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>
+              <IconWhatsApp className="w-3.5 h-3.5" />
+              {t('login.method_whatsapp')}
+            </button>
+            <button onClick={() => setMethod('magic')} className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest transition-colors ${method === 'magic' ? 'text-blue-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>
+              <IconEmailMagic className="w-3.5 h-3.5" />
+              {t('login.method_email')}
+            </button>
+            <button onClick={() => setMethod('passkey')} className={`flex items-center gap-1.5 text-[10px] uppercase tracking-widest transition-colors ${method === 'passkey' ? 'text-orange-400' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}>
+              <IconPasskeyBadge className="w-3.5 h-3.5" />
+              {t('login.method_passkey')}
+            </button>
           </div>
 
           <button
