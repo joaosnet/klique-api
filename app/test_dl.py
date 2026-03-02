@@ -1,12 +1,14 @@
 import asyncio
-import httpx
 import sys
+
+import httpx
 
 
 async def test_generation():
     sys.path.append('/app')
-    from app.config import SECURE_1PSID, SECURE_1PSIDTS
     from gemini_webapi import GeminiClient
+
+    from app.config import SECURE_1PSID, SECURE_1PSIDTS
 
     gemini_client = GeminiClient(SECURE_1PSID, SECURE_1PSIDTS)
     await gemini_client.init(timeout=30)

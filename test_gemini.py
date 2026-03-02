@@ -1,13 +1,12 @@
 import asyncio
-from typing import Any
-import os
 import sys
 
 
 async def test_generation():
     sys.path.append('/app')
-    from app.config import SECURE_1PSID, SECURE_1PSIDTS
     from gemini_webapi import GeminiClient
+
+    from app.config import SECURE_1PSID, SECURE_1PSIDTS
 
     print('Init client')
 

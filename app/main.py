@@ -24,10 +24,10 @@ from .routers import (
     cards,
     credits,
     domains,
+    models,
     oracle_analytics,
     payments,
     profile_router,
-    models,
     register,
     srs,
 )

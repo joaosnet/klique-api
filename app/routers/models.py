@@ -1,14 +1,15 @@
 import json
-import base64
 import re
+
 from fastapi import (
     APIRouter,
     Depends,
+    File,
     HTTPException,
     Request,
     UploadFile,
-    File,
 )
+
 from ..dependencies import get_current_active_user
 from ..logger import logger
 
@@ -42,16 +43,16 @@ async def generate_svg_from_image(
         file_bytes = await file.read()
 
         prompt = """
-        You are an expert Frontend Developer and UI Designer. 
-        I have provided an image of a card design. 
-        Your task is to analyze the visual structure, layout, typography, colors, and stylistic elements of this card, 
+        You are an expert Frontend Developer and UI Designer.
+        I have provided an image of a card design.
+        Your task is to analyze the visual structure, layout, typography, colors, and stylistic elements of this card,
         and output a CLEAN, RESPONSIVE, and REUSABLE SVG markup that faithfully replicates this design.
-        
+
         The SVG should act as a background/template.
         Use viewBox="0 0 400 600" (or similar standard card ratio).
         Use standard SVG elements (<defs>, <linearGradient>, <rect>, <path>, <text>).
         Ensure it is visually stunning and modern.
-        
+
         Return ONLY valid JSON containing the "svg" string property.
         Example response format:
         {

@@ -1,17 +1,12 @@
-import requests
-import sys
 
 # We need a valid card_id and token.
 # Let's bypass auth if possible, or just generate a valid JWT if needed.
 # Since we might not have a token, maybe we can find a user in DB,
 # generate a token with the SECRET_KEY from .env, and make the request.
-import os
-from jose import jwt
-from datetime import datetime, timedelta, timezone
 
 # Read from .env
 env_vars = {}
-with open('.env', 'r') as f:
+with open('.env', 'r', encoding='utf-8') as f:
     for line in f:
         if '=' in line and not line.startswith('#'):
             k, v = line.strip().split('=', 1)
