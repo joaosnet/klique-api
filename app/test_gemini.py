@@ -6,9 +6,9 @@ import httpx
 
 async def test_generation():
     sys.path.append('/app')
-    from gemini_webapi import GeminiClient
+    from gemini_webapi import GeminiClient  # noqa: PLC0415
 
-    from app.config import SECURE_1PSID, SECURE_1PSIDTS
+    from app.config import SECURE_1PSID, SECURE_1PSIDTS  # noqa: PLC0415
 
     gemini_client = GeminiClient(SECURE_1PSID, SECURE_1PSIDTS)
     await gemini_client.init(timeout=30)

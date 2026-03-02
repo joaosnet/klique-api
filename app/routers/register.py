@@ -44,7 +44,7 @@ async def register(
     db_profiles=Depends(get_profiles_collection),
     current_user: Optional[dict] = Depends(get_current_user_optional),
 ):
-    # Verificar se o e-mail já existe (apenas se não for o e-mail do próprio usuário atual)
+    # Verificar se o e-mail já existe (apenas se não for o e-mail do próprio usuário atual)  # noqa: E501
     existing_user = await db_users.find_one({'email': user_data.email})
     if existing_user and (
         not current_user

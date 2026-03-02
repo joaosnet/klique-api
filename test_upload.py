@@ -1,4 +1,3 @@
-
 # We need a valid card_id and token.
 # Let's bypass auth if possible, or just generate a valid JWT if needed.
 # Since we might not have a token, maybe we can find a user in DB,
@@ -16,5 +15,6 @@ SECRET_KEY = env_vars.get('SECRET_KEY')
 ALGORITHM = 'HS256'
 
 # Create a token for a mockup user. We need a valid user from DB ideally,
-# but let's just make one with some ID. Wait, the endpoint checks if the card belongs to the user.
+# but let's just make one with some ID. Wait, the endpoint checks if the card
+# belongs to the user.
 # Better to use mongosh with credentials to get a user and a card.

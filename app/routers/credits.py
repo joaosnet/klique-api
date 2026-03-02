@@ -113,7 +113,7 @@ async def use_one_credit(user_id: str) -> dict:
 
     remaining = (free + paid) - 1
     logger.info(
-        f'Crédito ({credit_type}) usado pelo usuário {user_id}. Restantes: {remaining}'
+        f'Crédito ({credit_type}) usado pelo usuário {user_id}. Restantes: {remaining}'  # noqa: E501
     )
 
     return {

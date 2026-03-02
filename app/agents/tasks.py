@@ -9,7 +9,10 @@ async def process_message_with_agent(
     message_text: str,
     whatsapp_service,
 ) -> dict:
-    """Processa uma mensagem usando o agente LangGraph e envia a resposta via WhatsApp."""
+    """
+    Processa uma mensagem usando o agente LangGraph e envia
+    a resposta via WhatsApp.
+    """
     try:
         agent = await AgentCache.get_agent()
 

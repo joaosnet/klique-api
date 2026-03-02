@@ -45,12 +45,16 @@ async def generate_svg_from_image(
         prompt = """
         You are an expert Frontend Developer and UI Designer.
         I have provided an image of a card design.
-        Your task is to analyze the visual structure, layout, typography, colors, and stylistic elements of this card,
-        and output a CLEAN, RESPONSIVE, and REUSABLE SVG markup that faithfully replicates this design.
+        Your task is to analyze the visual structure, layout, typography,
+        colors,
+        and stylistic elements of this card,
+        and output a CLEAN, RESPONSIVE, and REUSABLE SVG markup that faithfully
+        replicates this design.
 
         The SVG should act as a background/template.
         Use viewBox="0 0 400 600" (or similar standard card ratio).
-        Use standard SVG elements (<defs>, <linearGradient>, <rect>, <path>, <text>).
+        Use standard SVG elements:
+        (<defs>, <linearGradient>, <rect>, <path>, <text>).
         Ensure it is visually stunning and modern.
 
         Return ONLY valid JSON containing the "svg" string property.
@@ -74,7 +78,7 @@ async def generate_svg_from_image(
             )
             raise HTTPException(
                 status_code=500,
-                detail='Falha ao gerar o modelo SVG. Tente novamente com outra imagem.',
+                detail='Falha ao gerar o modelo SVG. Tente novamente com outra imagem.',  # noqa: E501
             )
 
         result_dict = json.loads(json_match.group(0))

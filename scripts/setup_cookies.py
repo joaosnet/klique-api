@@ -33,12 +33,13 @@ try:
 except ImportError as e:
     console.print(f'[red]Erro ao importar dependências:[/red] {e}')
     console.print(
-        'Certifique-se de que browser-cookie3 e gemini_webapi estão instalados.'
+        'Certifique-se de que browser-cookie3 e gemini_webapi '
+        'estão instalados.'
     )
     sys.exit(1)
 
 
-def setup_cookies(browser_name=None):
+def setup_cookies(browser_name=None):  # noqa: PLR0912, PLR0915
     """Configura cookies do Gemini automaticamente.
 
     Args:
@@ -52,7 +53,8 @@ def setup_cookies(browser_name=None):
         )
     else:
         console.print(
-            '🔍 Procurando cookies do Gemini em todos os navegadores disponíveis...'
+            '🔍 Procurando cookies do Gemini em todos os '
+            'navegadores disponíveis...'
         )
 
     browser_functions = {
@@ -73,7 +75,9 @@ def setup_cookies(browser_name=None):
         cj = func(domain_name='google.com')
         cookies = {c.name: c.value for c in cj}
         if '__Secure-1PSID' in cookies:
-            return cookies['__Secure-1PSID'], cookies.get('__Secure-1PSIDTS', '')
+            return cookies['__Secure-1PSID'], cookies.get(
+                '__Secure-1PSIDTS', ''
+            )
         return None, None
 
     secure_1psid = None
@@ -102,9 +106,7 @@ def setup_cookies(browser_name=None):
                     return False
                 secure_1psid, secure_1psidts = psid, psidts
                 browser_used = browser_name
-                print(
-                    f'✅ Cookies encontrados no navegador: {browser_name}'
-                )
+                print(f'✅ Cookies encontrados no navegador: {browser_name}')
             except Exception as e:
                 print(f'❌ Erro ao acessar navegador {browser_name}: {e}')
                 print(
@@ -221,7 +223,7 @@ DRIVE_FOLDER_ID=sua_pasta_pessoal_id_aqui
             updated_lines.append(f"SECURE_1PSID='{secure_1psid}'")
         elif line.startswith('SECURE_1PSIDTS='):
             updated_lines.append(f"SECURE_1PSIDTS='{secure_1psidts}'")
-        elif line.strip() == '' and not credentials_added and not has_psid:
+        elif not line.strip() and not credentials_added and not has_psid:
             # Adicionar credenciais após comentários iniciais se não existirem
             updated_lines.append(f"SECURE_1PSID='{secure_1psid}'")
             updated_lines.append(f"SECURE_1PSIDTS='{secure_1psidts}'")
@@ -261,7 +263,7 @@ def test_cookies():
         # Tentar inicializar cliente
         client = GeminiClient(secure_1psid, secure_1psidts)
         # Tentar init (que faz uma chamada de teste)
-        import asyncio
+        import asyncio  # noqa: PLC0415
 
         asyncio.run(client.init(timeout=10))
         print(

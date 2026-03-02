@@ -191,7 +191,7 @@ def remove_invalid_res_dirs(android_dir: Path) -> None:
             shutil.rmtree(entry)
 
 
-def fix_duplicate_resources(android_dir: Path) -> None:
+def fix_duplicate_resources(android_dir: Path) -> None:  # noqa: PLR0912
     """Detect and fix duplicate resource declarations in values/*.xml.
     scripts\build_android.py
         Android's resource merger fails with 'Duplicate resources' when the

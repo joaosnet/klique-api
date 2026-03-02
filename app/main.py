@@ -1,14 +1,6 @@
+import os
 import warnings
-
-warnings.filterwarnings(
-    'ignore',
-    category=UserWarning,
-    message=r'.*Pydantic V1.*',
-    module=r'langchain_core.*',
-)
-
-import os  # noqa: E402
-from contextlib import asynccontextmanager  # noqa: E402
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,6 +24,13 @@ from .routers import (
     srs,
 )
 from .scheduler import setup_scheduler, start_scheduler, stop_scheduler
+
+warnings.filterwarnings(
+    'ignore',
+    category=UserWarning,
+    message=r'.*Pydantic V1.*',
+    module=r'langchain_core.*',
+)
 
 
 @asynccontextmanager

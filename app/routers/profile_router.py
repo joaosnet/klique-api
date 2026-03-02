@@ -39,7 +39,9 @@ async def _get_or_create_profile(user_id: str, user_doc: dict):
     profile_id = user_doc.get('profile_id')
     if profile_id:
         try:
-            profile_doc = await profiles_col.find_one({'_id': ObjectId(profile_id)})
+            profile_doc = await profiles_col.find_one({
+                '_id': ObjectId(profile_id)
+            })  # noqa: E501
             if profile_doc:
                 return profile_doc
         except Exception:
@@ -152,11 +154,13 @@ async def generate_avatar(
 
     background_tasks.add_task(_generate_and_update)
 
-    return DefautMessage(success=True, message='Geração de avatar iniciada em background.')
+    return DefautMessage(
+        success=True, message='Geração de avatar iniciada em background.'
+    )  # noqa: E501
 
 
 @router.post('/me/avatar/upload', response_model=DefautMessage)
-async def upload_avatar(
+async def upload_avatar(  # noqa: PLR0913, PLR0917
     request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
@@ -193,9 +197,13 @@ async def upload_avatar(
 
     # If improvement requested and Gemini available, apply style improvement
     if improve and style_prompt:
-        gemini_client = getattr(request.app.state, 'gemini_webapi_client', None)
+        gemini_client = getattr(
+            request.app.state, 'gemini_webapi_client', None
+        )  # noqa: E501
         if gemini_client:
-            base_prompt = 'Retrato artístico de alta qualidade, cinematográfico'
+            base_prompt = (
+                'Retrato artístico de alta qualidade, cinematográfico'  # noqa: E501
+            )
             background_tasks.add_task(
                 improve_image_with_ai,
                 'avatars',

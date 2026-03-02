@@ -6,9 +6,9 @@ import httpx
 
 async def test_generation():
     sys.path.append('/app')
-    from gemini_webapi import GeminiClient
+    from gemini_webapi import GeminiClient  # noqa: PLC0415
 
-    from app.config import SECURE_1PSID, SECURE_1PSIDTS
+    from app.config import SECURE_1PSID, SECURE_1PSIDTS  # noqa: PLC0415
 
     gemini_client = GeminiClient(SECURE_1PSID, SECURE_1PSIDTS)
     await gemini_client.init(timeout=30)
@@ -36,7 +36,7 @@ async def test_generation():
             print('Found cookies dict:', type(cookies))
 
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'  # noqa: E501
         }
 
         try:

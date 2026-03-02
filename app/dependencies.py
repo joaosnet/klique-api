@@ -73,7 +73,9 @@ async def get_current_user(
         except Exception:
             raise credentials_exception
     else:
-        user = await db_users.find_one({'$or': [{'email': username}, {'phone_number': username}]})
+        user = await db_users.find_one({
+            '$or': [{'email': username}, {'phone_number': username}]
+        })
 
     if user is None:
         raise credentials_exception
@@ -113,7 +115,9 @@ async def get_current_user_optional(
         if username.startswith('anon_'):
             user = await db_users.find_one({'_id': ObjectId(username[5:])})
         else:
-            user = await db_users.find_one({'$or': [{'email': username}, {'phone_number': username}]})
+            user = await db_users.find_one({
+                '$or': [{'email': username}, {'phone_number': username}]
+            })
         return user
     except Exception:
         return None
@@ -135,7 +139,12 @@ def invalidate_token(token: str):
 async def authenticate_user(
     db_users: Collection, username: str, password: str
 ):
-    user = await db_users.find_one({'$or': [{'email': username.lower().strip()}, {'phone_number': username.strip()}]})
+    user = await db_users.find_one({
+        '$or': [
+            {'email': username.lower().strip()},
+            {'phone_number': username.strip()},
+        ]
+    })  # noqa: E501
     if not user:
         return False
     if not user.get('password'):
@@ -158,7 +167,9 @@ async def authenticate_token(token: str, db_users):
         if username.startswith('anon_'):
             user = await db_users.find_one({'_id': ObjectId(username[5:])})
         else:
-            user = await db_users.find_one({'$or': [{'email': username}, {'phone_number': username}]})
+            user = await db_users.find_one({
+                '$or': [{'email': username}, {'phone_number': username}]
+            })
 
         if user is None:
             return HTTPException(

@@ -191,7 +191,7 @@ async def generate_card_stream(
 
 
 @router.post('/swipe', response_model=SwipeResponse)
-async def swipe_card(  # noqa: PLR0913
+async def swipe_card(  # noqa: PLR0913, PLR0917
     request: Request,
     body: SwipeAction,
     background_tasks: BackgroundTasks,
@@ -400,7 +400,7 @@ async def regenerate_card_image(
 
 
 @router.post('/{card_id}/improve-image', response_model=DefautMessage)
-async def improve_card_image(
+async def improve_card_image(  # noqa: PLR0913, PLR0917
     card_id: str,
     body: ImageImproveRequest,
     request: Request,
@@ -430,8 +430,8 @@ async def improve_card_image(
         'scenario_context', ''
     )
     combined_prompt = (
-        f'{base_prompt}. Aplica o seguinte estilo artístico: {body.style_prompt}. '
-        'Mantém a qualidade cinematográfica, fotorealista, sem texto na imagem.'
+        f'{base_prompt}. Aplica o seguinte estilo artístico: {body.style_prompt}. '  # noqa: E501
+        'Mantém a qualidade cinematográfica, fotorealista, sem texto na imagem.'  # noqa: E501
     )
     background_tasks.add_task(
         get_or_generate_card_image,

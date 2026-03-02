@@ -127,9 +127,7 @@ class MessageProcessingData:
     attempts: int = 0
 
 
-async def _mark_message_as_processed(
-    db, data: MessageProcessingData
-) -> None:
+async def _mark_message_as_processed(db, data: MessageProcessingData) -> None:
     """Marca uma mensagem como processada no cache."""
     try:
         collection = db.get_collection('processed_messages')
@@ -413,9 +411,7 @@ async def process_status_viewed_for_image_generation(
         logger.exception('Detalhes do erro:')
 
 
-async def process_status_view(
-    data: dict, status_views_collection
-) -> None:
+async def process_status_view(data: dict, status_views_collection) -> None:
     """Processa e salva visualização de status no banco."""
     try:
         # Extrai dados do payload

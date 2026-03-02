@@ -4,6 +4,7 @@ Usa a biblioteca Python cairosvg (instala automaticamente se necessário).
 """
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -35,8 +36,6 @@ PNG_FOREGROUND = 'ic_launcher_foreground.png'
 
 def ensure_cairosvg():
     if importlib.util.find_spec('cairosvg') is None:
-        import subprocess
-
         print('Instalando cairosvg...')
         subprocess.check_call([
             sys.executable,
@@ -45,8 +44,8 @@ def ensure_cairosvg():
             'install',
             'cairosvg',
         ])
-    global cairosvg
-    import cairosvg
+    global cairosvg  # noqa: PLW0603
+    import cairosvg  # noqa: PLC0415
 
 
 def convert_svg_to_png(svg_path, out_path, size):

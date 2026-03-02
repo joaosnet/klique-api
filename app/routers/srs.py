@@ -39,7 +39,7 @@ def _apply_sm2(
     """
     Aplica o algoritmo SuperMemo-2 e retorna (new_interval, new_ef, new_reps).
     """
-    if quality >= 3:
+    if quality >= 3:  # noqa: PLR2004
         if repetitions == 0:
             new_interval = 1
         elif repetitions == 1:

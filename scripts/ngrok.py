@@ -6,10 +6,11 @@ Usage:
 
 Requirements:
     - Install the ngrok CLI or set NGROK_AUTH_TOKEN environment variable.
-    - pyngrok is installed in dev dependencies (already added via `uv add --dev pyngrok`).
+    - pyngrok is installed in dev dependencies (already added via
+      `uv add --dev pyngrok`).
 
-This script opens an ngrok HTTP tunnel and prints the public URL. Keep the process
-running to keep the tunnel alive.
+This script opens an ngrok HTTP tunnel and prints the public URL.
+Keep the process running to keep the tunnel alive.
 """
 
 from __future__ import annotations
@@ -55,13 +56,13 @@ def main(argv: list[str] | None = None) -> int:
         try:
             conf.get_default().auth_token = token
         except Exception:
-            # setting auth_token may fail in some environments; continue and rely on ngrok binary
+            # setting auth_token may fail in some environments; continue and rely on ngrok binary  # noqa: E501
             pass
     else:
         # No token — show helpful instructions and exit
         console.print('[red]ngrok authtoken not found.[/red]')
         console.print(
-            "Please create a '.ngrok.env' file at the project root with the line:"
+            "Please create a '.ngrok.env' file at the project root with the line:"  # noqa: E501
         )
         console.print('    NGROK_AUTH_TOKEN=SEU_TOKEN_AQUI')
         console.print('')
@@ -77,7 +78,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    console.print(Panel(f'Starting ngrok tunnel to localhost:{args.port}...', border_style='green'))
+    console.print(
+        Panel(
+            f'Starting ngrok tunnel to localhost:{args.port}...',
+            border_style='green',
+        )
+    )  # noqa: E501
     try:
         tunnel = ngrok.connect(args.port, 'http')
         console.print(f'[green]ngrok public url:[/green] {tunnel.public_url}')
@@ -94,7 +100,9 @@ def main(argv: list[str] | None = None) -> int:
             pass
         return 0
     except Exception as exc:
-        console.print('[red]Failed to start ngrok tunnel:[/red]', exc, style='red')
+        console.print(
+            '[red]Failed to start ngrok tunnel:[/red]', exc, style='red'
+        )  # noqa: E501
         return 2
 
     return 0

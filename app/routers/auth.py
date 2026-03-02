@@ -542,7 +542,7 @@ async def passkey_authenticate_verify(
             },
             {
                 '$set': {
-                    'webauthn_credentials.$.sign_count': verification.new_sign_count
+                    'webauthn_credentials.$.sign_count': verification.new_sign_count  # noqa: E501
                 }
             },
         )

@@ -84,7 +84,7 @@ class AgentCache:
                 'url': 'http://host.docker.internal:8020',
                 'transport': 'sse',
                 'headers': {
-                    'Authorization': 'Bearer x36r9h2bink1cke4cqq7a1c209xywe5w67e617glzordfijxok'
+                    'Authorization': 'Bearer x36r9h2bink1cke4cqq7a1c209xywe5w67e617glzordfijxok'  # noqa: E501
                 },
             },
             # 'sigaa-ufpa': {

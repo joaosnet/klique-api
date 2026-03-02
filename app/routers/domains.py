@@ -227,7 +227,7 @@ async def get_domain(
 
 
 @router.delete('/{domain_id}', response_model=DefautMessage)
-async def delete_domain(  # noqa: PLR0913
+async def delete_domain(  # noqa: PLR0913, PLR0917
     domain_id: str,
     current_user=Depends(get_current_active_user),
     domains_col=Depends(get_domains_collection),
@@ -341,7 +341,7 @@ async def regenerate_domain_image(
 
 
 @router.post('/{domain_id}/improve-image', response_model=DefautMessage)
-async def improve_domain_image(
+async def improve_domain_image(  # noqa: PLR0913, PLR0917
     domain_id: str,
     body: ImageImproveRequest,
     request: Request,
@@ -372,7 +372,7 @@ async def improve_domain_image(
         f"Ilustração 3D atmosférica cinematográfica do conceito '{theme}', "
         'tema de teoria dos jogos, qualidade premium.'
     )
-    # Use domain_id as filename so it doesn't conflict with the shared theme cache
+    # Use domain_id as filename so it doesn't conflict with the shared theme cache  # noqa: E501
     background_tasks.add_task(
         improve_image_with_ai,
         'domains',
@@ -383,7 +383,9 @@ async def improve_domain_image(
     )
     # Update the domain's image_url to point to the custom file
     abs_url = f'/media/domains/{domain_id}.png'
-    await domains_col.update_one({'_id': oid}, {'$set': {'image_url': abs_url}})
+    await domains_col.update_one(
+        {'_id': oid}, {'$set': {'image_url': abs_url}}
+    )  # noqa: E501
 
     return DefautMessage(
         success=True, message='Melhoria de imagem iniciada em background.'
@@ -422,7 +424,9 @@ async def upload_domain_image(
         shutil.copyfileobj(file.file, out)
 
     abs_url = f'/media/domains/{domain_id}.png'
-    await domains_col.update_one({'_id': oid}, {'$set': {'image_url': abs_url}})
+    await domains_col.update_one(
+        {'_id': oid}, {'$set': {'image_url': abs_url}}
+    )
 
     return DefautMessage(success=True, message='Imagem carregada com sucesso.')
 

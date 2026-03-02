@@ -136,7 +136,6 @@ async def stop_scheduler() -> None:
 
 def get_scheduler_status() -> dict:
     """Retorna o status atual do scheduler."""
-    from datetime import datetime
 
     agora = datetime.now(ZoneInfo(BRAZIL_TZ))
     jobs_info = []
