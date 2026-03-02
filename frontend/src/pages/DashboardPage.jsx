@@ -15,6 +15,7 @@ import {
 import { Bar, Line } from 'react-chartjs-2';
 import { domainsAPI } from '../services/api';
 import GamifiedLoader from '../components/Layout/GamifiedLoader';
+import { IconLogo, IconTime, IconStudy, IconQuestions, IconTarget, IconProgress, IconLog } from '../components/Icons/StatIcons';
 
 ChartJS.register(
   CategoryScale,
@@ -267,9 +268,7 @@ export default function DashboardPage() {
           <div className="dash-header-content">
             <div className="dash-logo">
               <div className="dash-logo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                </svg>
+                <IconLogo width={32} height={32} />
               </div>
               <div className="dash-logo-text">
                 <h1>OmniFlash</h1>
@@ -301,7 +300,7 @@ export default function DashboardPage() {
               {/* Countdown Timer */}
               <div className="dash-countdown-container">
                 <h2 className="dash-section-title justify-center">
-                  <span className="dash-title-icon">⏱️</span>
+                  <span className="dash-title-icon"><IconTime width={24} height={24} className="inline-block" /></span>
                   Contagem Regressiva
                 </h2>
                 <p className="dash-countdown-subtitle">Defina sua data-alvo abaixo</p>
@@ -360,7 +359,7 @@ export default function DashboardPage() {
               {/* Stats Cards */}
               <div className="dash-stats-grid">
                 <div className="dash-stat-card">
-                  <div className="dash-stat-icon study">📚</div>
+                  <div className="dash-stat-icon study"><IconStudy width={28} height={28} className="drop-shadow-lg" /></div>
                   <div className="dash-stat-info">
                     <span className="dash-stat-value">{totalHours.toFixed(1)}</span>
                     <span className="dash-stat-label">Horas Estudadas</span>
@@ -368,7 +367,7 @@ export default function DashboardPage() {
                   <div className="dash-stat-trend up">Meta: 500h</div>
                 </div>
                 <div className="dash-stat-card">
-                  <div className="dash-stat-icon questions">❓</div>
+                  <div className="dash-stat-icon questions"><IconQuestions width={28} height={28} className="drop-shadow-lg" /></div>
                   <div className="dash-stat-info">
                     <span className="dash-stat-value">{totalQuestions}</span>
                     <span className="dash-stat-label">Questões Resolvidas</span>
@@ -376,7 +375,7 @@ export default function DashboardPage() {
                   <div className="dash-stat-trend up">Meta: 3000</div>
                 </div>
                 <div className="dash-stat-card">
-                  <div className="dash-stat-icon accuracy">🎯</div>
+                  <div className="dash-stat-icon accuracy"><IconTarget width={28} height={28} className="drop-shadow-lg" /></div>
                   <div className="dash-stat-info">
                     <span className="dash-stat-value">{avgAccuracy}%</span>
                     <span className="dash-stat-label">Taxa de Acerto</span>
@@ -384,7 +383,7 @@ export default function DashboardPage() {
                   <div className="dash-stat-trend up">Meta: 80%</div>
                 </div>
                 <div className="dash-stat-card">
-                  <div className="dash-stat-icon progress">📈</div>
+                  <div className="dash-stat-icon progress"><IconProgress width={28} height={28} className="drop-shadow-lg" /></div>
                   <div className="dash-stat-info">
                     <span className="dash-stat-value">{avgProgress}%</span>
                     <span className="dash-stat-label">Progresso Geral</span>
@@ -418,7 +417,7 @@ export default function DashboardPage() {
               {/* Study Log */}
               <div className="dash-study-log">
                 <h3 className="dash-section-title">
-                  <span className="dash-title-icon">📝</span>
+                  <span className="dash-title-icon"><IconLog width={24} height={24} className="inline-block" /></span>
                   Registrar Estudo
                 </h3>
                 <div className="dash-log-form">
@@ -473,7 +472,7 @@ export default function DashboardPage() {
           {activeMenu === 'materias' && (
             <section className="dash-section active">
               <h2 className="dash-section-title justify-center">
-                <span className="dash-title-icon">📚</span>
+                <span className="dash-title-icon"><IconStudy width={24} height={24} className="inline-block" /></span>
                 Progresso por Domínio
               </h2>
 

@@ -1,11 +1,12 @@
 // EntityCard — Unmatched-style card component
 // Props: entity { id, name, power, resources, influence, strategy, image, rank }
 //        showDelete, small, onDelete
+import { IconDelete, IconStrategy } from '../Icons/ActionIcons';
 
 const STRATEGIES = {
   cooperate: { name: 'COOPERADOR', color: '#22c55e', desc: 'Colabora e retalia proporcionalmente.' },
-  defect:    { name: 'EXPLORADOR', color: '#ef4444', desc: 'Maximiza ganho individual; trai quando conveniente.' },
-  withdraw:  { name: 'ISOLADO',    color: '#6b7280', desc: 'Evita interações; neutro em conflitos.' },
+  defect: { name: 'EXPLORADOR', color: '#ef4444', desc: 'Maximiza ganho individual; trai quando conveniente.' },
+  withdraw: { name: 'ISOLADO', color: '#6b7280', desc: 'Evita interações; neutro em conflitos.' },
 };
 
 export default function EntityCard({ entity, showDelete = true, small = false, onDelete }) {
@@ -22,18 +23,16 @@ export default function EntityCard({ entity, showDelete = true, small = false, o
       {showDelete && onDelete && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(entity.id); }}
-          className="absolute top-2 right-2 z-50 w-6 h-6 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center text-white shadow-md transition-colors"
+          className="absolute top-2 right-2 z-50 w-7 h-7 rounded-full bg-black/60 hover:bg-black/90 flex items-center justify-center border border-red-500/50 shadow-md transition-all"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <IconDelete width={16} height={16} />
         </button>
       )}
 
       <div className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col">
         {/* Art / photo area — 55% */}
         <div className="w-full relative overflow-hidden bg-gray-900 border-b-2 border-white flex-shrink-0"
-             style={{ height: '55%' }}>
+          style={{ height: '55%' }}>
           {entity.image ? (
             <img
               src={entity.image}
@@ -42,10 +41,10 @@ export default function EntityCard({ entity, showDelete = true, small = false, o
             />
           ) : (
             <div
-              className="w-full h-full flex items-center justify-center"
+              className="w-full h-full flex flex-col items-center justify-center"
               style={{ background: 'linear-gradient(135deg, #1a0a2e, #4c1d95)' }}
             >
-              <span className="text-4xl opacity-60">⚡</span>
+              <IconStrategy type={entity.strategy} width={48} height={48} className="opacity-40" />
             </div>
           )}
 

@@ -3,20 +3,22 @@
 //        onClick: () => void
 
 import { useState, useRef } from 'react';
+import { ThemeIcon } from './../Icons/ThemeIcons';
 
 const THEME_MAP = {
-    dating: { icon: '♥', color: '#f472b6', dark: '#831843', grad: '#be185d', label: 'Dinâmicas' },
-    office: { icon: '⚡', color: '#a78bfa', dark: '#4c1d95', grad: '#7c3aed', label: 'Escritório' },
-    finance: { icon: '◈', color: '#fbbf24', dark: '#92400e', grad: '#b45309', label: 'Finanças' },
-    negotiation: { icon: '⚖', color: '#34d399', dark: '#065f46', grad: '#059669', label: 'Negociação' },
-    geopolitics: { icon: '✦', color: '#60a5fa', dark: '#1e3a8a', grad: '#2563eb', label: 'Geopolítica' },
-    social: { icon: '◉', color: '#fb923c', dark: '#7c2d12', grad: '#ea580c', label: 'Social' },
-    custom: { icon: '❈', color: '#e879f9', dark: '#701a75', grad: '#a21caf', label: 'Custom' },
+    dating: { color: '#f472b6', dark: '#831843', grad: '#be185d', label: 'Dinâmicas' },
+    office: { color: '#a78bfa', dark: '#4c1d95', grad: '#7c3aed', label: 'Escritório' },
+    finance: { color: '#fbbf24', dark: '#92400e', grad: '#b45309', label: 'Finanças' },
+    negotiation: { color: '#34d399', dark: '#065f46', grad: '#059669', label: 'Negociação' },
+    geopolitics: { color: '#60a5fa', dark: '#1e3a8a', grad: '#2563eb', label: 'Geopolítica' },
+    social: { color: '#fb923c', dark: '#7c2d12', grad: '#ea580c', label: 'Social' },
+    custom: { color: '#e879f9', dark: '#701a75', grad: '#a21caf', label: 'Custom' },
 };
 
 function getTheme(themeValue) {
     const key = Object.keys(THEME_MAP).find(k => themeValue?.toLowerCase().includes(k));
-    return THEME_MAP[key] || THEME_MAP.custom;
+    const t = THEME_MAP[key] || THEME_MAP.custom;
+    return { ...t, type: key || 'custom' };
 }
 
 export default function DomainSVGCard({ domain, stats, onClick }) {
@@ -124,16 +126,9 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
 
                     {/* Large background icon — only without image */}
                     {!domain.image_url && (
-                        <text
-                            x="230" y="105"
-                            fontSize="90"
-                            fontFamily="system-ui, sans-serif"
-                            fill={t.color}
-                            fillOpacity="0.12"
-                            textAnchor="middle"
-                        >
-                            {t.icon}
-                        </text>
+                        <g transform="translate(180, 50)">
+                            <ThemeIcon theme={t.type} width={90} height={90} color={t.color} />
+                        </g>
                     )}
 
                     {/* Theme label chip */}

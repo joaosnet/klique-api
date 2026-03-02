@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { profileAPI } from '../services/api';
+import { IconLogout } from '../components/Icons/StatIcons';
 import './ProfilePage.css';
 import './ToggleTheme.css';
 
@@ -244,11 +245,7 @@ export default function ProfilePage() {
                     onClick={handleLogout}
                     className="w-full flex items-center justify-center space-x-2 p-4 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-colors font-medium text-lg mt-8"
                 >
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
+                    <IconLogout width={20} height={20} />
                     <span>Sair da Conta</span>
                 </button>
             </div>

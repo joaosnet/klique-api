@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import EntityCard from './EntityCard';
+import { IconClose, IconPhoto, IconStrategy } from '../Icons/ActionIcons';
 
 const STRATEGY_OPTIONS = [
   { value: 'cooperate', label: 'Cooperador', desc: 'Colabora; retalia se traído' },
-  { value: 'defect',    label: 'Explorador', desc: 'Maximiza ganho individual' },
-  { value: 'withdraw',  label: 'Isolado',    desc: 'Evita interações; neutro' },
+  { value: 'defect', label: 'Explorador', desc: 'Maximiza ganho individual' },
+  { value: 'withdraw', label: 'Isolado', desc: 'Evita interações; neutro' },
 ];
 
 const DEFAULT_ENTITY = { name: '', power: 3, resources: 3, influence: 3, strategy: 'cooperate', image: null };
@@ -41,14 +42,12 @@ export default function EntityEditor({ onSave, onClose, initial }) {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4"
-             style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           <h2 className="font-title text-lg tracking-widest text-white">
             {initial ? 'EDITAR ENTIDADE' : 'NOVA ENTIDADE'}
           </h2>
           <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <IconClose width={20} height={20} />
           </button>
         </div>
 
@@ -80,8 +79,8 @@ export default function EntityEditor({ onSave, onClose, initial }) {
             >
               <input type="file" accept="image/*" onChange={handlePhoto} />
               {!form.image && (
-                <div className="text-center pointer-events-none">
-                  <div className="text-xl mb-1">📸</div>
+                <div className="text-center pointer-events-none flex flex-col items-center justify-center">
+                  <IconPhoto width={32} height={32} className="mb-2" />
                   <p className="text-xs text-gray-500">Clique para adicionar</p>
                 </div>
               )}
@@ -105,13 +104,14 @@ export default function EntityEditor({ onSave, onClose, initial }) {
                   key={value}
                   type="button"
                   onClick={() => set('strategy', value)}
-                  className="py-2 rounded-lg text-xs font-semibold transition-all"
+                  className="py-2.5 flex flex-col items-center justify-center rounded-lg text-xs font-semibold transition-all gap-1"
                   style={
                     form.strategy === value
                       ? { background: 'rgba(168,85,247,0.25)', border: '1px solid #a855f7', color: '#e9d5ff' }
                       : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#9ca3af' }
                   }
                 >
+                  <IconStrategy type={value} width={20} height={20} className={form.strategy !== value ? 'opacity-50 grayscale' : ''} />
                   {label}
                 </button>
               ))}
@@ -120,8 +120,8 @@ export default function EntityEditor({ onSave, onClose, initial }) {
 
           {/* Sliders */}
           {[
-            { field: 'power',     label: 'Poder',      color: '#ef4444' },
-            { field: 'resources', label: 'Recursos',   color: '#f59e0b' },
+            { field: 'power', label: 'Poder', color: '#ef4444' },
+            { field: 'resources', label: 'Recursos', color: '#f59e0b' },
             { field: 'influence', label: 'Influência', color: '#a855f7' },
           ].map(({ field, label, color }) => (
             <div key={field}>

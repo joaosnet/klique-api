@@ -1,5 +1,5 @@
-// GameTheoryCard — physical trading card design for Game Theory scenarios
 import { useRef, useState } from 'react';
+import { CustomSymbolTemplate } from '../Icons/ThemeIcons';
 // Props:
 //   card: { template_type, probability_heat_score, scenario_context, question,
 //            predicted_outcome, game_theory_explanation }
@@ -188,8 +188,8 @@ export default function GameTheoryCard({
     ? <div className="w-full h-full absolute inset-0 z-0" dangerouslySetInnerHTML={{ __html: customSvg }} style={{ background: '#000' }} />
     : card.media_urls && card.media_urls[0]
       ? <img src={`${import.meta.env.VITE_API_URL || ''}${card.media_urls[0]}`} className="w-full h-full object-cover absolute inset-0 z-0 opacity-90" />
-      : <div className="w-full h-full absolute inset-0 z-0" style={{ background: `linear-gradient(135deg, ${tmpl.darkColor}, ${tmpl.color})` }}>
-        <div className="absolute inset-0 flex items-center justify-center opacity-30 text-8xl">{tmpl.symbol}</div>
+      : <div className="w-full h-full absolute inset-0 z-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${tmpl.darkColor}, ${tmpl.color})` }}>
+        <CustomSymbolTemplate type={card.template_type} width={120} height={120} color={tmpl.accentColor} opacity={0.3} />
       </div>;
 
   const renderActionButtons = () => {
@@ -266,7 +266,9 @@ export default function GameTheoryCard({
             <div className="absolute top-0 left-0 w-12 h-32 z-10 drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)]">
               <svg viewBox="0 0 40 105" className="w-full h-full">
                 <polygon points="0,0 40,0 40,90 20,105 0,90" fill={tmpl.color} />
-                <text x="20" y="25" fill="white" fontSize="18" textAnchor="middle" fontFamily="system-ui, sans-serif">{tmpl.symbol}</text>
+                <g transform="translate(10, 10)">
+                  <CustomSymbolTemplate type={card.template_type} width={20} height={20} color="#fff" />
+                </g>
                 <text x="20" y="60" fontFamily="'Anton', sans-serif" fontSize="28" fill="white" textAnchor="middle">{heat}</text>
                 <text x="20" y="75" fontFamily="Courier New, monospace" fontSize="8" fill="rgba(255,255,255,0.8)" textAnchor="middle" fontWeight="bold">HEAT</text>
               </svg>
@@ -310,11 +312,11 @@ export default function GameTheoryCard({
           {/* Small Top Header for Back Face */}
           <div className="w-full relative overflow-hidden flex-shrink-0" style={{ height: '22%', background: `linear-gradient(135deg, ${tmpl.darkColor} 0%, #050505 100%)`, borderBottom: `2px solid ${tmpl.color}66` }}>
             {/* Background Symbol */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-10" style={{ fontSize: '100px', transform: 'translateY(10px)' }}>
-              {tmpl.symbol}
+            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+              <CustomSymbolTemplate type={card.template_type} width={100} height={100} color={tmpl.accentColor} />
             </div>
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
-              <span style={{ color: tmpl.accentColor, fontSize: 16, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{tmpl.symbol}</span>
+              <CustomSymbolTemplate type={card.template_type} width={24} height={24} color={tmpl.accentColor} style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
               <h2 className="font-title text-xl tracking-widest text-white uppercase mt-1" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>O Oráculo</h2>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontFamily: '"Courier New", monospace', marginTop: 2 }}>
                 {tmpl.shortLabel}
