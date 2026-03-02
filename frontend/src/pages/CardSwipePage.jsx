@@ -5,6 +5,7 @@ import GameTheoryCard from '../components/Cards/GameTheoryCard';
 import CardEditModal from '../components/Cards/CardEditModal';
 import { useAuth } from '../context/AuthContext';
 import { DEMO_CARDS, DEMO_DOMAINS } from '../utils/demoData';
+import { IconDeckCard, IconDelete, IconEditPen, IconSparkBoost } from '../components/Icons/ActionIcons';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -246,7 +247,7 @@ export default function CardSwipePage() {
     return (
       <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ maxWidth: 400, width: '100%', textAlign: 'center', background: 'var(--bg-card)', padding: '2rem', borderRadius: 16, border: '1px solid var(--border-color)' }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🎴</div>
+          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><IconDeckCard width={56} height={56} /></div>
           <h2 style={{ color: 'var(--text-highlight)', fontSize: 22, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>Demo Concluída</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.7, marginBottom: 28 }}>
             Treinaste com cenários de Teoria dos Jogos. Com a tua conta podes gerar cards ilimitados para qualquer domínio da tua vida.
@@ -303,7 +304,7 @@ export default function CardSwipePage() {
                 disabled={generating}
                 style={{ width: '100%', padding: '16px 0', borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 800, letterSpacing: 1, cursor: generating ? 'default' : 'pointer', textTransform: 'uppercase', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', transition: 'transform 0.2s', transform: generating ? 'scale(0.98)' : 'scale(1)' }}
               >
-                Criar Carta Manualmente ✍️
+                Criar Carta Manualmente
               </button>
             </div>
 
@@ -314,7 +315,7 @@ export default function CardSwipePage() {
                 style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', color: 'var(--text-highlight)', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>✨</span>
+                  <IconSparkBoost width={16} height={16} />
                   <span>Usar o Oráculo (Inteligência Artificial)</span>
                 </div>
                 <span style={{ transform: showAITools ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>▼</span>
@@ -341,7 +342,7 @@ export default function CardSwipePage() {
                 {/* Custom SVG Background Generator */}
                 {isAuthenticated && (
                   <div style={{ marginBottom: '1.25rem', padding: '12px', background: 'var(--bg-card-inner)', borderRadius: 8, border: '1px dashed var(--accent)' }}>
-                    <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-highlight)', fontWeight: 600 }}>🌟 Criar Modelo de Carta Visual</p>
+                    <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-highlight)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><IconSparkBoost width={14} height={14} /> Criar Modelo de Carta Visual</p>
                     <p style={{ margin: '0 0 10px 0', fontSize: 11, color: 'var(--text-muted)' }}>Muda o design de fundo enviando uma imagem de referência.</p>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                       <button
@@ -387,7 +388,7 @@ export default function CardSwipePage() {
                   disabled={generating}
                   style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--accent)', background: generating ? 'var(--bg-card-inner)' : 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, letterSpacing: 1, cursor: generating ? 'default' : 'pointer', textTransform: 'uppercase', transition: 'background 0.2s' }}
                 >
-                  {generating ? (progress ? `${progress.message} (${progress.percent}%)` : 'A Gerar...') : 'Gerar Novo Cenário com IA ✨'}
+                  {generating ? (progress ? `${progress.message} (${progress.percent}%)` : 'A Gerar...') : 'Gerar Novo Cenário com IA'}
                 </button>
 
                 {error && (
@@ -416,7 +417,9 @@ export default function CardSwipePage() {
                       onClick={() => handleEditCard(card, null)}
                       style={{ background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', borderRadius: 6, padding: '6px 14px', fontSize: 11, cursor: 'pointer', letterSpacing: 1, fontWeight: 600 }}
                     >
-                      ✏ Editar Cena
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <IconEditPen width={14} height={14} /> Editar Cena
+                      </span>
                     </button>
                   </div>
                 )}
@@ -439,7 +442,7 @@ export default function CardSwipePage() {
 
             {!card && !generating && (
               <div style={{ textAlign: 'center', marginTop: 60, color: 'var(--text-muted)' }}>
-                <p style={{ fontSize: 48, marginBottom: 16, opacity: 0.5 }}>🃏</p>
+                <p style={{ marginBottom: 16, opacity: 0.75, display: 'flex', justifyContent: 'center' }}><IconDeckCard width={44} height={44} /></p>
                 <p style={{ fontSize: 14 }}>Cria as tuas próprias cartas ou usa o Oráculo.</p>
               </div>
             )}
@@ -460,14 +463,14 @@ export default function CardSwipePage() {
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
                   >
                     <span>Gerar Oráculo AI</span>
-                    <span style={{ fontSize: 16 }}>✨</span>
+                    <IconSparkBoost width={16} height={16} />
                   </button>
                   <button
                     onClick={() => { setShowFabMenu(false); handleCreateManual(); }}
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
                   >
                     <span>Criar Manualmente</span>
-                    <span style={{ fontSize: 16 }}>✍️</span>
+                    <IconEditPen width={16} height={16} />
                   </button>
                 </div>
               )}
@@ -525,7 +528,7 @@ export default function CardSwipePage() {
                                   marginBottom: 8
                                 }}
                               >
-                                ✏ Editar Carta
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconEditPen width={15} height={15} /> Editar Carta</span>
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); document.body.click(); handleDeleteCard(c.id); }}
@@ -535,7 +538,7 @@ export default function CardSwipePage() {
                                   fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1
                                 }}
                               >
-                                🗑 Apagar Carta
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconDelete width={15} height={15} /> Apagar Carta</span>
                               </button>
                             </>
                           }
@@ -553,7 +556,7 @@ export default function CardSwipePage() {
         {showCTAModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem', backdropFilter: 'blur(4px)' }} onClick={handleModalDismiss}>
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--accent)', borderRadius: 16, padding: '2rem', maxWidth: 380, width: '100%' }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ fontSize: 40, textAlign: 'center', marginBottom: 12 }}>⚡</div>
+              <div style={{ textAlign: 'center', marginBottom: 12, display: 'flex', justifyContent: 'center' }}><IconSparkBoost width={40} height={40} /></div>
               <h2 style={{ color: 'var(--text-highlight)', fontSize: 20, fontWeight: 800, textAlign: 'center', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Gostou da análise?</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', lineHeight: 1.7, marginBottom: 24 }}>
                 Cria a tua conta gratuita para salvar este card no teu deck, treinar com repetição espaçada e gerar cenários personalizados para qualquer domínio.

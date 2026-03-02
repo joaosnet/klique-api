@@ -7,6 +7,7 @@ import DomainSVGCard from '../components/Cards/DomainSVGCard';
 import DomainEditModal from '../components/Domains/DomainEditModal';
 import { getErrorMessage } from '../utils/errorHandler';
 import GamifiedLoader from '../components/Layout/GamifiedLoader';
+import { IconDelete, IconEditPen, IconSparkBoost } from '../components/Icons/ActionIcons';
 
 const THEMES = [
   { value: 'dating', label: 'Dinâmicas de Encontros' },
@@ -177,7 +178,7 @@ export default function DomainsPage() {
           <GamifiedLoader label="A carregar domínios..." />
         ) : domains.length === 0 ? (
           <div style={{ textAlign: 'center', marginTop: 80 }}>
-            <p style={{ color: 'var(--text-muted)', fontSize: 48, marginBottom: 16 }}>⚡</p>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}><IconSparkBoost width={48} height={48} /></div>
             <p style={{ color: 'var(--text-muted)', fontSize: 16, marginBottom: 8 }}>Nenhum domínio criado ainda.</p>
             <p style={{ color: 'var(--border-color)', fontSize: 13 }}>Cria o teu primeiro domínio para começar a treinar.</p>
           </div>
@@ -198,14 +199,14 @@ export default function DomainsPage() {
                       title="Editar domínio"
                       style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.6)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, backdropFilter: 'blur(4px)' }}
                     >
-                      ✏
+                      <IconEditPen width={14} height={14} />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDelete(domain.id); }}
                       title="Apagar domínio"
                       style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.6)', border: '1px solid #ef444433', color: '#ef4444', cursor: 'pointer', fontSize: 13, backdropFilter: 'blur(4px)' }}
                     >
-                      🗑
+                      <IconDelete width={14} height={14} />
                     </button>
                   </div>
                 )}

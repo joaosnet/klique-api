@@ -75,8 +75,8 @@ from .schemas import (
 
 router = APIRouter()
 
-RP_ID = 'klique.app'  # domain
-RP_NAME = 'Klique'
+RP_ID = 'omniflash.app'  # domain
+RP_NAME = 'OmniFlash'
 
 
 @router.post('/auth/google', response_model=Token, tags=['auth'])
@@ -214,7 +214,7 @@ async def request_otp(request: OTPRequest, db_otp=Depends(get_otp_collection)):
         ws = WhatsAppService()
         await ws.send_message(
             f'{phone}@s.whatsapp.net',
-            f'Seu código de acesso Klique é: {code}',
+            f'Seu código de acesso OmniFlash é: {code}',
         )
         await ws.close()
     else:
@@ -305,11 +305,11 @@ async def request_magic_link(
         upsert=True,
     )
 
-    magic_url = f'https://klique.app/auth/verify?token={token}'
+    magic_url = f'https://omniflash.app/auth/verify?token={token}'
 
     await _send_email(
         email,
-        'Seu link de acesso Klique',
+        'Seu link de acesso OmniFlash',
         f'Clique aqui para entrar: {magic_url}',
     )
 
@@ -841,7 +841,7 @@ async def _send_email(to_email: str, subject: str, body: str):
     password = GMAIL_PASSWORD
 
     message = MIMEMultipart()
-    message['From'] = f'KliqueApp <{sender_email}>'
+    message['From'] = f'OmniFlash <{sender_email}>'
     message['To'] = to_email
     message['Subject'] = subject
     message.attach(MIMEText(body, 'plain', 'utf-8'))
@@ -860,7 +860,7 @@ async def _send_email(to_email: str, subject: str, body: str):
 async def send_alert_to_old_mail(
     old_email: str, user_name: str, new_email: str
 ):
-    subject = 'E-mail alterado | Klique'
+    subject = 'E-mail alterado | OmniFlash'
     body = f"""Olá, {user_name}! Sua conta teve o endereço de e-mail
     alterado, para entrar você deve utilizar o novo endereço {new_email}.
     Caso você não tenha alterado o e-mail entre em contato conosco."""
@@ -868,7 +868,7 @@ async def send_alert_to_old_mail(
 
 
 async def send_alert_to_google(email: str, user_name: str):
-    subject = 'Senha alterada | Klique'
+    subject = 'Senha alterada | OmniFlash'
     body = f"""Olá, {user_name}! Sua senha foi alterada com sucesso.
     Caso você não tenha alterado a senha, entre em contato conosco."""
     return await _send_email(email, subject, body)

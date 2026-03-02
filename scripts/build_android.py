@@ -4,6 +4,7 @@ Este script usa **rich** para saídas coloridas e painéis, tornando a
 execução mais agradável no terminal.
 """
 
+import os
 import re
 import shutil
 import subprocess
@@ -61,11 +62,60 @@ def print_header() -> None:
 
 
 def ensure_npm_dependencies() -> None:
-    run('npm install --legacy-peer-deps')
+    run('npm install')
+
+
+def _load_domain() -> str | None:
+    """Read DOMAIN from the root .env file."""
+    env_path = Path(__file__).parent.parent / '.env'
+    if not env_path.exists():
+        return None
+    for line in env_path.read_text(encoding='utf-8').splitlines():
+        line = line.strip()
+        if line.startswith('#') or '=' not in line:
+            continue
+        key, _, value = line.partition('=')
+        if key.strip() == 'DOMAIN':
+            return value.strip()
+    return None
 
 
 def build_frontend() -> None:
+    domain = _load_domain()
+    if domain:
+        api_url = f'https://{domain}'
+        console.print(
+            f'[cyan]Setting VITE_API_URL={api_url} for Android build[/cyan]'
+        )
+        os.environ['VITE_API_URL'] = api_url
+    else:
+        console.print(
+            '[yellow]Warning: DOMAIN not found in .env '
+            '— VITE_API_URL will be empty[/yellow]'
+        )
     run('npm run build')
+
+
+def remove_precompressed_dist_assets() -> None:
+    """Remove .gz/.br artifacts before `npx cap sync android`.
+
+    Android's asset merger can treat precompressed files as duplicates of
+    their original assets (e.g. `main.js` vs `main.js.gz`).
+    """
+    dist_dir = FRONTEND_DIR / 'dist'
+    if not dist_dir.exists():
+        return
+    removed = 0
+    for pattern in ('**/*.gz', '**/*.br'):
+        for file_path in dist_dir.glob(pattern):
+            if file_path.is_file():
+                file_path.unlink(missing_ok=True)
+                removed += 1
+    if removed:
+        console.print(
+            f'[cyan]Removed {removed} precompressed dist assets '
+            '(.gz/.br) before Android sync.[/cyan]'
+        )
 
 
 def add_android_platform_if_missing(android_dir: Path) -> None:
@@ -78,7 +128,7 @@ def add_android_platform_if_missing(android_dir: Path) -> None:
 
 
 def install_typescript_optional() -> None:
-    run('npm install --legacy-peer-deps typescript', check=False)
+    run('npm install typescript', check=False)
 
 
 def sync_android() -> None:
@@ -356,6 +406,7 @@ def main() -> None:
 
     ensure_npm_dependencies()
     build_frontend()
+    remove_precompressed_dist_assets()
     add_android_platform_if_missing(android_dir)
     install_typescript_optional()
     sync_android()

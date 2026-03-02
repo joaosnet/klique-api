@@ -1,4 +1,4 @@
-# Klique API
+# OmniFlash API
 
 Plataforma fullstack para geração de avatares com IA. O produto principal é o **fotodenatal.me** — um gerador de avatares natalinos que transforma fotos de usuários em personagens de Natal usando Google Gemini. O projeto também inclui um agente de IA via WhatsApp para automação de redes sociais.
 
@@ -11,7 +11,7 @@ Plataforma fullstack para geração de avatares com IA. O produto principal é o
 
 ## O que é este projeto
 
-O Klique API é composto por três partes:
+O OmniFlash API é composto por três partes:
 
 1. **Backend (FastAPI)** — API REST em Python que orquestra geração de imagens, autenticação, pagamentos e o agente de IA.
 2. **Frontend (React)** — SPA servida via Nginx com as páginas de landing, login, gerador de avatares, mural e painel do usuário.
@@ -165,7 +165,7 @@ GOOGLE_CLIENT_ID=
 # MongoDB
 DB_HOST=localhost
 DB_PORT=27017
-DB_DATABASE=klique
+DB_DATABASE=omniflash
 DB_USERNAME=root
 DB_PASSWORD=password
 
@@ -217,8 +217,7 @@ da task do Taskipy:
 # muda).  o dispositivo precisa estar conectado via USB ou na mesma
 # rede e com depuração remota ativada.
 #
-# o script utiliza `npm install --legacy-peer-deps` para evitar a
-# falha de dependências conflitantes que aparece com o plugin PWA.
+# o script utiliza `npm install` com resolução padrão de dependências.
 task android-hot
 ```
 

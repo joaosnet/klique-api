@@ -2,7 +2,7 @@
 
 ## 📊 Resumo da Implementação
 
-Este documento descreve o sistema de agendamento automático de postagens nas redes sociais implementado na Klique API, baseado em pesquisas sobre os melhores horários de engajamento em 2025.
+Este documento descreve o sistema de agendamento automático de postagens nas redes sociais implementado na OmniFlash API, baseado em pesquisas sobre os melhores horários de engajamento em 2025.
 
 ## 🎯 Plataformas Configuradas
 
@@ -749,4 +749,4 @@ def _load_conditional_prompt(base_filename: str) -> str:
 ---
 
 **Última atualização:** 19 de outubro de 2025  
-**Mantido por:** Klique API Team
+**Mantido por:** OmniFlash Team

@@ -25,7 +25,7 @@ async def create_admin_interactive():
     console.clear()
     console.print(
         Panel(
-            Text('Gerador de Administrador Klique AI', style='bold white'),
+            Text('Gerador de Administrador OmniFlash', style='bold white'),
             subtitle='✨ Configuração Inicial ✨',
             border_style='bright_blue',
         )

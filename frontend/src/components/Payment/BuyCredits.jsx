@@ -3,6 +3,13 @@ import { useAuth } from '../../context/AuthContext';
 import { paymentsAPI } from '../../services/api';
 import './BuyCredits.css';
 import { getErrorMessage } from '../../utils/errorHandler';
+import {
+    IconCheckShield,
+    IconCopyRunes,
+    IconGiftQuest,
+    IconPixPortal,
+    IconSparkBoost,
+} from '../Icons/ActionIcons';
 
 export default function BuyCredits() {
     const [unitPrice, setUnitPrice] = useState(1.00);
@@ -111,7 +118,7 @@ export default function BuyCredits() {
         <div className="buy-credits-container">
             <div className="buy-credits-card">
                 <div className="card-header">
-                    <span className="card-icon">🎫</span>
+                    <IconGiftQuest className="card-icon" width={56} height={56} />
                     <h2>Comprar Créditos</h2>
                     <p>Defina o valor e a quantidade de créditos</p>
                 </div>
@@ -174,7 +181,7 @@ export default function BuyCredits() {
                         </div>
 
                         <div className="credits-preview">
-                            <span className="preview-icon">✨</span>
+                            <IconSparkBoost className="preview-icon" width={22} height={22} />
                             <span className="preview-text">
                                 Você receberá <strong>{quantity} créditos</strong>
                             </span>
@@ -192,7 +199,7 @@ export default function BuyCredits() {
                                 </>
                             ) : (
                                 <>
-                                    <span>📱</span>
+                                    <IconPixPortal className="btn-icon" width={20} height={20} />
                                     Gerar QR Code PIX
                                 </>
                             )}
@@ -201,7 +208,7 @@ export default function BuyCredits() {
                 ) : (
                     <div className="pix-payment">
                         <div className="pix-header">
-                            <span className="pix-icon">✅</span>
+                            <IconCheckShield className="pix-icon" width={48} height={48} />
                             <h3>PIX Gerado!</h3>
                             <p>Escaneie o QR Code ou copie o código</p>
                         </div>
@@ -215,7 +222,7 @@ export default function BuyCredits() {
                                 />
                             ) : (
                                 <div className="qr-placeholder">
-                                    <span>📱</span>
+                                    <IconPixPortal className="qr-placeholder-icon" width={44} height={44} />
                                     <p>QR Code não disponível</p>
                                 </div>
                             )}
@@ -233,7 +240,7 @@ export default function BuyCredits() {
                         </div>
 
                         <button onClick={handleCopyPix} className="btn-copy-pix">
-                            <span>📋</span>
+                            <IconCopyRunes className="btn-icon" width={18} height={18} />
                             Copiar código PIX
                         </button>
 

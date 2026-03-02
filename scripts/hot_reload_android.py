@@ -20,6 +20,7 @@ The script performs the following steps:
 
 """
 
+import os
 import socket
 import subprocess
 import time
@@ -66,6 +67,28 @@ def run(
     )
 
 
+def remove_precompressed_dist_assets() -> None:
+    """Remove .gz/.br files from dist before Android sync.
+
+    These precompressed files are useful for web serving but can cause
+    duplicate asset merge errors in Android builds.
+    """
+    dist_dir = FRONTEND_DIR / 'dist'
+    if not dist_dir.exists():
+        return
+    removed = 0
+    for pattern in ('**/*.gz', '**/*.br'):
+        for file_path in dist_dir.glob(pattern):
+            if file_path.is_file():
+                file_path.unlink(missing_ok=True)
+                removed += 1
+    if removed:
+        console.print(
+            f'[cyan]Removed {removed} precompressed dist assets '
+            '(.gz/.br) before Android sync.[/cyan]'
+        )
+
+
 def main() -> None:
     console.print(
         Panel(
@@ -76,9 +99,8 @@ def main() -> None:
     )
 
     # 1. install frontend dependencies (ensures capacitor packages exist)
-    # avoid peer-dependency conflicts that show up on some machines by
-    # using the legacy resolver (matches what we use in CI/production).
-    run('npm install --legacy-peer-deps')
+    run('npm install')
+    remove_precompressed_dist_assets()
 
     # make sure the Android platform exists and is synced; mirrors
     # build_android.py so the dev loop doesn't fail on a fresh clone.
@@ -94,10 +116,30 @@ def main() -> None:
     # case the caller hasn't already run `npm install` post‑clone.  A
     # second install is harmless and avoids the same cryptic error we
     # saw during the scripted build.
-    run('npm install --legacy-peer-deps typescript', check=False)
+    run('npm install typescript', check=False)
     run('npx cap sync android')
 
-    # 2. start the Vite dev server in the background
+    # 2. Auto-detect backend URL: if Docker production stack is running,
+    # route API calls through Traefik (https://localhost); otherwise the
+    # Vite proxy will try http://localhost:8000 (local uvicorn).
+    if not os.environ.get('VITE_BACKEND_URL'):
+        try:
+            out = subprocess.check_output(
+                'docker inspect -f "{{.State.Running}}" fastapi-omniflash',
+                shell=True,
+                text=True,
+                stderr=subprocess.DEVNULL,
+            ).strip()
+            if out == 'true':
+                os.environ['VITE_BACKEND_URL'] = 'https://localhost'
+                console.print(
+                    '[cyan]Docker backend detected → '
+                    'VITE_BACKEND_URL=https://localhost[/cyan]'
+                )
+        except Exception:
+            pass  # Docker not available or container not running
+
+    # Start the Vite dev server in the background
     dev_proc = subprocess.Popen(
         'npm run dev',
         cwd=FRONTEND_DIR,
@@ -145,7 +187,10 @@ def main() -> None:
                 f'[cyan]Using adb device {target} (auto-selected)[/cyan]'
             )
             cmd += f' --target={target}'
-        run(cmd)
+        try:
+            run(cmd)
+        except KeyboardInterrupt:
+            console.print('[yellow]Hot-reload interrupted by user.[/yellow]')
     finally:
         # kill the dev process when the user quits the Android run
         console.print('\n[+] stopping dev server')

@@ -149,7 +149,7 @@
 }
 
 .upload-icon {
-    font-size: 4rem;
+    display: inline-flex;
     margin-bottom: var(--spacing-sm);
     animation: bounce 2s ease-in-out infinite;
 }
@@ -230,7 +230,7 @@
 }
 
 .capture-icon {
-    font-size: 1.2rem;
+    display: inline-flex;
 }
 
 .upload-actions {
@@ -242,6 +242,9 @@
 }
 
 .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: rgba(0, 0, 0, 0.05);
     color: var(--text-secondary);
     border: 1px solid rgba(0, 0, 0, 0.1);
@@ -295,8 +298,8 @@
 }
 
 .processing-icon {
-    font-size: 3.5rem;
     display: block;
+    margin-inline: auto;
     margin-bottom: var(--spacing-md);
     animation: pulse 1.5s ease-in-out infinite;
     text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
@@ -429,7 +432,7 @@
 }
 
 .btn-action .icon {
-    font-size: 1.25rem;
+    display: inline-flex;
 }
 
 /* Specific Button Styles */

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errorHandler';
+import { IconCameraShot, IconSparkBoost } from '../components/Icons/ActionIcons';
 
 // ── Step 1: Basic Data ───────────────────────────────────────────────────────
 function StepBasicData({ data, onChange, onNext }) {
@@ -62,8 +63,9 @@ function StepBasicData({ data, onChange, onNext }) {
   };
 
   const inputStyle = {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'var(--bg-card-inner)',
+    border: '1px solid var(--border-color)',
+    color: 'var(--text-main)',
   };
 
   return (
@@ -73,16 +75,24 @@ function StepBasicData({ data, onChange, onNext }) {
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:bg-white/5"
-          style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+          className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all"
+          style={{
+            color: 'var(--text-main)',
+            border: '1px solid var(--border-color)',
+            background: 'transparent',
+          }}
         >
           <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
           Google
         </button>
         <button
           type="button"
-          className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-white transition-all hover:bg-white/5"
-          style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+          className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all"
+          style={{
+            color: 'var(--text-main)',
+            border: '1px solid var(--border-color)',
+            background: 'transparent',
+          }}
         >
           <span className="text-lg"></span>
           Apple
@@ -90,14 +100,14 @@ function StepBasicData({ data, onChange, onNext }) {
       </div>
 
       <div className="relative">
-        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-        <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#15121f] px-2 text-gray-500 tracking-tighter">ou use seu email</span></div>
+        <div className="absolute inset-0 flex items-center"><div className="w-full border-t" style={{ borderColor: 'var(--border-color)' }}></div></div>
+        <div className="relative flex justify-center text-xs uppercase"><span className="px-2 tracking-tighter" style={{ background: 'var(--bg-card)', color: 'var(--text-muted)' }}>ou use seu email</span></div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {['name', 'email'].map((field) => (
           <div key={field}>
-            <label className="block text-[10px] uppercase tracking-widest text-gray-400 mb-1.5 ml-1">
+            <label className="block text-[10px] uppercase tracking-widest mb-1.5 ml-1" style={{ color: 'var(--text-muted)' }}>
               {field === 'name' ? 'Nome' : 'Email'}
             </label>
             <input
@@ -106,7 +116,7 @@ function StepBasicData({ data, onChange, onNext }) {
               onChange={(e) => onChange(field, e.target.value)}
               placeholder={field === 'email' ? 'seu@email.com' : 'Seu nome'}
               required
-              className="w-full rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-600 outline-none focus:ring-1 ring-purple-500"
+              className="w-full rounded-lg px-4 py-3 text-sm placeholder-gray-500 outline-none focus:ring-1 ring-purple-500"
               style={inputStyle}
             />
           </div>
@@ -114,14 +124,14 @@ function StepBasicData({ data, onChange, onNext }) {
 
         {!usePasskey && (
           <div>
-            <label className="block text-[10px] uppercase tracking-widest text-gray-400 mb-1.5 ml-1">Senha</label>
+            <label className="block text-[10px] uppercase tracking-widest mb-1.5 ml-1" style={{ color: 'var(--text-muted)' }}>Senha</label>
             <input
               type="password"
               value={data.password}
               onChange={(e) => onChange('password', e.target.value)}
               placeholder="Mínimo 6 caracteres"
               required={!usePasskey}
-              className="w-full rounded-lg px-4 py-3 text-sm text-gray-100 placeholder-gray-600 outline-none focus:ring-1 ring-purple-500"
+              className="w-full rounded-lg px-4 py-3 text-sm placeholder-gray-500 outline-none focus:ring-1 ring-purple-500"
               style={inputStyle}
             />
           </div>
@@ -199,9 +209,9 @@ function StepPrisonersDilemma({ onNext }) {
 
   return (
     <div>
-      <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+      <p className="text-sm mb-6 leading-relaxed" style={{ color: 'var(--text-muted)' }}>
         Você e um estranho estão presos. Cada um decide{' '}
-        <strong className="text-white">sem saber a escolha do outro</strong>.
+        <strong style={{ color: 'var(--text-main)' }}>sem saber a escolha do outro</strong>.
       </p>
 
       {!revealed ? (
@@ -218,7 +228,7 @@ function StepPrisonersDilemma({ onNext }) {
               style={{ border: `1px solid ${color}40`, background: `${color}10` }}
             >
               <div className="font-title tracking-widest text-sm" style={{ color }}>{label}</div>
-              <div className="text-xs text-gray-400 mt-1">{desc}</div>
+              <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{desc}</div>
             </button>
           ))}
         </div>
@@ -227,30 +237,32 @@ function StepPrisonersDilemma({ onNext }) {
           <div className="rounded-xl p-5" style={{ border: `1px solid ${outcome.color}40`, background: `${outcome.color}10` }}>
             <div className="flex justify-between items-center mb-3">
               <div className="text-center">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">Você</div>
+                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>Você</div>
                 <div className="font-title text-sm" style={{ color: outcome.color }}>
                   {chosen === 'cooperate' ? 'COLABORAR' : chosen === 'defect' ? 'EXPLORAR' : 'ISOLAR'}
                 </div>
-                <div className="font-title text-3xl text-white mt-1">{outcome.you}</div>
+                <div className="font-title text-3xl mt-1" style={{ color: 'var(--text-main)' }}>{outcome.you}</div>
               </div>
-              <div className="font-title text-2xl text-gray-600">VS</div>
+              <div className="font-title text-2xl" style={{ color: 'var(--text-muted)' }}>VS</div>
               <div className="text-center">
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">CPU</div>
-                <div className="font-title text-sm text-gray-300">
+                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>CPU</div>
+                <div className="font-title text-sm" style={{ color: 'var(--text-main)' }}>
                   {cpuChoice === 'cooperate' ? 'COLABORAR' : 'EXPLORAR'}
                 </div>
-                <div className="font-title text-3xl text-white mt-1">{outcome.other}</div>
+                <div className="font-title text-3xl mt-1" style={{ color: 'var(--text-main)' }}>{outcome.other}</div>
               </div>
             </div>
             <div className="border-t pt-3" style={{ borderColor: `${outcome.color}30` }}>
               <div className="font-semibold text-sm mb-1" style={{ color: outcome.color }}>{outcome.label}</div>
-              <p className="text-xs text-gray-400 leading-relaxed">{outcome.desc}</p>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>{outcome.desc}</p>
             </div>
           </div>
-          <div className="rounded-lg p-4 text-xs text-gray-400"
+          <div className="rounded-lg p-4 text-xs"
             style={{ background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)' }}>
             <span className="text-purple-300 font-semibold">Nash Equilibrium:</span>{' '}
+            <span style={{ color: 'var(--text-muted)' }}>
             Quando ambos exploram — ninguém tem incentivo de mudar sozinho, mesmo que cooperar fosse melhor para todos.
+            </span>
           </div>
           <button
             onClick={onNext}
@@ -290,7 +302,7 @@ function StepBattleCardCreator({ onNext }) {
   return (
     <div className="space-y-5">
       <div>
-        <label className="block text-xs uppercase tracking-widest text-gray-400 mb-2">
+        <label className="block text-xs uppercase tracking-widest mb-2" style={{ color: 'var(--text-muted)' }}>
           Foto (opcional)
         </label>
         <div className="image-upload-wrapper"
@@ -298,8 +310,8 @@ function StepBattleCardCreator({ onNext }) {
           <input type="file" accept="image/*" onChange={handlePhoto} />
           {!photoBase64 && (
             <div className="text-center pointer-events-none">
-              <div className="text-2xl mb-1">📸</div>
-              <p className="text-xs text-gray-500">Clique para adicionar foto</p>
+              <div className="text-2xl mb-1" style={{ display: 'flex', justifyContent: 'center' }}><IconCameraShot width={24} height={24} /></div>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Clique para adicionar foto</p>
             </div>
           )}
         </div>
@@ -307,7 +319,7 @@ function StepBattleCardCreator({ onNext }) {
 
       {AI_QUESTIONS.map((q) => (
         <div key={q.id}>
-          <p className="text-sm text-gray-300 mb-2">{q.q}</p>
+          <p className="text-sm mb-2" style={{ color: 'var(--text-main)' }}>{q.q}</p>
           <div className="flex flex-col gap-2">
             {q.opts.map((opt) => (
               <button
@@ -318,7 +330,7 @@ function StepBattleCardCreator({ onNext }) {
                 style={
                   answers[q.id] === opt
                     ? { background: 'rgba(168,85,247,0.2)', border: '1px solid #a855f7', color: '#e9d5ff' }
-                    : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#9ca3af' }
+                    : { background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }
                 }
               >
                 {opt}
@@ -353,7 +365,7 @@ function StepFinalCard({ name, cardData, onFinish }) {
 
   return (
     <div className="flex flex-col items-center gap-6">
-      <p className="text-gray-400 text-sm text-center">
+      <p className="text-sm text-center" style={{ color: 'var(--text-muted)' }}>
         Seu Card de Batalha foi criado. Ele aparecerá automaticamente no Simulador.
       </p>
 
@@ -365,7 +377,7 @@ function StepFinalCard({ name, cardData, onFinish }) {
             ) : (
               <div className="w-full h-full flex items-center justify-center"
                 style={{ background: 'linear-gradient(135deg, #1a0a2e, #4c1d95)' }}>
-                <span className="text-5xl">⚡</span>
+                <IconSparkBoost width={44} height={44} />
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
@@ -388,17 +400,17 @@ function StepFinalCard({ name, cardData, onFinish }) {
       </div>
 
       <div className="w-full rounded-xl p-5 space-y-3"
-        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(168,85,247,0.15)' }}>
-        <h3 className="font-title text-sm tracking-widest text-white">STATS INICIAIS</h3>
+        style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+        <h3 className="font-title text-sm tracking-widest" style={{ color: 'var(--text-main)' }}>STATS INICIAIS</h3>
         {[
           { label: 'Poder', value: 50, color: '#ef4444' },
           { label: 'Recursos', value: 50, color: '#f59e0b' },
           { label: 'Influência', value: 50, color: '#a855f7' },
         ].map(({ label, value, color }) => (
           <div key={label}>
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
+            <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
               <span className="uppercase tracking-wider">{label}</span>
-              <span className="font-bold text-white">{value}</span>
+              <span className="font-bold" style={{ color: 'var(--text-main)' }}>{value}</span>
             </div>
             <div className="w-full h-1.5 rounded-full bg-gray-800">
               <div className="h-full rounded-full" style={{ width: `${value}%`, background: color }} />
@@ -412,7 +424,7 @@ function StepFinalCard({ name, cardData, onFinish }) {
         className="w-full py-3 rounded-lg font-title tracking-widest text-sm uppercase text-white transition-all hover:scale-105 pulse-glow"
         style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
       >
-        Entrar no Simulador ⚡
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><IconSparkBoost width={16} height={16} /> Entrar no Simulador</span>
       </button>
     </div>
   );
@@ -436,16 +448,16 @@ function StepperHeader({ current }) {
             style={
               current >= s.n
                 ? { background: '#a855f7', color: '#fff' }
-                : { background: 'rgba(255,255,255,0.06)', color: '#6b7280', border: '1px solid rgba(255,255,255,0.1)' }
+                : { background: 'var(--bg-card-inner)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }
             }
           >
             {current > s.n ? '✓' : s.n}
           </div>
-          <span className={`text-xs ml-1 hidden sm:block flex-shrink-0 mr-1 ${current >= s.n ? 'text-gray-300' : 'text-gray-600'}`}>
+          <span className="text-xs ml-1 hidden sm:block flex-shrink-0 mr-1" style={{ color: current >= s.n ? 'var(--text-main)' : 'var(--text-muted)' }}>
             {s.label}
           </span>
           {i < STEPS_META.length - 1 && (
-            <div className="flex-1 h-px mx-2" style={{ background: current > s.n ? '#a855f7' : 'rgba(255,255,255,0.08)' }} />
+            <div className="flex-1 h-px mx-2" style={{ background: current > s.n ? '#a855f7' : 'var(--border-color)' }} />
           )}
         </div>
       ))}
@@ -473,22 +485,30 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="min-h-screen flex items-start justify-center px-4 py-10"
-      style={{ background: 'linear-gradient(135deg, #12121a, #1a0a2e)' }}
+      className="flex items-start justify-center px-4"
+      style={{
+        minHeight: '100dvh',
+        paddingTop: '2.5rem',
+        paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom))',
+        background:
+          'linear-gradient(135deg, var(--bg-app) 0%, var(--bg-card) 45%, color-mix(in srgb, var(--accent-dark) 55%, var(--bg-app) 45%) 100%)',
+        color: 'var(--text-main)',
+        transition: 'background-color 0.3s ease, color 0.3s ease',
+      }}
     >
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <Link to="/" className="font-title text-xl tracking-widest text-purple-400">
-            GAME THEORY
+            OMNIFLASH
           </Link>
         </div>
 
         <div className="rounded-2xl p-6 sm:p-8"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(168,85,247,0.2)' }}>
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
           <StepperHeader current={step} />
 
-          <h1 className="font-title text-2xl tracking-wider text-white mb-1">{title}</h1>
-          <p className="text-gray-500 text-sm mb-6">{sub}</p>
+          <h1 className="font-title text-2xl tracking-wider mb-1" style={{ color: 'var(--text-main)' }}>{title}</h1>
+          <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>{sub}</p>
 
           {step === 1 && <StepBasicData data={formData} onChange={handleChange} onNext={() => setStep(2)} />}
           {step === 2 && <StepPrisonersDilemma onNext={() => setStep(3)} />}
@@ -497,7 +517,7 @@ export default function RegisterPage() {
         </div>
 
         {step === 1 && (
-          <p className="text-center text-sm text-gray-500 mt-4">
+          <p className="text-center text-sm mt-4" style={{ color: 'var(--text-muted)' }}>
             Já tem conta?{' '}
             <Link to="/login" className="text-purple-400 hover:text-purple-300 transition-colors">
               Entrar

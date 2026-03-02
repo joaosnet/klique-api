@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import './PaymentModal.css';
+import { IconGiftQuest, IconShareRocket, IconSparkBoost, IconWatermarkOff } from '../Icons/ActionIcons';
 
 export default function PaymentModal({ isOpen, onClose }) {
     const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function PaymentModal({ isOpen, onClose }) {
                     ✕
                 </button>
 
-                <div className="modal-icon">🎁</div>
+                <IconGiftQuest className="modal-icon" width={64} height={64} />
 
                 <h2 className="modal-title">
                     Desbloqueie sua imagem!
@@ -31,15 +32,15 @@ export default function PaymentModal({ isOpen, onClose }) {
 
                 <div className="modal-benefits">
                     <div className="benefit">
-                        <span className="benefit-icon">✨</span>
+                        <IconSparkBoost className="benefit-icon" width={20} height={20} />
                         <span>Imagem em alta resolução</span>
                     </div>
                     <div className="benefit">
-                        <span className="benefit-icon">🚫</span>
+                        <IconWatermarkOff className="benefit-icon" width={20} height={20} />
                         <span>Sem marca d'água</span>
                     </div>
                     <div className="benefit">
-                        <span className="benefit-icon">📱</span>
+                        <IconShareRocket className="benefit-icon" width={20} height={20} />
                         <span>Compartilhe nas redes</span>
                     </div>
                 </div>

@@ -26,8 +26,10 @@
 }
 
 .login-icon {
-    font-size: 4rem;
+    width: 60px;
+    height: 60px;
     display: block;
+    margin-inline: auto;
     margin-bottom: var(--spacing-sm);
     animation: bounce 2s infinite;
 }

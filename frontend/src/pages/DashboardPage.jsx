@@ -16,6 +16,8 @@ import { Bar, Line } from 'react-chartjs-2';
 import { domainsAPI } from '../services/api';
 import GamifiedLoader from '../components/Layout/GamifiedLoader';
 import { IconLogo, IconTime, IconStudy, IconQuestions, IconTarget, IconProgress, IconLog } from '../components/Icons/StatIcons';
+import { ThemeIcon } from '../components/Icons/ThemeIcons';
+import { IconSparkBoost } from '../components/Icons/ActionIcons';
 
 ChartJS.register(
   CategoryScale,
@@ -44,9 +46,9 @@ const CHART_COLORS = [
   'rgba(255, 87, 34, 0.8)',
 ];
 
-const DOMAIN_ICONS = [
-  '📖', '🔢', '🏦', '💼', '💻', '📈', '🤝', '🇬🇧', '📊',
-  '🎯', '🧠', '⚡', '🎲', '🗂️', '🌐', '🔬',
+const DOMAIN_THEMES = [
+  'office', 'finance', 'negotiation', 'social', 'geopolitics', 'finance', 'social', 'office',
+  'geopolitics', 'negotiation', 'social', 'custom', 'custom', 'office', 'geopolitics', 'finance',
 ];
 
 
@@ -395,7 +397,7 @@ export default function DashboardPage() {
               {/* Charts Section */}
               <div className="dash-charts-grid">
                 <div className="dash-chart-container" style={{ height: 350 }}>
-                  <h3 className="dash-chart-title">📊 Progresso por Domínio</h3>
+                  <h3 className="dash-chart-title"><IconProgress width={18} height={18} /> Progresso por Domínio</h3>
                   <div style={{ height: 250 }}>
                     {domainsLoading ? (
                       <GamifiedLoader label="A carregar domínios..." fullScreen={false} />
@@ -407,7 +409,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="dash-chart-container" style={{ height: 350 }}>
-                  <h3 className="dash-chart-title">📈 Horas de Estudo (Semana)</h3>
+                  <h3 className="dash-chart-title"><IconTime width={18} height={18} /> Horas de Estudo (Semana)</h3>
                   <div style={{ height: 250 }}>
                     <Line data={hoursChartData} options={hoursChartOptions} />
                   </div>
@@ -480,7 +482,7 @@ export default function DashboardPage() {
                 <GamifiedLoader label="A carregar domínios..." fullScreen={false} />
               ) : domains.length === 0 ? (
                 <div style={{ textAlign: 'center', paddingTop: 80 }}>
-                  <p style={{ fontSize: 48, marginBottom: 16 }}>⚡</p>
+                  <IconSparkBoost width={48} height={48} style={{ marginBottom: 16 }} />
                   <p style={{ color: 'var(--dash-text-secondary)', fontSize: 16, marginBottom: 8 }}>Nenhum domínio criado ainda.</p>
                   <p style={{ color: 'var(--dash-text-secondary)', fontSize: 13 }}>Crie domínios na página de Domínios para acompanhar seu progresso aqui.</p>
                 </div>
@@ -489,11 +491,11 @@ export default function DashboardPage() {
                   {domains.map(({ domain }, index) => {
                     const data = studyData[domain.id] || { hours: 0, questions: 0, correct: 0, progress: 0 };
                     const accuracy = data.questions > 0 ? Math.round((data.correct / data.questions) * 100) : 0;
-                    const icon = DOMAIN_ICONS[index % DOMAIN_ICONS.length];
+                    const theme = DOMAIN_THEMES[index % DOMAIN_THEMES.length];
 
                     return (
                       <div className="dash-materia-card" key={domain.id ?? index}>
-                        <div className="dash-materia-icon">{icon}</div>
+                        <div className="dash-materia-icon"><ThemeIcon theme={theme} width={34} height={34} /></div>
                         <h3>{domain.name}</h3>
                         <div className="dash-materia-stats">
                           <div className="dash-materia-stat">

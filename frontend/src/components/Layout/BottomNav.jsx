@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import './BottomNav.css';
 import { useAuth } from '../../context/AuthContext';
-import ThemeSettingsModal from './ThemeSettingsModal';
 import { IconDomains, IconTrain, IconDashboard, IconVisual, IconProfile } from '../Icons/NavIcons';
 
 export default function BottomNav() {
     const { isAuthenticated } = useAuth();
-    const [showThemeModal, setShowThemeModal] = useState(false);
 
     if (!isAuthenticated) return null;
 
@@ -41,10 +39,14 @@ export default function BottomNav() {
                     )}
                 </NavLink>
 
-                <button onClick={() => setShowThemeModal(true)} className={`nav-item ${showThemeModal ? 'active' : ''}`}>
-                    <IconVisual active={showThemeModal} width={24} height={24} />
-                    <span>Visual</span>
-                </button>
+                <NavLink to="/visual" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    {({ isActive }) => (
+                        <>
+                            <IconVisual active={isActive} width={24} height={24} />
+                            <span>Visual</span>
+                        </>
+                    )}
+                </NavLink>
 
                 <NavLink to="/perfil" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     {({ isActive }) => (
@@ -55,7 +57,6 @@ export default function BottomNav() {
                     )}
                 </NavLink>
             </nav>
-            {showThemeModal && <ThemeSettingsModal onClose={() => setShowThemeModal(false)} />}
         </>
     );
 }

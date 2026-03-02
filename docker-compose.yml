@@ -1,31 +1,31 @@
 services:
-  whatsapp:
-    image: aldinokemal2104/go-whatsapp-web-multidevice
-    container_name: whatsapp
-    restart: always
-    ports:
-      - "3000:3000"
-    volumes:
-      - whatsapp:/app/storages
-    command:
-      - rest
-      - --basic-auth=admin:admin
-      - --port=3000
-      - --debug=false
-      - --os=Chrome
-      - --account-validation=false
-      - --webhook=http://fastapi-klique:8000/webhooks/whatsapp
-    networks:
-      - whatsapp-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+  # whatsapp:
+  #   image: aldinokemal2104/go-whatsapp-web-multidevice
+  #   container_name: whatsapp
+  #   restart: always
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - whatsapp:/app/storages
+  #   command:
+  #     - rest
+  #     - --basic-auth=admin:admin
+  #     - --port=3000
+  #     - --debug=false
+  #     - --os=Chrome
+  #     - --account-validation=false
+  #     - --webhook=http://fastapi-omniflash:8000/webhooks/whatsapp
+  #   networks:
+  #     - whatsapp-network
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
 
   mongodb:
     image: mongo:latest
-    container_name: mongodb_kliqueq
+    container_name: mongodb_omniflash
     ports:
       - "27017:27017"
     volumes:
@@ -47,7 +47,7 @@ services:
       start_period: 5s
 
   fastapi-app:
-    container_name: fastapi-klique
+    container_name: fastapi-omniflash
     build: .
     ports:
       - "8000:8000"
@@ -128,7 +128,7 @@ services:
   #   restart: always
 
   frontend:
-    container_name: klique-frontend
+    container_name: omniflash-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
@@ -145,7 +145,7 @@ services:
       # Keep the container's node_modules — don't overwrite with host folder
       - /app/node_modules
     environment:
-      - VITE_BACKEND_URL=http://fastapi-klique:8000
+      - VITE_BACKEND_URL=http://fastapi-omniflash:8000
       - VITE_DOCKER=1
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/" ]

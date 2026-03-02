@@ -3,6 +3,7 @@ import { srsAPI } from '../services/api';
 import GamifiedLoader from '../components/Layout/GamifiedLoader';
 import GameTheoryCard from '../components/Cards/GameTheoryCard';
 import DeckPileDisplay from '../components/Cards/DeckPileDisplay';
+import { IconSparkBoost } from '../components/Icons/ActionIcons';
 
 const RATING_LABELS = [
   { rating: 0, label: 'Sem ideia', color: '#ef4444' },
@@ -71,7 +72,7 @@ export default function TrainingPage() {
   if (done) {
     return (
       <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: '2rem' }}>
-        <div style={{ fontSize: 56, textAlign: 'center' }}>⚡</div>
+        <div style={{ textAlign: 'center' }}><IconSparkBoost width={56} height={56} /></div>
         <h2 style={{ color: '#e9d5ff', fontSize: 22, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
           Treino Concluído
         </h2>

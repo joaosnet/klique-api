@@ -101,7 +101,7 @@ export default function OnboardingTutorial({ onComplete, currentStep = 1 }) {
 
     const handleComplete = () => {
         setIsVisible(false);
-        localStorage.setItem('klique_onboarding_complete', 'true');
+        localStorage.setItem('omniflash_onboarding_complete', 'true');
         onComplete?.();
     };
 
@@ -177,7 +177,7 @@ export function useOnboarding() {
     const [showOnboarding, setShowOnboarding] = useState(false);
 
     useEffect(() => {
-        const completed = localStorage.getItem('klique_onboarding_complete');
+        const completed = localStorage.getItem('omniflash_onboarding_complete');
         if (!completed) {
             setShowOnboarding(true);
         }
@@ -185,11 +185,11 @@ export function useOnboarding() {
 
     const completeOnboarding = () => {
         setShowOnboarding(false);
-        localStorage.setItem('klique_onboarding_complete', 'true');
+        localStorage.setItem('omniflash_onboarding_complete', 'true');
     };
 
     const resetOnboarding = () => {
-        localStorage.removeItem('klique_onboarding_complete');
+        localStorage.removeItem('omniflash_onboarding_complete');
         setShowOnboarding(true);
     };
 

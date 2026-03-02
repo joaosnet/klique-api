@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'favicon.svg', 'robots.txt', 'icons/*.png'],
       manifest: {
-        name: 'Game Theory Platform',
-        short_name: 'GameTheory',
+        name: 'OmniFlash',
+        short_name: 'OmniFlash',
         description: 'Simulador Universal de Teoria dos Jogos',
         theme_color: '#12121a',
         background_color: '#12121a',
@@ -98,11 +98,11 @@ export default defineConfig({
     // clientPort: 80 is only needed inside Docker (nginx proxy). Omit it for native dev.
     ...(process.env.VITE_DOCKER ? { hmr: { clientPort: 80 } } : {}),
     proxy: {
-      '/api': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
-      '/token': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
-      '/auth': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
-      '/users': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
-      '/media': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true },
+      '/api': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true, secure: false },
+      '/token': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true, secure: false },
+      '/auth': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true, secure: false },
+      '/users': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true, secure: false },
+      '/media': { target: process.env.VITE_BACKEND_URL || 'http://localhost:8000', changeOrigin: true, secure: false },
     },
   },
 })

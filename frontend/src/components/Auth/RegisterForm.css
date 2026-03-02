@@ -26,8 +26,10 @@
 }
 
 .register-icon {
-    font-size: 3.5rem;
+    width: 58px;
+    height: 58px;
     display: block;
+    margin-inline: auto;
     margin-bottom: var(--spacing-sm);
     animation: bounce 2s infinite;
 }

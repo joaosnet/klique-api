@@ -1,34 +1,26 @@
-# Build stage
-FROM node:20-alpine AS build
+FROM cgr.dev/chainguard/node:latest-dev AS build
+
+USER root
+RUN mkdir -p /app && chown -R node:node /app
+USER node
 
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY --chown=node:node package*.json ./
 
-# Install dependencies (use --legacy-peer-deps to resolve vite-plugin-pwa conflicts)
-RUN npm install --legacy-peer-deps
+# Install dependencies
+RUN npm install
 
-# Copy source code
-COPY . .
-
-# Build the application
+# Copy source code and build static assets
+COPY --chown=node:node . .
 RUN npm run build
 
-# Production stage - serve with nginx
-FROM nginx:alpine
+# Serve static assets with an unprivileged Nginx runtime
+FROM cgr.dev/chainguard/nginx:latest
 
-# Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copy built assets from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Expose port 80
-EXPOSE 80
-
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 8080
+CMD ["-g", "daemon off;"]

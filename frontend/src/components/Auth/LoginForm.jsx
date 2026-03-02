@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './LoginForm.css';
 import { getErrorMessage } from '../../utils/errorHandler';
+import { IconUserBadge } from '../Icons/ActionIcons';
 
 export default function LoginForm() {
     const [email, setEmail] = useState('');
@@ -34,7 +35,7 @@ export default function LoginForm() {
         <div className="login-container">
             <div className="login-card">
                 <div className="login-header">
-                    <span className="login-icon">🎅</span>
+                    <IconUserBadge className="login-icon" width={60} height={60} />
                     <h1>Bem-vindo de volta!</h1>
                     <p>Entre para criar seus avatares natalinos</p>
                 </div>

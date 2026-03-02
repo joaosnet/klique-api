@@ -19,7 +19,7 @@
       <stop offset="100%" stop-color="#111827" />
     </linearGradient>
 
-    <!-- Border Glow for Front Card (Klique API Teal -> Cyan) -->
+    <!-- Border Glow for Front Card (OmniFlash Teal -> Cyan) -->
     <linearGradient id="border-glow" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#009688" />
       <stop offset="100%" stop-color="#00f2fe" />

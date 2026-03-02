@@ -1,3 +1,5 @@
+import { IconSparkBoost } from '../components/Icons/ActionIcons';
+
 const PORTFOLIO_DATA = {
   name: 'João Duarte',
   headline: 'Desenvolvedor Full-Stack · Estrategista · Builder',
@@ -8,7 +10,7 @@ const PORTFOLIO_DATA = {
   experiences: [
     {
       role: 'Desenvolvedor Full-Stack',
-      company: 'Klique Platform',
+      company: 'OmniFlash Platform',
       period: '2024 — Presente',
       desc: 'Arquitetura de plataforma React + FastAPI com geração de imagens por IA, sistema de créditos e PWA instalável.',
     },
@@ -67,7 +69,7 @@ export default function PortfolioPage() {
         <div className="relative max-w-2xl mx-auto">
           <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center text-4xl"
                style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>
-            ⚡
+            <IconSparkBoost width={36} height={36} />
           </div>
           <h1 className="font-title text-4xl sm:text-5xl tracking-widest text-white mb-3">{d.name.toUpperCase()}</h1>
           <p className="text-purple-300 text-lg mb-3">{d.headline}</p>

@@ -83,11 +83,15 @@ app = FastAPI(title='OmniFlash API', version='1.0.0', lifespan=lifespan)
 origins = [
     'https://omniflash.app',
     'http://omniflash.app',
+    'https://fotodenatal.me',
+    'http://fotodenatal.me',
+    'https://localhost',
     'http://localhost',
     'http://localhost:8080',
     'http://localhost:8000',
     'http://localhost:3000',
     'http://localhost:5173',
+    'capacitor://localhost',
 ]
 
 app.add_middleware(

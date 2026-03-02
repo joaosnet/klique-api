@@ -1,6 +1,7 @@
 import EntityCard from './EntityCard';
 import EntityEditor from './EntityEditor';
 import { useState } from 'react';
+import { IconDeckCard, IconSparkBoost } from '../Icons/ActionIcons';
 
 const PRESETS = {
   corporativo: {
@@ -105,7 +106,7 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
               className="w-20 h-20 rounded-2xl flex items-center justify-center"
               style={{ background: 'rgba(168,85,247,0.08)', border: '2px dashed rgba(168,85,247,0.3)' }}
             >
-              <span className="text-3xl opacity-50">🃏</span>
+              <IconDeckCard className="opacity-70" width={34} height={34} />
             </div>
             <div>
               <p className="text-gray-400 text-sm">Nenhuma entidade no deck.</p>
@@ -158,7 +159,7 @@ export default function SimulatorRoster({ population, onAdd, onRemove, onSimulat
           className="w-full py-3 rounded-xl font-title tracking-widest text-sm uppercase text-white transition-all hover:scale-[1.02] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           style={{ background: canSimulate ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : undefined }}
         >
-          {canSimulate ? 'SIMULAR INTERAÇÕES ⚡' : `Adicione pelo menos 2 entidades (${population.length}/2)`}
+          {canSimulate ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><IconSparkBoost width={16} height={16} /> SIMULAR INTERAÇÕES</span> : `Adicione pelo menos 2 entidades (${population.length}/2)`}
         </button>
       </div>
 

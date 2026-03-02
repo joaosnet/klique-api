@@ -21,8 +21,10 @@
 }
 
 .card-icon {
-    font-size: 3.5rem;
     display: block;
+    width: 56px;
+    height: 56px;
+    margin-inline: auto;
     margin-bottom: 1rem;
 }
 
@@ -163,7 +165,7 @@
 }
 
 .preview-icon {
-    font-size: 1.5rem;
+    display: inline-flex;
 }
 
 .preview-text {
@@ -201,8 +203,8 @@
     cursor: not-allowed;
 }
 
-.btn-generate-pix span {
-    font-size: 1.25rem;
+.btn-generate-pix .btn-icon {
+    display: inline-flex;
 }
 
 /* PIX Payment Section */
@@ -215,8 +217,10 @@
 }
 
 .pix-icon {
-    font-size: 3rem;
     display: block;
+    width: 48px;
+    height: 48px;
+    margin-inline: auto;
     margin-bottom: 0.5rem;
 }
 
@@ -253,8 +257,8 @@
     color: #666;
 }
 
-.qr-placeholder span {
-    font-size: 3rem;
+.qr-placeholder-icon {
+    display: inline-flex;
     margin-bottom: 0.5rem;
 }
 
@@ -296,6 +300,10 @@
 
 .btn-copy-pix:hover {
     background: rgba(255, 255, 255, 0.25);
+}
+
+.btn-copy-pix .btn-icon {
+    display: inline-flex;
 }
 
 .checking-payment {

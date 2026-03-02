@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.svg';
 import './Header.css';
+import { IconCameraShot, IconTicketPass, IconUserBadge } from '../Icons/ActionIcons';
 
 export default function Header() {
     const { user, credits, isAuthenticated, logout } = useAuth();
@@ -24,8 +25,8 @@ export default function Header() {
         <header className="header">
             <div className="header-container">
                 <Link to="/" className="logo" onClick={closeMobileMenu}>
-                    <img src={logo} alt="Klique Natal" className="logo-image" />
-                    <span className="logo-text">Klique Natal</span>
+                    <img src={logo} alt="OmniFlash" className="logo-image" />
+                    <span className="logo-text">OmniFlash</span>
                 </Link>
 
                 {/* Hamburger Button - Mobile Only */}
@@ -46,7 +47,8 @@ export default function Header() {
                         className={`nav-link ${isActive('/') ? 'active' : ''}`}
                         onClick={closeMobileMenu}
                     >
-                        🎄 Criar Avatar
+                        <IconCameraShot className="nav-link-icon" width={18} height={18} />
+                        Criar Avatar
                     </Link>
 
                     {isAuthenticated ? (
@@ -56,13 +58,16 @@ export default function Header() {
                                 className={`credits-badge ${isActive('/credits') ? 'active' : ''}`}
                                 onClick={closeMobileMenu}
                             >
-                                <span className="credits-icon">🎟️</span>
+                                <IconTicketPass className="credits-icon" width={20} height={20} />
                                 <span className="credits-count">{credits.total}</span>
                                 <span className="credits-label">créditos</span>
                             </Link>
 
                             <div className="user-menu">
-                                <span className="user-name">👤 {user?.name?.split(' ')[0]}</span>
+                                <span className="user-name">
+                                    <IconUserBadge width={16} height={16} />
+                                    {user?.name?.split(' ')[0]}
+                                </span>
                                 <button onClick={handleLogout} className="btn-logout">
                                     Sair
                                 </button>

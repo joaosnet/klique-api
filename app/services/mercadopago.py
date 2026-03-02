@@ -36,7 +36,7 @@ class MercadoPagoService:
         amount: float,
         user_email: str,
         user_id: str,
-        description: str = 'Créditos Klique Natal',
+        description: str = 'Créditos OmniFlash',
         credits_count: Optional[int] = None,
     ) -> dict:
         """

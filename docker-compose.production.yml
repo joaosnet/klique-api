@@ -39,7 +39,7 @@ services:
 
   mongodb:
     image: mongo:latest
-    container_name: mongodb_kliqueq
+    container_name: mongodb_omniflash
     restart: always
     volumes:
       - mongodb_data:/data/db
@@ -68,7 +68,7 @@ services:
         max-file: "5"
 
   fastapi-app:
-    container_name: fastapi-klique
+    container_name: fastapi-omniflash
     build: .
     restart: always
     depends_on:
@@ -126,7 +126,7 @@ services:
         max-file: "5"
 
   frontend:
-    container_name: klique-frontend
+    container_name: omniflash-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -147,10 +147,14 @@ services:
       - "traefik.http.routers.frontend-secure.tls.certResolver=letsencrypt"
       # Apply middlewares
       - "traefik.http.routers.frontend-secure.middlewares=secure-headers@file,compress@file"
+      # Localhost router (for local testing)
+      - "traefik.http.routers.frontend-local.rule=Host(`localhost`)"
+      - "traefik.http.routers.frontend-local.entrypoints=web,websecure"
+      - "traefik.http.routers.frontend-local.tls=true"
       # Service configuration
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      - "traefik.http.services.frontend.loadbalancer.server.port=8080"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+      test: [ "CMD", "nginx", "-t" ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -177,7 +181,7 @@ services:
   #     - --debug=false
   #     - --os=Chrome
   #     - --account-validation=false
-  #     - --webhook=http://fastapi-klique:8000/webhooks/whatsapp
+  #     - --webhook=http://fastapi-omniflash:8000/webhooks/whatsapp
   #   networks:
   #     - whatsapp-network
 

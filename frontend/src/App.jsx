@@ -13,6 +13,7 @@ const CardSwipePage = lazy(() => import('./pages/CardSwipePage'));
 const TrainingPage = lazy(() => import('./pages/TrainingPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const VisualPage = lazy(() => import('./pages/VisualPage'));
 
 
 function ProtectedRoute({ children }) {
@@ -36,6 +37,7 @@ function AppRoutes() {
         <Route path="/criar/:domainId" element={<CardSwipePage />} />
         <Route path="/treinar" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
         <Route path="/oracle" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/visual" element={<ProtectedRoute><VisualPage /></ProtectedRoute>} />
         <Route path="/perfil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -52,17 +54,25 @@ function DynamicStatusBarHandler() {
   return null;
 }
 
+function AppShell() {
+  const { isAuthenticated } = useAuth();
+
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-app)', transition: 'background-color 0.3s ease' }}>
+      <main className={`flex-1 relative ${isAuthenticated ? 'pb-24' : ''}`}>
+        <AppRoutes />
+      </main>
+      <BottomNav />
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <DynamicStatusBarHandler />
-        <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-app)', transition: 'background-color 0.3s ease' }}>
-          <main className="flex-1 pb-24 relative">
-            <AppRoutes />
-          </main>
-          <BottomNav />
-        </div>
+        <AppShell />
       </AuthProvider>
     </BrowserRouter>
   );

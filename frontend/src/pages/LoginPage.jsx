@@ -129,7 +129,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="font-title text-2xl tracking-widest text-purple-400">
-            GAME THEORY
+            OMNIFLASH
           </Link>
           <p className="text-[var(--text-muted)] text-xs uppercase tracking-widest mt-1">
             Teoria dos Jogos · Geopolítica

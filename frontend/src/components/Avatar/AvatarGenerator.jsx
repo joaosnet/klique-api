@@ -5,6 +5,16 @@ import { useNavigate } from 'react-router-dom';
 import ImageComparator from './ImageComparator';
 import OnboardingTutorial, { useOnboarding } from '../Onboarding/OnboardingTutorial';
 import PaymentModal from '../Payment/PaymentModal';
+import {
+    IconCameraShot,
+    IconCutBlade,
+    IconDownloadDrop,
+    IconFolderLoot,
+    IconInstagramOrb,
+    IconResetCycle,
+    IconSparkBoost,
+    IconWhatsappQuest,
+} from '../Icons/ActionIcons';
 import './AvatarGenerator.css';
 
 export default function AvatarGenerator() {
@@ -284,7 +294,7 @@ export default function AvatarGenerator() {
         }
 
         const link = document.createElement('a');
-        link.download = 'avatar-natal-klique.png';
+        link.download = 'avatar-omniflash.png';
         link.href = result;
         link.click();
     };
@@ -323,7 +333,7 @@ export default function AvatarGenerator() {
             return;
         }
 
-        const text = `Ficou incrível meu avatar de Natal! 🎅🎄\n\nFiz no Klique, cria o seu também aqui: ${window.location.href}`;
+        const text = `Ficou incrível meu avatar!\n\nFiz no OmniFlash, cria o seu também aqui: ${window.location.href}`;
 
         // Tenta usar o Web Share API nativo (Mobile Android/iOS)
         if (navigator.share && result) {
@@ -359,7 +369,7 @@ export default function AvatarGenerator() {
             return;
         }
 
-        const text = `Ficou incrível meu avatar de Natal! 🎅🎄\n\nFiz no Klique, cria o seu também aqui: ${window.location.href}`;
+        const text = `Ficou incrível meu avatar!\n\nFiz no OmniFlash, cria o seu também aqui: ${window.location.href}`;
 
         // Tenta usar o Web Share API nativo
         if (navigator.share && result) {
@@ -382,7 +392,7 @@ export default function AvatarGenerator() {
         handleDownload();
 
         navigator.clipboard.writeText(text).then(() => {
-            alert('Imagem baixada e texto copiado! 📸\n\nAgora é só abrir o Instagram e postar no Story ou Feed.');
+            alert('Imagem baixada e texto copiado!\n\nAgora é só abrir o Instagram e postar no Story ou Feed.');
             window.open('https://instagram.com', '_blank');
         }).catch(() => {
             window.open('https://instagram.com', '_blank');
@@ -455,7 +465,7 @@ export default function AvatarGenerator() {
                                                     title="Fazer Upload da Galeria"
                                                     style={{ width: '50px', height: '50px', padding: 0, justifyContent: 'center', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(5px)' }}
                                                 >
-                                                    <span className="capture-icon" style={{ fontSize: '1.5rem' }}>📁</span>
+                                                    <IconFolderLoot className="capture-icon" width={24} height={24} />
                                                 </button>
 
                                                 <button
@@ -465,14 +475,14 @@ export default function AvatarGenerator() {
                                                         handleCapture();
                                                     }}
                                                 >
-                                                    <span className="capture-icon">📸</span>
+                                                    <IconCameraShot className="capture-icon" width={22} height={22} />
                                                     Tirar Foto
                                                 </button>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="upload-placeholder">
-                                            <span className="upload-icon">📷</span>
+                                            <IconCameraShot className="upload-icon" width={62} height={62} />
                                             <p>Clique para enviar sua foto</p>
                                             <span className="upload-hint">ou arraste e solte aqui</span>
                                             <div style={{ marginTop: '20px' }}>
@@ -482,7 +492,8 @@ export default function AvatarGenerator() {
                                                         className="btn-secondary"
                                                         style={{ background: 'var(--christmas-green)', color: 'white', border: 'none' }}
                                                     >
-                                                        📷 Usar Câmera
+                                                        <IconCameraShot width={16} height={16} />
+                                                        Usar Câmera
                                                     </button>
                                                 )}
                                             </div>
@@ -502,7 +513,8 @@ export default function AvatarGenerator() {
                                 {imagePreview && !processing && !result && (
                                     <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10 }}>
                                         <button onClick={(e) => { e.stopPropagation(); handleReset(); }} className="btn-secondary">
-                                            🔄 Trocar Foto
+                                            <IconResetCycle width={16} height={16} />
+                                            Trocar Foto
                                         </button>
                                     </div>
                                 )}
@@ -511,7 +523,7 @@ export default function AvatarGenerator() {
                                 {processing && (
                                     <div className="processing-overlay">
                                         <div className="processing-content">
-                                            <span className="processing-icon">✨</span>
+                                            <IconSparkBoost className="processing-icon" width={56} height={56} />
                                             <p className="processing-message">{progress.message || 'Preparando magia...'}</p>
                                             <div className="progress-bar">
                                                 <div
@@ -530,23 +542,24 @@ export default function AvatarGenerator() {
                         <div className="result-actions-section">
                             <div className="share-buttons-grid">
                                 <button onClick={handleDownload} className="btn-action download">
-                                    <span className="icon">⬇️</span>
+                                    <IconDownloadDrop className="icon" width={20} height={20} />
                                     <span className="label">Baixar Imagem</span>
                                 </button>
 
                                 <button onClick={handleShareWhatsApp} className="btn-action whatsapp">
-                                    <span className="icon">💚</span>
+                                    <IconWhatsappQuest className="icon" width={20} height={20} />
                                     <span className="label">WhatsApp</span>
                                 </button>
 
                                 <button onClick={handleShareInstagram} className="btn-action instagram">
-                                    <span className="icon">📸</span>
+                                    <IconInstagramOrb className="icon" width={20} height={20} />
                                     <span className="label">Instagram</span>
                                 </button>
                             </div>
 
                             <button onClick={handleReset} className="btn-action reset">
-                                <span>🔄</span> Fazer Outro
+                                <IconResetCycle className="icon" width={18} height={18} />
+                                Fazer Outro
                             </button>
                         </div>
                     ) : (
@@ -598,7 +611,10 @@ export default function AvatarGenerator() {
                                         onChange={(e) => setRemoveBg(e.target.checked)}
                                         disabled={processing}
                                     />
-                                    <span className="checkbox-label">✂️ Remover fundo da imagem</span>
+                                    <span className="checkbox-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                        <IconCutBlade width={14} height={14} />
+                                        Remover fundo da imagem
+                                    </span>
                                 </label>
                             </div>
 
@@ -615,7 +631,7 @@ export default function AvatarGenerator() {
                                     </>
                                 ) : (
                                     <>
-                                        ✨ Gerar Avatar {isAuthenticated && `(${credits.total} créditos)`}
+                                        <IconSparkBoost width={16} height={16} /> Gerar Avatar {isAuthenticated && `(${credits.total} créditos)`}
                                     </>
                                 )}
                             </button>

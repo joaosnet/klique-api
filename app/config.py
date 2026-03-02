@@ -36,12 +36,12 @@ DB_PORT = int(os.getenv('DB_PORT', '27017'))
 # Detect if running outside Docker (on host) and using container hostnames
 if not os.path.exists('/.dockerenv') and DB_HOST in {
     'mongodb',
-    'mongodb_kliqueq',
-    'fastapi-klique',
+    'mongodb_omniflash',
+    'fastapi-omniflash',
 }:
     # Se estivermos rodando no host e o host apontar para o container
     DB_HOST = 'localhost'
-DB_DATABASE = os.getenv('DB_DATABASE', 'klique')
+DB_DATABASE = os.getenv('DB_DATABASE', 'omniflash')
 DB_USERNAME = os.getenv('DB_USERNAME')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 # OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')

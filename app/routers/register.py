@@ -261,7 +261,7 @@ async def _send_email(to_email: str, subject: str, body: str):
     password = GMAIL_PASSWORD
 
     message = MIMEMultipart()
-    message['From'] = f'KliqueApp <{sender_email}>'
+    message['From'] = f'OmniFlash <{sender_email}>'
     message['To'] = to_email
     message['Subject'] = subject
     message.attach(MIMEText(body, 'html', 'utf-8'))
@@ -280,7 +280,7 @@ async def _send_email(to_email: str, subject: str, body: str):
 async def send_confirmation_code(
     confirmation_code: str, user_email: str, user_name: str
 ):
-    subject = 'Código de confirmação de e-mail | Klique'
+    subject = 'Código de confirmação de e-mail | OmniFlash'
     body = f"""
     <html>
     <head>
@@ -294,12 +294,12 @@ async def send_confirmation_code(
     </head>
     <body>
         <div class="container">
-            <h1>Confirmação de E-mail - Klique</h1>
+            <h1>Confirmação de E-mail - OmniFlash</h1>
             <p>Olá, {user_name}!</p>
-            <p>Obrigado por se registrar no Klique. Para confirmar seu e-mail, use o código abaixo:</p>
+            <p>Obrigado por se registrar no OmniFlash. Para confirmar seu e-mail, use o código abaixo:</p>
             <div class="code">{confirmation_code}</div>
             <p>Se você não solicitou este código, ignore este e-mail.</p>
-            <p>Atenciosamente,<br>Equipe Klique</p>
+            <p>Atenciosamente,<br>Equipe OmniFlash</p>
         </div>
     </body>
     </html>

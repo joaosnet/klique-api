@@ -70,7 +70,9 @@
 }
 
 .modal-icon {
-    font-size: 4rem;
+    width: 64px;
+    height: 64px;
+    margin-inline: auto;
     margin-bottom: 0.5rem;
     animation: bounce 1s ease-in-out infinite;
 }
@@ -120,7 +122,7 @@
 }
 
 .benefit-icon {
-    font-size: 1.25rem;
+    display: inline-flex;
 }
 
 .btn-buy-credits {
@@ -163,7 +165,8 @@
     }
 
     .modal-icon {
-        font-size: 3rem;
+        width: 52px;
+        height: 52px;
     }
 
     .modal-title {
