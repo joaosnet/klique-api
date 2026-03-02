@@ -346,16 +346,16 @@ export default function CardSwipePage() {
 
                 {/* Format selection */}
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-highlight)', fontWeight: 600 }}>Formato da Questão</p>
+                  <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-highlight)', fontWeight: 600 }}>{t('training.questionFormat')}</p>
                   <select
                     value={cardFormat}
                     onChange={(e) => setCardFormat(e.target.value)}
                     style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none' }}
                   >
-                    <option value="concurso_certo_errado">Concurso (Certo/Errado)</option>
-                    <option value="concurso_multipla_escolha">Concurso (Múltipla Escolha)</option>
-                    <option value="flashcard_basico">Flashcard Básico (Frente/Verso)</option>
-                    <option value="game_theory">Teoria dos Jogos (Avançado)</option>
+                    <option value="concurso_certo_errado">{t('training.formatCE')}</option>
+                    <option value="concurso_multipla_escolha">{t('training.formatME')}</option>
+                    <option value="flashcard_basico">{t('training.formatFlashcard')}</option>
+                    <option value="game_theory">{t('training.formatGameTheory')}</option>
                   </select>
                 </div>
 
@@ -516,7 +516,7 @@ export default function CardSwipePage() {
                     transform: showFabMenu ? 'rotate(45deg)' : 'rotate(0deg)',
                     paddingBottom: 2
                   }}
-                  title="Adicionar carta"
+                  title={t('cards.fab_add')}
                 >
                   +
                 </button>
@@ -593,7 +593,7 @@ export default function CardSwipePage() {
                               }}
                               style={{ flex: 1, padding: '14px 0', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', cursor: 'pointer', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}
                             >
-                              Descarta
+                              {t('gameCard.discard')}
                             </button>
                             <button
                               onClick={() => {
@@ -602,7 +602,7 @@ export default function CardSwipePage() {
                               }}
                               style={{ flex: 1, padding: '14px 0', borderRadius: 8, border: '1px solid rgba(74, 222, 128, 0.4)', background: 'rgba(74, 222, 128, 0.15)', color: '#4ade80', cursor: 'pointer', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}
                             >
-                              Guardar
+                              {t('gameCard.save')}
                             </button>
                           </div>
                         )}

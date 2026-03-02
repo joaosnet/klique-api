@@ -251,10 +251,10 @@ export default function GameTheoryCard({
         </div>
       )}
       {/* 3D Flipper Container */}
-      <div style={{ width: '100%', height: '100%', transition: 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)', transformStyle: 'preserve-3d', transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)', display: 'grid' }}>
+      <div style={{ width: '100%', height: '100%', transition: 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)', transformStyle: 'preserve-3d', transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)', position: 'relative' }}>
 
         {/* FRONT FACE */}
-        <div style={{ gridArea: '1 / 1 / 2 / 2', backfaceVisibility: 'hidden' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col">
+        <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col">
           {/* Topo: Arte e Hexágono */}
           <div className="w-full relative overflow-hidden bg-gray-900 border-b-2 border-white" style={{ height: '55%' }}>
             {artVisual}
@@ -306,7 +306,7 @@ export default function GameTheoryCard({
         </div>
 
         {/* BACK FACE */}
-        <div style={{ gridArea: '1 / 1 / 2 / 2', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col">
+        <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col">
           {/* Small Top Header for Back Face */}
           <div className="w-full relative overflow-hidden flex-shrink-0" style={{ height: '22%', background: `linear-gradient(135deg, ${tmpl.darkColor} 0%, #050505 100%)`, borderBottom: `2px solid ${tmpl.color}66` }}>
             {/* Background Symbol */}

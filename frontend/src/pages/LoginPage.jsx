@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errorHandler';
+import { googleSignInNative, appleSignInWeb, appleSignInNative, isNativePlatform } from '../utils/socialAuth';
 import { IconPasswordLock, IconWhatsApp, IconEmailMagic, IconPasskeyBadge, IconGoogle, IconApple } from '../components/Icons/AuthIcons';
 
 export default function LoginPage() {
@@ -16,8 +18,69 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, loginWithOTP, lazyRegister, loginWithPasskey } = useAuth();
+  const { login, loginWithOTP, loginWithGoogle, loginWithApple, lazyRegister, loginWithPasskey } = useAuth();
   const navigate = useNavigate();
+
+  const handleGoogleLoginWeb = useGoogleLogin({
+    flow: 'implicit',
+    onSuccess: async (tokenResponse) => {
+      setError('');
+      setLoading(true);
+      try {
+        await loginWithGoogle(tokenResponse.access_token);
+        navigate('/dominios');
+      } catch (err) {
+        setError(getErrorMessage(err, t('login.error_google')));
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => setError(t('login.error_google')),
+  });
+
+  const handleGoogleLogin = useCallback(async () => {
+    setError('');
+    setLoading(true);
+    try {
+      if (isNativePlatform()) {
+        // Native Android: Capacitor plugin returns id_token directly
+        const idToken = await googleSignInNative();
+        await loginWithGoogle(idToken);
+        navigate('/dominios');
+      } else {
+        // Web: trigger the Google OAuth popup
+        setLoading(false);
+        handleGoogleLoginWeb();
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, t('login.error_google')));
+      setLoading(false);
+    }
+  }, [handleGoogleLoginWeb, loginWithGoogle, navigate, t]);
+
+  const handleAppleLogin = useCallback(async () => {
+    setError('');
+    setLoading(true);
+    try {
+      let idToken, name;
+      if (isNativePlatform()) {
+        ({ idToken, name } = await appleSignInNative());
+      } else {
+        ({ idToken, name } = await appleSignInWeb());
+      }
+      await loginWithApple(idToken, name);
+      navigate('/dominios');
+    } catch (err) {
+      // User cancelled the popup — don't show error
+      if (err?.message?.includes('popup') || err?.code === 'SIGN_IN_CANCELED') {
+        setLoading(false);
+        return;
+      }
+      setError(getErrorMessage(err, t('login.error_apple')));
+    } finally {
+      setLoading(false);
+    }
+  }, [loginWithApple, navigate, t]);
 
   const handlePasskeyLogin = async (e) => {
     e.preventDefault();
@@ -84,34 +147,6 @@ export default function LoginPage() {
       alert('Link enviado! Verifique seu e-mail.');
     } catch (err) {
       setError(getErrorMessage(err, t('login.error_magic_link')));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    // This should open Google One Tap or a popup
-    // For now, mock a successful token
-    setError('');
-    setLoading(true);
-    try {
-      // Mock token for demo
-      // await loginWithGoogle("google-token");
-      alert(t('login.google_placeholder'));
-    } catch (err) {
-      setError(getErrorMessage(err, t('login.error_google')));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAppleLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      alert(t('login.apple_placeholder'));
-    } catch (err) {
-      setError(getErrorMessage(err, t('login.error_apple')));
     } finally {
       setLoading(false);
     }

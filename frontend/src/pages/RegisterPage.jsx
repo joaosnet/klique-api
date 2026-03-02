@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errorHandler';
+import { googleSignInNative, appleSignInWeb, appleSignInNative, isNativePlatform } from '../utils/socialAuth';
 import { IconCameraShot, IconSparkBoost } from '../components/Icons/ActionIcons';
 import { IconGoogle, IconApple } from '../components/Icons/AuthIcons';
 import { useTranslation } from 'react-i18next';
@@ -12,35 +14,67 @@ function StepBasicData({ data, onChange, onNext }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [usePasskey, setUsePasskey] = useState(false);
-  const { login, registerPasskey } = useAuth();
+  const { login, loginWithGoogle, loginWithApple, registerPasskey } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLoginWeb = useGoogleLogin({
+    flow: 'implicit',
+    onSuccess: async (tokenResponse) => {
+      setError('');
+      setLoading(true);
+      try {
+        await loginWithGoogle(tokenResponse.access_token);
+        navigate('/dominios');
+      } catch (err) {
+        setError(getErrorMessage(err, t('register.error_google')));
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => setError(t('register.error_google')),
+  });
+
+  const handleGoogleLogin = useCallback(async () => {
     setError('');
     setLoading(true);
     try {
-      // Mock token for demo, similar to LoginPage
-      alert(t('register.google_placeholder'));
-      // await loginWithGoogle("google-token");
-      // onNext();
-    } catch {
-      setError(t('register.error_google'));
-    } finally {
+      if (isNativePlatform()) {
+        const idToken = await googleSignInNative();
+        await loginWithGoogle(idToken);
+        navigate('/dominios');
+      } else {
+        setLoading(false);
+        handleGoogleLoginWeb();
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, t('register.error_google')));
       setLoading(false);
     }
-  };
+  }, [handleGoogleLoginWeb, loginWithGoogle, navigate, t]);
 
-  const handleAppleLogin = async () => {
+  const handleAppleLogin = useCallback(async () => {
     setError('');
     setLoading(true);
     try {
-      alert(t('register.apple_placeholder'));
-    } catch {
-      setError(t('register.error_apple'));
+      let idToken, name;
+      if (isNativePlatform()) {
+        ({ idToken, name } = await appleSignInNative());
+      } else {
+        ({ idToken, name } = await appleSignInWeb());
+      }
+      await loginWithApple(idToken, name);
+      navigate('/dominios');
+    } catch (err) {
+      if (err?.message?.includes('popup') || err?.code === 'SIGN_IN_CANCELED') {
+        setLoading(false);
+        return;
+      }
+      setError(getErrorMessage(err, t('register.error_apple')));
     } finally {
       setLoading(false);
     }
-  };
+  }, [loginWithApple, navigate, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

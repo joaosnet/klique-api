@@ -94,8 +94,8 @@
     "error_google": "Error logging in with Google",
     "error_apple": "Error logging in with Apple",
     "error_guest": "Error starting guest session",
-    "google_placeholder": "Google Login placeholder",
-    "apple_placeholder": "Apple Login placeholder"
+    "error_google_cancelled": "Google login cancelled",
+    "error_apple_cancelled": "Apple login cancelled"
   },
   "register": {
     "omniflash": "OMNIFLASH",
@@ -114,8 +114,8 @@
     "create_account_continue": "Create Account & Continue →",
     "signing_up": "Please wait...",
     "password_min_error": "Password must be at least 6 characters.",
-    "google_placeholder": "Google Login placeholder - Will create the account and skip step 1.",
-    "apple_placeholder": "Apple Login placeholder - Will create the account and skip step 1.",
+    "google_placeholder": "Registering with Google...",
+    "apple_placeholder": "Registering with Apple...",
     "error_apple": "Error logging in with Apple",
     "passwords_mismatch": "Passwords do not match",
     "password_min_chars": "Password must be at least 6 characters",
@@ -514,6 +514,22 @@
     "payoff_matrix": "PAYOFF",
     "black_swan": "BLACK SWAN"
   },
+  "flashcard": {
+    "question": "Question",
+    "answer": "Answer",
+    "tap_to_flip": "Tap to flip"
+  },
+  "concursoCard": {
+    "styleCebraspe": "Cebraspe Style",
+    "multipleChoice": "Multiple Choice",
+    "unpublishedQuestion": "Unpublished Q",
+    "correct": "Correct",
+    "wrong": "Wrong",
+    "seeAnswer": "See Answer",
+    "answerAndComments": "Answer & Comments",
+    "aiPrediction": "AI Prediction",
+    "teacherExplanation": "Teacher's Explanation"
+  },
   "deckPile": {
     "cards_to_train": "CARDS TO TRAIN TODAY",
     "oracle_deck": "ORACLE DECK",
@@ -577,6 +593,11 @@
     "streak": "Streak",
     "unexpectedResponse": "Unexpected response",
     "useOracle": "Use Oracle",
+    "questionFormat": "Question Format",
+    "formatCE": "Exam (True/False)",
+    "formatME": "Exam (Multiple Choice)",
+    "formatFlashcard": "Basic Flashcard (Front/Back)",
+    "formatGameTheory": "Game Theory (Advanced)",
     "results": "Results ({{count}} cards)"
   },
   "dashboard": {

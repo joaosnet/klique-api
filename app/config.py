@@ -28,6 +28,9 @@ ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv('ACCESS_TOKEN_EXPIRE_DAYS', '30'))
 GMAIL_EMAIL = os.getenv('GMAIL_EMAIL')
 GMAIL_PASSWORD = os.getenv('GMAIL_APP_PASSWORD')
 
+# Apple Sign In
+APPLE_CLIENT_ID = os.getenv('APPLE_CLIENT_ID', '')  # Apple Service ID
+
 # MongoDB Settings
 DB_CONNECTION = os.getenv('DB_CONNECTION', 'mongodb')
 DB_HOST = os.getenv('DB_HOST', 'mongodb')

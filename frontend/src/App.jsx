@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import BottomNav from './components/Layout/BottomNav';
 import GamifiedLoader from './components/Layout/GamifiedLoader';
@@ -70,12 +71,16 @@ function AppShell() {
 }
 
 export default function App() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <DynamicStatusBarHandler />
-        <AppShell />
-      </AuthProvider>
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <AuthProvider>
+          <DynamicStatusBarHandler />
+          <AppShell />
+        </AuthProvider>
+      </GoogleOAuthProvider>
     </BrowserRouter>
   );
 }

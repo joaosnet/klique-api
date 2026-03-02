@@ -6,11 +6,14 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Annotated
 
+import httpx
+import jwt
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
+from jwt.algorithms import RSAAlgorithm
 from webauthn import (
     generate_authentication_options,
     generate_registration_options,
@@ -28,6 +31,7 @@ from webauthn.helpers.structs import (
 
 from ..config import (
     ACCESS_TOKEN_EXPIRE_DAYS,
+    APPLE_CLIENT_ID,
     GMAIL_EMAIL,
     GMAIL_PASSWORD,
     GOOGLE_CLIENT_ID,
@@ -78,6 +82,32 @@ router = APIRouter()
 RP_ID = 'omniflash.app'  # domain
 RP_NAME = 'OmniFlash'
 
+# Cache for Apple's public keys
+_apple_keys_cache: dict | None = None
+_apple_keys_fetched_at: datetime | None = None
+APPLE_KEYS_CACHE_TTL = timedelta(hours=24)
+
+
+async def _get_apple_public_keys() -> list[dict]:
+    """Fetch and cache Apple's public keys for JWT verification."""
+    global _apple_keys_cache, _apple_keys_fetched_at
+    now = datetime.now(timezone.utc)
+    if (
+        _apple_keys_cache is not None
+        and _apple_keys_fetched_at is not None
+        and now - _apple_keys_fetched_at < APPLE_KEYS_CACHE_TTL
+    ):
+        return _apple_keys_cache['keys']
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            'https://appleid.apple.com/auth/keys', timeout=10
+        )
+        resp.raise_for_status()
+        _apple_keys_cache = resp.json()
+        _apple_keys_fetched_at = now
+        return _apple_keys_cache['keys']
+
 
 @router.post('/auth/google', response_model=Token, tags=['auth'])
 async def google_login(
@@ -85,6 +115,12 @@ async def google_login(
     db_users=Depends(get_users_collection),
     db_profiles=Depends(get_profiles_collection),
 ):
+    email = None
+    name = 'User'
+    picture = None
+    google_sub = None
+
+    # Try verifying as an id_token first (native / credential flow)
     try:
         id_info = id_token.verify_oauth2_token(
             request.token, google_requests.Request(), GOOGLE_CLIENT_ID
@@ -92,71 +128,44 @@ async def google_login(
         email = id_info.get('email')
         name = id_info.get('name', 'User')
         picture = id_info.get('picture')
-
-        if not email:
+        google_sub = id_info.get('sub')
+    except ValueError:
+        # Token is not an id_token — try as access_token via Google userinfo
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    'https://www.googleapis.com/oauth2/v3/userinfo',
+                    headers={
+                        'Authorization': f'Bearer {request.token}'
+                    },
+                    timeout=10,
+                )
+                if resp.status_code != 200:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail='Invalid Google token',
+                    )
+                userinfo = resp.json()
+                email = userinfo.get('email')
+                name = userinfo.get('name', 'User')
+                picture = userinfo.get('picture')
+                google_sub = userinfo.get('sub')
+        except httpx.HTTPError:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='Email not found in Google token',
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Invalid Google token',
             )
 
-        user = await db_users.find_one({'email': email})
-
-        if not user:
-            # Auto-register
-            profile_data = {
-                'name': name,
-                'nickname': name,
-                'country': 'Brasil',
-                'state': '',
-                'city': '',
-                'district': '',
-                'deficiency': 'Nenhuma',
-                'avatar_url': picture,
-                'email': email,
-                'created_at': datetime.now(timezone.utc),
-                'updated_at': datetime.now(timezone.utc),
-            }
-            new_profile = await db_profiles.insert_one(profile_data)
-
-            user_data = {
-                'name': name,
-                'email': email,
-                'profile_id': str(new_profile.inserted_id),
-                'user_type': 'user',
-                'confirmed_code': True,
-                'google_id': id_info.get('sub'),
-                'created_at': datetime.now(timezone.utc),
-                'updated_at': datetime.now(timezone.utc),
-            }
-            await db_users.insert_one(user_data)
-            user = await db_users.find_one({'email': email})
-
-        access_token_expires = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-        access_token = create_access_token(
-            data={'sub': user['email']}, expires_delta=access_token_expires
-        )
-        return {'access_token': access_token, 'token_type': 'bearer'}
-
-    except ValueError:
+    if not email:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid Google token',
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Email not found in Google token',
         )
-
-
-@router.post('/auth/apple', response_model=Token, tags=['auth'])
-async def apple_login(
-    request: AppleLoginRequest,
-    db_users=Depends(get_users_collection),
-    db_profiles=Depends(get_profiles_collection),
-):
-    # This is a skeleton for Apple Login
-    # Mock implementation for demonstration
-    email = 'apple-user@example.com'  # Should be extracted from verified token
-    name = request.name or 'Apple User'
 
     user = await db_users.find_one({'email': email})
+
     if not user:
+        # Auto-register
         profile_data = {
             'name': name,
             'nickname': name,
@@ -165,6 +174,7 @@ async def apple_login(
             'city': '',
             'district': '',
             'deficiency': 'Nenhuma',
+            'avatar_url': picture,
             'email': email,
             'created_at': datetime.now(timezone.utc),
             'updated_at': datetime.now(timezone.utc),
@@ -177,7 +187,8 @@ async def apple_login(
             'profile_id': str(new_profile.inserted_id),
             'user_type': 'user',
             'confirmed_code': True,
-            'apple_id': 'apple-sub',  # Should be extracted from verified token
+            'google_id': google_sub,
+            'auth_methods': ['google'],
             'created_at': datetime.now(timezone.utc),
             'updated_at': datetime.now(timezone.utc),
         }
@@ -189,6 +200,119 @@ async def apple_login(
         data={'sub': user['email']}, expires_delta=access_token_expires
     )
     return {'access_token': access_token, 'token_type': 'bearer'}
+
+
+@router.post('/auth/apple', response_model=Token, tags=['auth'])
+async def apple_login(
+    request: AppleLoginRequest,
+    db_users=Depends(get_users_collection),
+    db_profiles=Depends(get_profiles_collection),
+):
+    try:
+        # Decode the JWT header to find the key id (kid)
+        unverified_header = jwt.get_unverified_header(request.token)
+        kid = unverified_header.get('kid')
+        if not kid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Invalid Apple token: missing kid',
+            )
+
+        # Fetch Apple's public keys and find the matching one
+        apple_keys = await _get_apple_public_keys()
+        matching_key = None
+        for key in apple_keys:
+            if key['kid'] == kid:
+                matching_key = key
+                break
+
+        if not matching_key:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Apple public key not found for kid',
+            )
+
+        # Build the RSA public key from JWK
+        public_key = RSAAlgorithm.from_jwk(matching_key)
+
+        # Verify and decode the identity token
+        decoded = jwt.decode(
+            request.token,
+            public_key,
+            algorithms=['RS256'],
+            audience=APPLE_CLIENT_ID,
+            issuer='https://appleid.apple.com',
+        )
+
+        apple_sub = decoded.get('sub')
+        email = decoded.get('email')
+        name = request.name or 'Apple User'
+
+        if not apple_sub:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='Apple token missing sub claim',
+            )
+
+        # Find user by apple_id first, then by email
+        user = await db_users.find_one({'apple_id': apple_sub})
+        if not user and email:
+            user = await db_users.find_one({'email': email})
+            if user:
+                # Link Apple ID to existing account
+                await db_users.update_one(
+                    {'_id': user['_id']},
+                    {'$set': {'apple_id': apple_sub}},
+                )
+
+        if not user:
+            # Auto-register new user
+            profile_data = {
+                'name': name,
+                'nickname': name,
+                'country': 'Brasil',
+                'state': '',
+                'city': '',
+                'district': '',
+                'deficiency': 'Nenhuma',
+                'email': email,
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc),
+            }
+            new_profile = await db_profiles.insert_one(profile_data)
+
+            user_data = {
+                'name': name,
+                'email': email,
+                'profile_id': str(new_profile.inserted_id),
+                'user_type': 'user',
+                'confirmed_code': True,
+                'apple_id': apple_sub,
+                'auth_methods': ['apple'],
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc),
+            }
+            await db_users.insert_one(user_data)
+            user = await db_users.find_one({'apple_id': apple_sub})
+
+        # Use email or apple_id as JWT subject
+        sub = user.get('email') or user.get('apple_id')
+        access_token_expires = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+        access_token = create_access_token(
+            data={'sub': sub}, expires_delta=access_token_expires
+        )
+        return {'access_token': access_token, 'token_type': 'bearer'}
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Apple token has expired',
+        )
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f'Invalid Apple token: {e}',
+        )
 
 
 @router.post('/auth/otp/request', tags=['auth'])

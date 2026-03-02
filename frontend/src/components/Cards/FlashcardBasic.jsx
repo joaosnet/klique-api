@@ -141,10 +141,10 @@ export default function FlashcardBasic({
             )}
 
             {/* 3D Flipper Container */}
-            <div style={{ width: '100%', height: '100%', minHeight: '400px', transition: 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)', transformStyle: 'preserve-3d', transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)', display: 'grid' }}>
+            <div style={{ width: '100%', height: '100%', minHeight: '400px', transition: 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)', transformStyle: 'preserve-3d', transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)', position: 'relative' }}>
 
                 {/* FRONT FACE */}
-                <div style={{ gridArea: '1 / 1 / 2 / 2', backfaceVisibility: 'hidden' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col bg-white rounded-xl shadow-lg border border-gray-200">
+                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col bg-white rounded-xl shadow-lg border border-gray-200">
                     <div className="w-full text-gray-800 p-6 flex flex-col items-center justify-center text-center relative z-10 flex-grow">
                         <h3 className="text-sm font-semibold text-blue-600 mb-4 uppercase tracking-widest">{t('flashcard.question')}</h3>
                         <p className="text-xl leading-relaxed font-medium">
@@ -157,7 +157,7 @@ export default function FlashcardBasic({
                 </div>
 
                 {/* BACK FACE */}
-                <div style={{ gridArea: '1 / 1 / 2 / 2', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col bg-blue-50 rounded-xl shadow-lg border border-blue-200">
+                <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col bg-blue-50 rounded-xl shadow-lg border border-blue-200">
                     <div className="w-full text-gray-800 p-6 flex flex-col items-center justify-center text-center relative z-10 flex-grow">
                         <h3 className="text-sm font-semibold text-green-600 mb-4 uppercase tracking-widest">{t('flashcard.answer')}</h3>
                         <p className="text-2xl leading-relaxed font-bold text-blue-900 mb-4">

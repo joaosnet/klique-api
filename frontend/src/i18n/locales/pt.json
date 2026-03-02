@@ -94,8 +94,8 @@
     "error_google": "Erro no login com Google",
     "error_apple": "Erro no login com Apple",
     "error_guest": "Erro ao iniciar sessão convidado",
-    "google_placeholder": "Google Login placeholder",
-    "apple_placeholder": "Apple Login placeholder"
+    "error_google_cancelled": "Login com Google cancelado",
+    "error_apple_cancelled": "Login com Apple cancelado"
   },
   "register": {
     "omniflash": "OMNIFLASH",
@@ -114,8 +114,8 @@
     "create_account_continue": "Criar Conta & Continuar →",
     "signing_up": "Aguarde...",
     "password_min_error": "A senha deve ter pelo menos 6 caracteres.",
-    "google_placeholder": "Google Login placeholder - Irá criar a conta e pular o passo 1.",
-    "apple_placeholder": "Apple Login placeholder - Irá criar a conta e pular o passo 1.",
+    "google_placeholder": "Registrando com Google...",
+    "apple_placeholder": "Registrando com Apple...",
     "error_apple": "Erro no login com Apple",
     "passwords_mismatch": "As senhas não coincidem",
     "password_min_chars": "A senha deve ter no mínimo 6 caracteres",
@@ -514,6 +514,22 @@
     "payoff_matrix": "RECOMPENSA",
     "black_swan": "CISNE NEGRO"
   },
+  "flashcard": {
+    "question": "Pergunta",
+    "answer": "Resposta",
+    "tap_to_flip": "Toque para virar"
+  },
+  "concursoCard": {
+    "styleCebraspe": "Estilo Cebraspe",
+    "multipleChoice": "Múltipla Escolha",
+    "unpublishedQuestion": "Q-Inédita",
+    "correct": "Certo",
+    "wrong": "Errado",
+    "seeAnswer": "Ver Gabarito",
+    "answerAndComments": "Gabarito e Comentários",
+    "aiPrediction": "Aposta da IA",
+    "teacherExplanation": "Explicação do Professor"
+  },
   "deckPile": {
     "cards_to_train": "CARTAS PARA TREINAR HOJE",
     "oracle_deck": "ORACLE DECK",
@@ -577,6 +593,11 @@
     "streak": "Sequencia",
     "unexpectedResponse": "Resposta inesperada",
     "useOracle": "Usar Oraculo",
+    "questionFormat": "Formato da Questão",
+    "formatCE": "Concurso (Certo/Errado)",
+    "formatME": "Concurso (Múltipla Escolha)",
+    "formatFlashcard": "Flashcard Básico (Frente/Verso)",
+    "formatGameTheory": "Teoria dos Jogos (Avançado)",
     "results": "Resultados ({{count}} cards)"
   },
   "dashboard": {

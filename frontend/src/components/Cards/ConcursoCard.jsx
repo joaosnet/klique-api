@@ -140,10 +140,10 @@ export default function ConcursoCard({
         return (
             <div className="flex justify-center gap-4 mt-6 w-full px-4" onClick={(e) => e.stopPropagation()}>
                 <button className="flex-1 py-3 px-4 rounded-full border-2 border-green-500 text-green-700 font-bold hover:bg-green-50 transition-colors uppercase tracking-widest text-sm">
-                    Certo
+                    {t('concursoCard.correct')}
                 </button>
                 <button className="flex-1 py-3 px-4 rounded-full border-2 border-red-500 text-red-700 font-bold hover:bg-red-50 transition-colors uppercase tracking-widest text-sm">
-                    Errado
+                    {t('concursoCard.wrong')}
                 </button>
             </div>
         );
@@ -173,17 +173,17 @@ export default function ConcursoCard({
             )}
 
             {/* 3D Flipper Container */}
-            <div style={{ width: '100%', height: '100%', minHeight: '440px', transition: 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)', transformStyle: 'preserve-3d', transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)', display: 'grid' }}>
+            <div style={{ width: '100%', height: '100%', minHeight: '440px', transition: 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)', transformStyle: 'preserve-3d', transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)', position: 'relative' }}>
 
                 {/* FRONT FACE (Enunciado) */}
-                <div style={{ gridArea: '1 / 1 / 2 / 2', backfaceVisibility: 'hidden' }} className="relative w-full h-full overflow-hidden flex flex-col bg-white rounded-xl shadow-md border border-gray-200">
+                <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }} className="relative w-full h-full overflow-hidden flex flex-col bg-white rounded-xl shadow-md border border-gray-200">
 
                     <div className="w-full bg-slate-800 text-white py-2 px-4 shadow-sm flex items-center justify-between z-10">
                         <span className="text-xs font-bold uppercase tracking-widest text-slate-300">
-                            {isCE ? 'Estilo Cebraspe' : 'Múltipla Escolha'}
+                            {isCE ? t('concursoCard.styleCebraspe') : t('concursoCard.multipleChoice')}
                         </span>
                         <span className="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-white font-mono">
-                            Q-Inédita
+                            {t('concursoCard.unpublishedQuestion')}
                         </span>
                     </div>
 
@@ -202,30 +202,30 @@ export default function ConcursoCard({
 
                         {!isME && !isCE && (
                             <div className="mt-auto w-full text-center text-xs text-blue-500 font-semibold uppercase tracking-widest pt-4 animate-pulse">
-                                Ver Gabarito
+                                {t('concursoCard.seeAnswer')}
                             </div>
                         )}
                     </div>
                 </div>
 
                 {/* BACK FACE (Gabarito) */}
-                <div style={{ gridArea: '1 / 1 / 2 / 2', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} className="relative w-full h-full overflow-hidden flex flex-col bg-slate-50 rounded-xl shadow-lg border border-slate-200">
+                <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} className="relative w-full h-full overflow-hidden flex flex-col bg-slate-50 rounded-xl shadow-lg border border-slate-200">
 
                     <div className="w-full bg-slate-800 text-white py-2 px-4 shadow-sm flex items-center justify-center z-10">
-                        <span className="text-xs font-bold uppercase tracking-widest text-green-400">Gabarito e Comentários</span>
+                        <span className="text-xs font-bold uppercase tracking-widest text-green-400">{t('concursoCard.answerAndComments')}</span>
                     </div>
 
                     <div className="w-full text-gray-800 p-5 flex flex-col items-start justify-start text-left relative z-10 flex-grow overflow-y-auto no-scrollbar">
 
                         <div className="w-full bg-white rounded-lg border border-gray-200 p-4 shadow-sm mb-4">
-                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1 block">Aposta da IA</span>
+                            <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1 block">{t('concursoCard.aiPrediction')}</span>
                             <p className="text-lg font-bold text-slate-800 break-words">
                                 {card.correct_answer || (isCE ? card.predicted_outcome : 'N/A')}
                             </p>
                         </div>
 
                         <div className="w-full bg-blue-50/50 rounded-lg border border-blue-100 p-4">
-                            <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider mb-2 block">Explicação do Professor</span>
+                            <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider mb-2 block">{t('concursoCard.teacherExplanation')}</span>
                             <p className="text-sm font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">
                                 {card.explanation || card.game_theory_explanation}
                             </p>

@@ -18,6 +18,11 @@ const config: CapacitorConfig = {
       style: 'DARK',
       overlaysWebView: false,
     },
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      serverClientId: process.env.VITE_GOOGLE_CLIENT_ID || '',
+      forceCodeForRefreshToken: false,
+    },
   },
 };
 
