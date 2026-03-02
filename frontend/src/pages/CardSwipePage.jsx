@@ -538,7 +538,7 @@ export default function CardSwipePage() {
                 <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 20, textAlign: 'center' }}>
                   {t('cards.cardOptionsInstruction')}
                 </p>
-                <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 w-full px-2 sm:px-0 sm:flex-wrap sm:justify-center sm:gap-6 sm:overflow-visible sm:pb-0" style={{ scrollPadding: '1rem', WebkitOverflowScrolling: 'touch' }}>
+                <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 w-full px-2 sm:px-0 sm:flex-wrap sm:justify-center sm:gap-6 sm:overflow-visible sm:pb-0 sm:snap-none" style={{ scrollPadding: '1rem', WebkitOverflowScrolling: 'touch' }}>
                   {savedCards.map((c, idx) => {
                     const uniqueId = c.id ?? c._id ?? `card-${idx}`;
                     const props = {
@@ -581,7 +581,7 @@ export default function CardSwipePage() {
                     }
 
                     return (
-                      <div key={uniqueId} className="snap-center shrink-0 w-[85vw] max-w-[380px] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)] flex flex-col items-center">
+                      <div key={uniqueId} className="snap-center shrink-0 w-[85vw] max-w-[380px] sm:snap-align-none sm:shrink sm:w-[calc(50%_-_12px)] sm:max-w-none lg:w-[calc(33.333%_-_16px)] xl:w-[calc(25%_-_18px)] flex flex-col items-center">
                         <CardElem {...props} />
                         {/* Fake Swipe Buttons for Demo */}
                         {!isAuthenticated && (
