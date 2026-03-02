@@ -10,8 +10,9 @@ warnings.filterwarnings(
 import os  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from gemini_webapi import GeminiClient
 
@@ -26,6 +27,7 @@ from .routers import (
     oracle_analytics,
     payments,
     profile_router,
+    models,
     register,
     srs,
 )
@@ -91,6 +93,22 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+# Add GZipMiddleware for response compression
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+@app.middleware('http')
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers['Strict-Transport-Security'] = (
+        'max-age=31536000; includeSubDomains'
+    )
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    return response
+
+
 # Setup templates and static files
 
 MEDIA_DIR = os.path.join(
@@ -120,6 +138,7 @@ app.include_router(cards.router)
 app.include_router(srs.router)
 app.include_router(oracle_analytics.router)
 app.include_router(profile_router.router)
+app.include_router(models.router)
 
 if __name__ == '__main__':
     import uvicorn

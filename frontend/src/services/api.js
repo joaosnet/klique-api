@@ -431,4 +431,19 @@ export const oracleAPI = {
     },
 };
 
+// ========================================
+// OmniFlash — Models API
+// ========================================
+
+export const modelsAPI = {
+    generateSVG: async (imageFile) => {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        const response = await api.post('/api/models/generate-svg', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+};
+
 export default api;

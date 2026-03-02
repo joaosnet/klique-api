@@ -58,6 +58,42 @@ function heatColor(score) {
   return score >= 67 ? '#ef4444' : score >= 34 ? '#f59e0b' : '#22c55e';
 }
 
+function ContextMenuOverlay({ onClose, children }) {
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); onClose(); }}
+      style={{
+        position: 'absolute', inset: 0, zIndex: 999,
+        background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '24px', animation: 'fadeIn 0.2s ease-out', borderRadius: 16
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 240, display: 'flex', flexDirection: 'column', gap: 12,
+          animation: 'scaleUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}
+      >
+        <p style={{ color: '#fff', fontSize: 13, textAlign: 'center', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 16 }}>Ações da Carta</p>
+
+        {children}
+
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          style={{
+            marginTop: 8, padding: '12px 0', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)',
+            background: 'transparent', color: '#ccc', cursor: 'pointer', fontSize: 12, fontWeight: 600, textTransform: 'uppercase'
+          }}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // footer: optional JSX to replace the default save/discard button row
 export default function GameTheoryCard({
   card,
@@ -67,391 +103,247 @@ export default function GameTheoryCard({
   onDiscard,
   swiping,
   footer,
+  customSvg,
 }) {
   const tmpl = TEMPLATES[card.template_type] || TEMPLATES.if_then;
   const heat = card.probability_heat_score;
   const hc = heatColor(heat);
-  const gradId = `gt-grad-${card.template_type}`;
-  const heatFill = Math.round(338 * heat / 100);
+  const total = 9; // Temporary mock total, or calculate from somewhere if needed
+  const rank = Math.round(total / 3);
 
   // Swipe / drag-to-flip state
-  const dragRef = useRef(null); // { startX, startY, moved }
-  const [dragOffset, setDragOffset] = useState(0); // live tilt in px during drag
-  const SWIPE_THRESHOLD = 40; // px to trigger flip
+  const dragRef = useRef(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const SWIPE_THRESHOLD = 40;
+
+  // Context Menu state
+  const pressTimer = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Stop any pending long-press if movement occurs or interaction ends
+  const cancelPress = () => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  };
+
+  const startPress = () => {
+    cancelPress();
+    pressTimer.current = setTimeout(() => {
+      setShowMenu(true);
+    }, 500); // 500ms long press threshold
+  };
 
   const onPointerDown = (e) => {
     dragRef.current = { startX: e.clientX, startY: e.clientY, moved: false };
+    startPress();
   };
 
   const onPointerMove = (e) => {
     if (!dragRef.current) return;
     const dx = e.clientX - dragRef.current.startX;
     const dy = e.clientY - dragRef.current.startY;
-    if (Math.abs(dx) > 5) dragRef.current.moved = true;
-    // Only tilt if mostly horizontal
-    if (Math.abs(dx) > Math.abs(dy)) {
-      setDragOffset(dx);
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      dragRef.current.moved = true;
+      cancelPress(); // Cancel long press if user moves pointer
     }
+    if (Math.abs(dx) > Math.abs(dy)) setDragOffset(dx);
   };
 
   const onPointerUp = (e) => {
+    cancelPress();
     if (!dragRef.current) return;
     const dx = e.clientX - dragRef.current.startX;
     const dy = e.clientY - dragRef.current.startY;
     const wasDragging = dragRef.current.moved;
     dragRef.current = null;
     setDragOffset(0);
-    // Trigger flip if horizontal swipe threshold met and mostly horizontal
+    // Ignore swipe events acting as reveals if showing menu
+    if (showMenu) return;
+
     if (wasDragging && Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) * 1.5) {
       if (onReveal) onReveal();
     }
   };
 
   const onPointerLeave = () => {
+    cancelPress();
     dragRef.current = null;
     setDragOffset(0);
   };
 
-  const renderSVGHeader = (isBack = false) => (
-    <svg
-      viewBox="0 0 370 155"
-      width="100%"
-      style={{ display: 'block' }}
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id={`${gradId}-${isBack ? 'back' : 'front'}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={tmpl.gradStart} stopOpacity="0.9" />
-          <stop offset="100%" stopColor={tmpl.gradStart} stopOpacity="0" />
-        </linearGradient>
-        <linearGradient id={`${gradId}-imageOverlay`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={tmpl.innerBg} stopOpacity="0.15" />
-          <stop offset="50%" stopColor={tmpl.innerBg} stopOpacity="0.05" />
-          <stop offset="100%" stopColor={tmpl.innerBg} stopOpacity="0.7" />
-        </linearGradient>
-        <clipPath id={`${gradId}-corners`}>
-          <rect x="0" y="0" width="370" height="155" rx="0" />
-        </clipPath>
-      </defs>
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setShowMenu(true);
+  };
 
-      {/* Background — transparent so the CSS container bg shows through, or Image */}
-      <g clipPath={`url(#${gradId}-corners)`}>
-        {card.media_urls && card.media_urls[0] ? (
-          <>
-            <image
-              href={`${import.meta.env.VITE_API_URL || ''}${card.media_urls[0]}`}
-              x="0" y="0" width="370" height="155"
-              preserveAspectRatio="xMidYMid slice"
-            />
-            <rect width="370" height="155" fill={`url(#${gradId}-imageOverlay)`} />
-          </>
-        ) : (
-          <rect width="370" height="155" fill={`url(#${gradId}-${isBack ? 'back' : 'front'})`} />
-        )}
-      </g>
+  const handleCardClick = (e) => {
+    if (showMenu) return; // Disallow flip if menu is active
+    if (dragRef.current?.moved) return;
+    if (onReveal) onReveal();
+  };
 
-      {/* Diagonal accent lines — only without image */}
-      {!(card.media_urls && card.media_urls[0]) && (
-        <>
-          <line x1="0" y1="0" x2="370" y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
-          <line x1="370" y1="0" x2="0" y2="155" stroke={tmpl.color} strokeOpacity="0.06" strokeWidth="1" />
-          <line x1="185" y1="0" x2="185" y2="155" stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
-          <line x1="0" y1="77" x2="370" y2="77" stroke={tmpl.color} strokeOpacity="0.04" strokeWidth="1" />
-        </>
-      )}
-
-      {/* Decorative aura circles — only without image */}
-      {!(card.media_urls && card.media_urls[0]) && (
-        <>
-          <circle cx="310" cy="40" r="85" fill={tmpl.color} fillOpacity="0.06" />
-          <circle cx="310" cy="40" r="52" fill={tmpl.color} fillOpacity="0.07" />
-          <circle cx="55" cy="125" r="65" fill={tmpl.color} fillOpacity="0.05" />
-        </>
-      )}
-
-      {/* Large background symbol — only without image */}
-      {!(card.media_urls && card.media_urls[0]) && (
-        <text
-          x="185" y="105"
-          fill={tmpl.color}
-          fontSize="78"
-          fontFamily="system-ui, sans-serif"
-          textAnchor="middle"
-          opacity="0.18"
-          transform={isBack ? "scale(-1, 1) translate(-370, 0)" : "none"}
-        >
-          {tmpl.symbol}
-        </text>
-      )}
-
-      {/* ── Template label badge (top-left) ── */}
-      <rect x="0" y="0" width={tmpl.labelWidth} height="22" fill={tmpl.color} fillOpacity="0.92" rx="0" />
-      {/* bottom-right corner rounding only */}
-      <rect x={tmpl.labelWidth - 8} y="0" width="8" height="22" fill={tmpl.color} fillOpacity="0.92" />
-      {/* mask corner with transparent — inherits container bg via CSS */}
-      <rect x={tmpl.labelWidth - 8} y="14" width="8" height="8" style={{ fill: tmpl.innerBg }} />
-      <text
-        x="10" y="15"
-        fill="#000"
-        fontSize="8"
-        letterSpacing="2"
-        fontFamily="Courier New, monospace"
-        fontWeight="800"
-      >
-        {isBack ? 'VERSO' : tmpl.shortLabel}
-      </text>
-
-      {/* ── Heat score (top-right) ── */}
-      <text
-        x="358" y="15"
-        fill={hc}
-        fontSize="10"
-        fontFamily="Courier New, monospace"
-        fontWeight="700"
-        textAnchor="end"
-      >
-        HEAT {heat}
-      </text>
-
-      {/* ── Corner symbols ── */}
-      {/* bottom-left */}
-      <text
-        x="14" y="140"
-        fill={tmpl.accentColor}
-        fontSize="20"
-        fontFamily="system-ui, sans-serif"
-        fontWeight="700"
-        opacity="0.6"
-      >
-        {tmpl.symbol}
-      </text>
-      {/* top-right (rotated 180°) */}
-      <g transform="translate(356,25) rotate(180)">
-        <text
-          x="0" y="0"
-          fill={tmpl.accentColor}
-          fontSize="20"
-          fontFamily="system-ui, sans-serif"
-          fontWeight="700"
-          opacity="0.6"
-        >
-          {tmpl.symbol}
-        </text>
-      </g>
-
-      {/* ── Heat bar ── */}
-      <rect x="16" y="147" width="338" height="3" rx="1.5" fill="rgba(255,255,255,0.08)" />
-      <rect x="16" y="147" width={heatFill} height="3" rx="1.5" fill={hc} />
-    </svg>
-  );
+  const artVisual = customSvg
+    ? <div className="w-full h-full absolute inset-0 z-0" dangerouslySetInnerHTML={{ __html: customSvg }} style={{ background: '#000' }} />
+    : card.media_urls && card.media_urls[0]
+      ? <img src={`${import.meta.env.VITE_API_URL || ''}${card.media_urls[0]}`} className="w-full h-full object-cover absolute inset-0 z-0 opacity-90" />
+      : <div className="w-full h-full absolute inset-0 z-0" style={{ background: `linear-gradient(135deg, ${tmpl.darkColor}, ${tmpl.color})` }}>
+        <div className="absolute inset-0 flex items-center justify-center opacity-30 text-8xl">{tmpl.symbol}</div>
+      </div>;
 
   const renderActionButtons = () => {
     if (footer !== undefined) return footer;
     if (!onSave && !onDiscard) return null;
     return (
-      <div style={{ display: 'flex', gap: 8 }}>
+      <>
         <button
-          onClick={(e) => { e.stopPropagation(); onDiscard(); }}
+          onClick={(e) => { e.stopPropagation(); setShowMenu(false); onSave(); }}
           style={{
-            flex: 1, padding: '11px 0', borderRadius: 8,
-            border: '1px solid #ef4444',
-            background: '#ef444411', color: '#ef4444', cursor: 'pointer',
-            fontSize: 18, fontWeight: 700,
+            width: '100%', padding: '14px 0', borderRadius: 8, border: 'none',
+            background: tmpl.btnBg, color: '#fff', cursor: 'pointer',
+            fontSize: 13, fontWeight: 700, letterSpacing: 2,
+            textTransform: 'uppercase', fontFamily: '"Inter", system-ui, sans-serif',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+          }}
+        >
+          Guardar no Deck
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDiscard(); }}
+          style={{
+            width: '100%', padding: '14px 0', borderRadius: 8,
+            border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', cursor: 'pointer',
+            fontSize: 13, fontWeight: 700, letterSpacing: 2,
+            textTransform: 'uppercase', fontFamily: '"Inter", system-ui, sans-serif'
           }}
           title="Descartar"
         >
-          ✕
+          Descartar Carta
         </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onSave(); }}
-          style={{
-            flex: 3, padding: '11px 0', borderRadius: 8, border: 'none',
-            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-            color: '#fff', cursor: 'pointer',
-            fontSize: 11, fontWeight: 700, letterSpacing: 2,
-            textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
-          }}
-        >
-          Salvar no Deck →
-        </button>
-      </div>
+      </>
     );
-  };
-
-  const handleCardClick = (e) => {
-    // Suppress click if the pointer was dragged significantly
-    if (dragRef.current?.moved) return;
-    if (onReveal) {
-      onReveal();
-    }
   };
 
   return (
     <div
+      className="unmatched-card"
       style={{
-        background: tmpl.outerBg,
-        borderRadius: 14,
-        padding: 5,
-        boxShadow: `0 0 36px ${tmpl.glowColor}, 0 20px 48px rgba(0,0,0,0.85)`,
-        maxWidth: 380,
-        width: '100%',
+        maxWidth: 380, width: '100%', cursor: 'grab', userSelect: 'none', touchAction: 'pan-y', margin: '0 auto',
         transition: swiping ? 'transform 0.35s ease, opacity 0.35s ease' : 'transform 0.15s ease, opacity 0.35s ease',
         transform:
-          swiping === 'right'
-            ? 'translateX(120%) rotate(12deg)'
-            : swiping === 'left'
-              ? 'translateX(-120%) rotate(-12deg)'
-              : dragOffset !== 0
-                ? `translateX(${dragOffset * 0.08}px) rotate(${dragOffset * 0.015}deg)`
+          swiping === 'right' ? 'translateX(120%) rotate(12deg)'
+            : swiping === 'left' ? 'translateX(-120%) rotate(-12deg)'
+              : dragOffset !== 0 ? `translateX(${dragOffset * 0.08}px) rotate(${dragOffset * 0.015}deg)`
                 : 'none',
-        opacity: swiping ? 0 : 1,
-        perspective: '1500px',
-        cursor: 'grab',
-        userSelect: 'none',
-        touchAction: 'pan-y',
+        opacity: swiping ? 0 : 1, perspective: '1500px', position: 'relative'
       }}
-      onClick={handleCardClick}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerLeave}
+      onClick={handleCardClick} onContextMenu={handleContextMenu} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerLeave}
     >
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      `}} />
+      {showMenu && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 9999, pointerEvents: 'auto' }}>
+          <ContextMenuOverlay onClose={() => setShowMenu(false)}>
+            {renderActionButtons()}
+          </ContextMenuOverlay>
+        </div>
+      )}
       {/* 3D Flipper Container */}
-      <div
-        style={{
-          width: '100%',
-          transition: 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)',
-          transformStyle: 'preserve-3d',
-          transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)',
-          display: 'grid',
-        }}
-      >
-        {/* Front Face */}
-        <div
-          style={{
-            gridArea: '1 / 1 / 2 / 2',
-            backfaceVisibility: 'hidden',
-            background: tmpl.innerBg,
-            borderRadius: 10,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {renderSVGHeader(false)}
+      <div style={{ width: '100%', height: '100%', transition: 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)', transformStyle: 'preserve-3d', transform: revealed ? 'rotateY(180deg)' : 'rotateY(0deg)', display: 'grid' }}>
 
-          <div style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {/* Scenario */}
-            <div style={{ marginBottom: 14 }}>
-              <p style={{
-                color: tmpl.accentColor, fontSize: 8, letterSpacing: 3,
-                textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
-                margin: '0 0 5px', fontWeight: 700,
-              }}>
-                ▸ Cenário
-              </p>
-              <p style={{ color: 'var(--text-main)', fontSize: 13, lineHeight: 1.7, margin: 0 }}>
-                {card.scenario_context}
-              </p>
+        {/* FRONT FACE */}
+        <div style={{ gridArea: '1 / 1 / 2 / 2', backfaceVisibility: 'hidden' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col">
+          {/* Topo: Arte e Hexágono */}
+          <div className="w-full relative overflow-hidden bg-gray-900 border-b-2 border-white" style={{ height: '55%' }}>
+            {artVisual}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/30 to-transparent z-0"></div>
+
+            {/* Tag Superior Esquerda (Rank) */}
+            <div className="absolute top-0 left-0 w-12 h-32 z-10 drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)]">
+              <svg viewBox="0 0 40 105" className="w-full h-full">
+                <polygon points="0,0 40,0 40,90 20,105 0,90" fill={tmpl.color} />
+                <text x="20" y="25" fill="white" fontSize="18" textAnchor="middle" fontFamily="system-ui, sans-serif">{tmpl.symbol}</text>
+                <text x="20" y="60" fontFamily="'Anton', sans-serif" fontSize="28" fill="white" textAnchor="middle">{heat}</text>
+                <text x="20" y="75" fontFamily="Courier New, monospace" fontSize="8" fill="rgba(255,255,255,0.8)" textAnchor="middle" fontWeight="bold">HEAT</text>
+              </svg>
             </div>
 
-            {/* Question */}
-            <div style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: `1px solid ${tmpl.color}44`,
-              borderLeft: `3px solid ${tmpl.color}`,
-              borderRadius: '0 8px 8px 0',
-              padding: '11px 13px',
-              marginBottom: 14,
-            }}>
-              <p style={{
-                color: tmpl.accentColor, fontSize: 8, letterSpacing: 3,
-                textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
-                margin: '0 0 5px', fontWeight: 700,
-              }}>
-                ▸ Pergunta Tática
+            {/* Boost Marker */}
+            <div className="absolute bottom-[-10px] right-3 z-20 w-8 h-8 rounded-full bg-black border-2 border-white flex items-center justify-center shadow-lg">
+              <span className="font-title text-white text-sm mt-0.5">{tmpl.shortLabel[0]}</span>
+            </div>
+          </div>
+
+          {/* Texto da Carta */}
+          <div className="w-full text-white p-3 flex flex-col relative z-10 bg-black flex-grow">
+            <h2 className="font-title text-xl tracking-wider leading-none mb-1 uppercase truncate" style={{ color: tmpl.color }}>
+              {tmpl.shortLabel}
+            </h2>
+            <div className="w-full h-[1px] bg-gray-700 mb-2"></div>
+
+            <div className="flex-grow flex flex-col justify-start space-y-2 overflow-hidden">
+              <p className="text-xs font-bold text-gray-200 uppercase" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                ► {card.scenario_context}
               </p>
-              <p style={{ color: 'var(--text-main)', fontSize: 14, fontWeight: 600, lineHeight: 1.6, margin: 0 }}>
+              <p className="text-sm leading-tight text-white font-semibold flex-grow" style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                 {card.question}
               </p>
             </div>
 
             {/* Hint to click */}
             <div style={{
-              width: '100%', padding: '10px 0', borderRadius: 8,
-              border: `1px dashed ${tmpl.color}55`,
-              background: `${tmpl.color}11`,
-              color: tmpl.accentColor, textAlign: 'center',
-              fontSize: 10, fontWeight: 700, letterSpacing: 2,
-              textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
-              marginTop: 'auto', marginBottom: 14,
-              animation: 'card-pulse 2s infinite',
+              width: '100%', padding: '6px 0', borderRadius: 4, border: `1px dashed ${tmpl.color}55`, background: `${tmpl.color}11`,
+              color: tmpl.accentColor, textAlign: 'center', fontSize: 9, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase',
+              fontFamily: 'Courier New, monospace', marginTop: 'auto', marginBottom: 6, animation: 'card-pulse 2s infinite',
             }}>
-              ◈ Clica para Revelar o Oráculo
+              ◈ Revelar o Oráculo
             </div>
-
-            {/* Spacer for Action Buttons equivalent height so grid cells match nicely, 
-                or we can just render them on both sides to keep size uniform */}
-            {renderActionButtons()}
           </div>
         </div>
 
-        {/* Back Face */}
-        <div
-          style={{
-            gridArea: '1 / 1 / 2 / 2',
-            backfaceVisibility: 'hidden',
-            background: tmpl.innerBg,
-            borderRadius: 10,
-            overflow: 'hidden',
-            transform: 'rotateY(180deg)',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {renderSVGHeader(true)}
+        {/* BACK FACE */}
+        <div style={{ gridArea: '1 / 1 / 2 / 2', backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }} className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col">
+          {/* Small Top Header for Back Face */}
+          <div className="w-full relative overflow-hidden flex-shrink-0" style={{ height: '22%', background: `linear-gradient(135deg, ${tmpl.darkColor} 0%, #050505 100%)`, borderBottom: `2px solid ${tmpl.color}66` }}>
+            {/* Background Symbol */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-10" style={{ fontSize: '100px', transform: 'translateY(10px)' }}>
+              {tmpl.symbol}
+            </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+              <span style={{ color: tmpl.accentColor, fontSize: 16, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{tmpl.symbol}</span>
+              <h2 className="font-title text-xl tracking-widest text-white uppercase mt-1" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>O Oráculo</h2>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontFamily: '"Courier New", monospace', marginTop: 2 }}>
+                {tmpl.shortLabel}
+              </p>
+            </div>
+          </div>
 
-          <div style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{
-              background: 'rgba(34,197,94,0.05)',
-              border: '1px solid rgba(34,197,94,0.2)',
-              borderRadius: 8, padding: '11px 13px', marginBottom: 14,
-            }}>
-              <p style={{
-                color: '#6ee7b7', fontSize: 8, letterSpacing: 3,
-                textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
-                margin: '0 0 5px', fontWeight: 700,
-              }}>
+          <div className="w-full text-white p-3 flex flex-col bg-black flex-grow overflow-y-auto no-scrollbar">
+
+            <div style={{ background: 'rgba(34,197,94,0.1)', borderLeft: '3px solid #22c55e', borderRadius: '0 8px 8px 0', padding: '10px 12px', marginBottom: 12 }}>
+              <p style={{ color: '#4ade80', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontFamily: 'Courier New, monospace', margin: '0 0 4px', fontWeight: 800 }}>
                 ▸ Resultado Provável
               </p>
-              <p style={{ color: 'var(--text-main)', fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+              <p style={{ color: '#f8fafc', fontSize: 13, lineHeight: 1.6, margin: 0, fontWeight: 500 }}>
                 {card.predicted_outcome}
               </p>
             </div>
 
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: 8, padding: '11px 13px',
-              marginBottom: 14,
-            }}>
-              <p style={{
-                color: 'var(--text-muted)', fontSize: 8, letterSpacing: 3,
-                textTransform: 'uppercase', fontFamily: 'Courier New, monospace',
-                margin: '0 0 5px', fontWeight: 700,
-              }}>
-                ▸ Análise · Teoria dos Jogos
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 12px', marginBottom: 10, flexGrow: 1 }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontFamily: 'Courier New, monospace', margin: '0 0 4px', fontWeight: 800 }}>
+                ▸ Análise · Teoria Jogos
               </p>
-              <p style={{ color: 'var(--text-main)', fontSize: 13, lineHeight: 1.75, margin: 0 }}>
+              <p style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 1.6, margin: 0 }}>
                 {card.game_theory_explanation}
               </p>
             </div>
-
-            <div style={{ marginTop: 'auto' }}>
-              {renderActionButtons()}
-            </div>
           </div>
         </div>
+
       </div>
     </div>
   );

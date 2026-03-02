@@ -177,7 +177,7 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ color: 'var(--text-highlight)', fontSize: 16, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
-            Editar Card
+            {cardId ? 'Editar Card' : 'Criar Card'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20 }}>✕</button>
         </div>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { domainsAPI, cardsAPI } from '../services/api';
+import { domainsAPI, cardsAPI, modelsAPI } from '../services/api';
 import GameTheoryCard from '../components/Cards/GameTheoryCard';
 import CardEditModal from '../components/Cards/CardEditModal';
 import { useAuth } from '../context/AuthContext';
@@ -33,7 +33,9 @@ export default function CardSwipePage() {
   const [swiping, setSwiping] = useState(null);
   const [context, setContext] = useState('');
 
-  const [activeTab, setActiveTab] = useState('generate');
+  const [showCreateView, setShowCreateView] = useState(false);
+  const [showFabMenu, setShowFabMenu] = useState(false);
+  const [showAITools, setShowAITools] = useState(false);
   const [savedCards, setSavedCards] = useState([]);
   const [loadingCards, setLoadingCards] = useState(false);
   const [generateImage, setGenerateImage] = useState(true);
@@ -41,6 +43,14 @@ export default function CardSwipePage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCard, setEditingCard] = useState(null); // { card, cardId }
   const [pendingImageAction, setPendingImageAction] = useState(null);
+
+  const [revealedCards, setRevealedCards] = useState({});
+  const toggleReveal = (id) => setRevealedCards(prev => ({ ...prev, [id]: !prev[id] }));
+
+  // Custom SVG model state
+  const [customSvg, setCustomSvg] = useState(null);
+  const [generatingSvg, setGeneratingSvg] = useState(false);
+  const svgFileInputRef = useRef(null);
 
   const { isAuthenticated } = useAuth();
   const [demoIndex, setDemoIndex] = useState(0);
@@ -58,7 +68,7 @@ export default function CardSwipePage() {
       .catch(() => navigate('/'));
   }, [domainId, isAuthenticated]);
 
-  const loadSavedCards = async () => {
+  const loadSavedCards = async (isInitial = false) => {
     if (!isAuthenticated) return;
     setLoadingCards(true);
     try {
@@ -72,7 +82,7 @@ export default function CardSwipePage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) loadSavedCards();
+    if (isAuthenticated) loadSavedCards(true);
   }, [isAuthenticated, domainId]);
 
   const generateCard = async () => {
@@ -109,6 +119,30 @@ export default function CardSwipePage() {
     } finally {
       setGenerating(false);
       setProgress(null);
+    }
+  };
+
+  const handleUploadSvgModel = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setGeneratingSvg(true);
+    setError('');
+
+    try {
+      const result = await modelsAPI.generateSVG(file);
+      if (result.success && result.svg) {
+        setCustomSvg(result.svg);
+      } else {
+        throw new Error('Falha ao gerar o modelo SVG');
+      }
+    } catch (err) {
+      setError(err.message || 'Erro ao gerar o modelo da carta com IA.');
+      console.error(err);
+    } finally {
+      setGeneratingSvg(false);
+      // Reset input so the same file can be selected again
+      if (svgFileInputRef.current) svgFileInputRef.current.value = '';
     }
   };
 
@@ -154,6 +188,22 @@ export default function CardSwipePage() {
       setRevealed(false);
       setPendingImageAction(null);
     }, 350);
+  };
+
+  const handleCreateManual = () => {
+    setEditingCard({
+      cardId: null,
+      card: {
+        template_type: 'if_then',
+        scenario_context: '',
+        question: '',
+        predicted_outcome: '',
+        game_theory_explanation: '',
+        probability_heat_score: 50,
+        visual_prompt_idea: '',
+      }
+    });
+    setShowEditModal(true);
   };
 
   const handleEditCard = (cardToEdit, cardId) => {
@@ -212,9 +262,11 @@ export default function CardSwipePage() {
     );
   }
 
+  const isCreating = savedCards.length === 0 || showCreateView;
+
   return (
-    <div style={{ minHeight: 'calc(100vh - 56px)', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ maxWidth: 520, width: '100%' }}>
+    <div style={{ minHeight: 'calc(100vh - 56px)', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+      <div style={{ width: '100%', maxWidth: isCreating ? 520 : 1200 }}>
         {/* Header */}
         <div style={{ marginBottom: '1.25rem' }}>
           <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, padding: 0, marginBottom: 6 }}>
@@ -227,96 +279,152 @@ export default function CardSwipePage() {
           )}
         </div>
 
-        {/* Tabs — only for authenticated users */}
-        {isAuthenticated && (
-          <div style={{ display: 'flex', gap: 0, marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
-            {[
-              { key: 'generate', label: '⊕ Gerar' },
-              { key: 'deck', label: `🃏 Meu Deck (${savedCards.length})` },
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setActiveTab(key)}
-                style={{
-                  padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer',
-                  color: activeTab === key ? 'var(--text-highlight)' : 'var(--text-muted)',
-                  borderBottom: activeTab === key ? '2px solid var(--accent)' : '2px solid transparent',
-                  fontSize: 13, fontWeight: 600, letterSpacing: 1,
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* ======================== GENERATE TAB ======================== */}
-        {activeTab === 'generate' && (
-          <>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: '1rem' }}>
-              Desliza para a direita para salvar · Para a esquerda para descartar
+        {/* ======================== CREATE / EMPTY STATE ======================== */}
+        {isCreating && (
+          <div style={{ width: '100%', maxWidth: 520, margin: '0 auto' }}>
+            {savedCards.length > 0 && (
+              <div style={{ marginBottom: '1rem' }}>
+                <button
+                  onClick={() => setShowCreateView(false)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, padding: 0, display: 'flex', alignItems: 'center', gap: 6, opacity: 0.8 }}
+                >
+                  <span style={{ fontSize: 16 }}>←</span> Voltar ao Deck
+                </button>
+              </div>
+            )}
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: '1rem', textAlign: 'center' }}>
+              Cria as tuas próprias cartas ou usa o Oráculo para as gerar
             </p>
 
-            {/* Context input */}
-            <div style={{ marginBottom: '1rem' }}>
-              <input
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-                placeholder="Sub-tema ou contexto (opcional)..."
-                style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 8, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
-              />
+            {/* Main Create Button */}
+            <div style={{ marginBottom: '2rem' }}>
+              <button
+                onClick={handleCreateManual}
+                disabled={generating}
+                style={{ width: '100%', padding: '16px 0', borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 800, letterSpacing: 1, cursor: generating ? 'default' : 'pointer', textTransform: 'uppercase', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', transition: 'transform 0.2s', transform: generating ? 'scale(0.98)' : 'scale(1)' }}
+              >
+                Criar Carta Manualmente ✍️
+              </button>
             </div>
 
-            {/* Generate button */}
-            <button
-              onClick={generateCard}
-              disabled={generating}
-              style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: 'none', background: generating ? 'var(--bg-card-inner)' : 'var(--accent)', color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: 2, cursor: generating ? 'default' : 'pointer', textTransform: 'uppercase', marginBottom: '1rem', transition: 'background 0.2s' }}
-            >
-              {generating ? (progress ? `${progress.message} (${progress.percent}%)` : 'Gerando...') : 'Gerar Próximo Cenário'}
-            </button>
+            {/* AI Tolls Toggle */}
+            <div style={{ marginBottom: showAITools ? '1rem' : '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+              <button
+                onClick={() => setShowAITools(!showAITools)}
+                style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', color: 'var(--text-highlight)', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0 }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>✨</span>
+                  <span>Usar o Oráculo (Inteligência Artificial)</span>
+                </div>
+                <span style={{ transform: showAITools ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>▼</span>
+              </button>
+            </div>
 
-            {/* AI image toggle — only for authenticated */}
-            {isAuthenticated && !card && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: '1rem', color: 'var(--text-muted)', fontSize: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={generateImage}
-                  onChange={e => setGenerateImage(e.target.checked)}
-                  style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
-                />
-                Gerar imagem com IA ao salvar
-              </label>
-            )}
+            {/* AI Tools Section */}
+            {showAITools && (
+              <div style={{ background: 'var(--bg-card)', padding: '1rem', borderRadius: 12, border: '1px solid var(--border-color)', marginBottom: '2rem', animation: 'fadeIn 0.3s ease-out' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: 11, marginBottom: '1rem' }}>
+                  A IA vai gerar um cenário baseado no domínio atual e no contexto que forneceres. Depois poderás deslizar para guardar (direita) ou descartar (esquerda).
+                </p>
 
-            {error && (
-              <div style={{ background: '#7f1d1d', border: '1px solid #ef4444', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#fca5a5', fontSize: 13 }}>
-                {error}
+                {/* Context input */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <input
+                    value={context}
+                    onChange={(e) => setContext(e.target.value)}
+                    placeholder="Sub-tema ou contexto específico (opcional)..."
+                    style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                {/* Custom SVG Background Generator */}
+                {isAuthenticated && (
+                  <div style={{ marginBottom: '1.25rem', padding: '12px', background: 'var(--bg-card-inner)', borderRadius: 8, border: '1px dashed var(--accent)' }}>
+                    <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-highlight)', fontWeight: 600 }}>🌟 Criar Modelo de Carta Visual</p>
+                    <p style={{ margin: '0 0 10px 0', fontSize: 11, color: 'var(--text-muted)' }}>Muda o design de fundo enviando uma imagem de referência.</p>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <button
+                        onClick={() => svgFileInputRef.current?.click()}
+                        disabled={generatingSvg}
+                        style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '6px 12px', borderRadius: 6, fontSize: 12, cursor: generatingSvg ? 'default' : 'pointer', fontWeight: 600, transition: 'all 0.2s', flexShrink: 0 }}
+                      >
+                        {generatingSvg ? 'A Processar...' : '↑ Enviar Imagem'}
+                      </button>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={svgFileInputRef}
+                        style={{ display: 'none' }}
+                        onChange={handleUploadSvgModel}
+                      />
+                      {customSvg && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 700 }}>✓ Aplicado</span>
+                          <button onClick={() => setCustomSvg(null)} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 11, cursor: 'pointer', padding: 0 }}>Remover</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI image toggle — only for authenticated */}
+                {isAuthenticated && !card && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: '1rem', color: 'var(--text-muted)', fontSize: 12 }}>
+                    <input
+                      type="checkbox"
+                      checked={generateImage}
+                      onChange={e => setGenerateImage(e.target.checked)}
+                      style={{ accentColor: 'var(--accent)', width: 14, height: 14 }}
+                    />
+                    Gerar imagem descritiva com IA ao salvar o card
+                  </label>
+                )}
+
+                {/* Generate AI button */}
+                <button
+                  onClick={generateCard}
+                  disabled={generating}
+                  style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--accent)', background: generating ? 'var(--bg-card-inner)' : 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, letterSpacing: 1, cursor: generating ? 'default' : 'pointer', textTransform: 'uppercase', transition: 'background 0.2s' }}
+                >
+                  {generating ? (progress ? `${progress.message} (${progress.percent}%)` : 'A Gerar...') : 'Gerar Novo Cenário com IA ✨'}
+                </button>
+
+                {error && (
+                  <div style={{ background: '#7f1d1d', border: '1px solid #ef4444', borderRadius: 8, padding: '10px 14px', marginTop: 16, color: '#fca5a5', fontSize: 13 }}>
+                    {error}
+                  </div>
+                )}
               </div>
             )}
 
             {/* Pending image action badge */}
             {pendingImageAction && (
-              <div style={{ marginBottom: 8, padding: '6px 10px', borderRadius: 6, background: '#7c3aed22', border: '1px solid #7c3aed44', color: '#a78bfa', fontSize: 11 }}>
-                Ação de imagem pendente: {pendingImageAction.type === 'generate' ? 'Gerar com IA' : pendingImageAction.type === 'improve' ? `Melhorar (${pendingImageAction.stylePrompt})` : pendingImageAction.type === 'upload' ? 'Upload de ficheiro' : pendingImageAction.type}
-                <button onClick={() => setPendingImageAction(null)} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', marginLeft: 8, fontSize: 12 }}>✕</button>
+              <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: '#7c3aed22', border: '1px solid #7c3aed44', color: '#a78bfa', fontSize: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Ação pendente: {pendingImageAction.type === 'generate' ? 'Gerar com IA' : pendingImageAction.type === 'improve' ? `Melhorar (${pendingImageAction.stylePrompt})` : pendingImageAction.type === 'upload' ? 'Upload de ficheiro' : pendingImageAction.type}</span>
+                <button onClick={() => setPendingImageAction(null)} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>&times;</button>
               </div>
             )}
 
-            {/* Card */}
+            {/* Display Generated AI Card (for swiping) */}
             {card && (
-              <>
+              <div style={{ marginTop: '1rem' }}>
                 {/* Edit button above card */}
                 {isAuthenticated && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, maxWidth: 380, margin: '0 auto 8px auto' }}>
                     <button
                       onClick={() => handleEditCard(card, null)}
-                      style={{ background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', borderRadius: 6, padding: '5px 12px', fontSize: 11, cursor: 'pointer', letterSpacing: 1 }}
+                      style={{ background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', borderRadius: 6, padding: '6px 14px', fontSize: 11, cursor: 'pointer', letterSpacing: 1, fontWeight: 600 }}
                     >
-                      ✏ Editar Card
+                      ✏ Editar Cena
                     </button>
                   </div>
                 )}
+
+                <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 16, textAlign: 'center' }}>
+                  Desliza para a direita para guardar · Esquerda para descartar
+                </p>
+
                 <GameTheoryCard
                   card={card}
                   revealed={revealed}
@@ -324,87 +432,119 @@ export default function CardSwipePage() {
                   onSave={() => handleSwipe('save')}
                   onDiscard={() => handleSwipe('discard')}
                   swiping={swiping}
+                  customSvg={customSvg}
                 />
-              </>
-            )}
-
-            {!card && !generating && !error && (
-              <div style={{ textAlign: 'center', marginTop: 40, color: 'var(--text-muted)' }}>
-                <p style={{ fontSize: 40, marginBottom: 12 }}>🎴</p>
-                <p style={{ fontSize: 14 }}>Clica em "Gerar Próximo Cenário" para o Oráculo criar o teu primeiro card.</p>
               </div>
             )}
-          </>
+
+            {!card && !generating && (
+              <div style={{ textAlign: 'center', marginTop: 60, color: 'var(--text-muted)' }}>
+                <p style={{ fontSize: 48, marginBottom: 16, opacity: 0.5 }}>🃏</p>
+                <p style={{ fontSize: 14 }}>Cria as tuas próprias cartas ou usa o Oráculo.</p>
+              </div>
+            )}
+          </div>
         )}
 
-        {/* ======================== DECK TAB ======================== */}
-        {activeTab === 'deck' && (
+        {/* ======================== DECK ======================== */}
+        {!isCreating && (
           <div>
+            {/* FAB wrapper */}
+            <div style={{ position: 'fixed', bottom: '90px', right: '1.5rem', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+
+              {/* Mini buttons menu */}
+              {showFabMenu && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end', animation: 'fadeInUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+                  <button
+                    onClick={() => { setShowFabMenu(false); setShowCreateView(true); }}
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
+                  >
+                    <span>Gerar Oráculo AI</span>
+                    <span style={{ fontSize: 16 }}>✨</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowFabMenu(false); handleCreateManual(); }}
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
+                  >
+                    <span>Criar Manualmente</span>
+                    <span style={{ fontSize: 16 }}>✍️</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Main FAB */}
+              <button
+                onClick={() => setShowFabMenu(!showFabMenu)}
+                style={{
+                  width: 60, height: 60, borderRadius: 30, background: 'var(--accent)', color: '#fff', fontSize: 28,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.4)', border: 'none', cursor: 'pointer',
+                  transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s',
+                  transform: showFabMenu ? 'rotate(45deg)' : 'rotate(0deg)',
+                  paddingBottom: 2
+                }}
+                title="Adicionar carta"
+              >
+                +
+              </button>
+
+              <style dangerouslySetInnerHTML={{
+                __html: `
+                @keyframes fadeInUp {
+                  from { opacity: 0; transform: translateY(20px) scale(0.9); }
+                  to { opacity: 1; transform: translateY(0) scale(1); }
+                }
+              `}} />
+            </div>
+
             {loadingCards ? (
               <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: 40 }}>A carregar cards...</p>
-            ) : savedCards.length === 0 ? (
-              <div style={{ textAlign: 'center', marginTop: 60 }}>
-                <p style={{ fontSize: 36, marginBottom: 12 }}>📭</p>
-                <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Ainda não tens cards guardados neste domínio.</p>
-                <button
-                  onClick={() => setActiveTab('generate')}
-                  style={{ marginTop: 16, padding: '10px 24px', borderRadius: 8, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', letterSpacing: 1 }}
-                >
-                  Gerar o Primeiro Card
-                </button>
-              </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {savedCards.map((c, idx) => {
-                  const color = TEMPLATE_COLORS[c.template_type] || '#7c3aed';
-                  const imgUrl = c.media_urls && c.media_urls[0] ? `${API_URL}${c.media_urls[0]}` : null;
-                  return (
-                    <div
-                      key={c.id ?? c._id ?? idx}
-                      style={{ background: 'var(--bg-card)', border: `1px solid ${color}33`, borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}
-                    >
-                      {/* Thumbnail */}
-                      <div style={{ width: 52, height: 52, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {imgUrl
-                          ? <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : <span style={{ fontSize: 22 }}>{c.template_type === 'black_swan' ? '✦' : c.template_type === 'payoff_matrix' ? '◈' : '⚖'}</span>
-                        }
+              <>
+                <p style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 20, textAlign: 'center' }}>
+                  Pressiona a carta (ou clica botão direito) para ver opções
+                </p>
+                <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 w-full px-2 sm:px-0 sm:flex-wrap sm:justify-center sm:gap-6 sm:overflow-visible sm:pb-0" style={{ scrollPadding: '1rem', WebkitOverflowScrolling: 'touch' }}>
+                  {savedCards.map((c, idx) => {
+                    const uniqueId = c.id ?? c._id ?? `card-${idx}`;
+                    return (
+                      <div key={uniqueId} className="snap-center shrink-0 w-[85vw] max-w-[380px] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)] flex flex-col items-center">
+                        <GameTheoryCard
+                          card={c}
+                          revealed={!!revealedCards[uniqueId]}
+                          onReveal={() => toggleReveal(uniqueId)}
+                          customSvg={c.customSvg}
+                          footer={
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); document.body.click(); handleEditCard(c, c.id); }}
+                                style={{
+                                  width: '100%', padding: '14px 0', borderRadius: 8, border: '1px solid var(--border-color)',
+                                  background: 'var(--bg-card-inner)', color: '#fff', cursor: 'pointer',
+                                  fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
+                                  marginBottom: 8
+                                }}
+                              >
+                                ✏ Editar Carta
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); document.body.click(); handleDeleteCard(c.id); }}
+                                style={{
+                                  width: '100%', padding: '14px 0', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.4)',
+                                  background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', cursor: 'pointer',
+                                  fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1
+                                }}
+                              >
+                                🗑 Apagar Carta
+                              </button>
+                            </>
+                          }
+                        />
                       </div>
-                      {/* Content */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color, border: `1px solid ${color}`, borderRadius: 3, padding: '1px 5px' }}>
-                            {c.template_type === 'if_then' ? 'SE/ENTÃO' : c.template_type === 'payoff_matrix' ? 'RECOMPENSA' : 'CISNE NEGRO'}
-                          </span>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: heatColor(c.probability_heat_score) }}>
-                            HEAT {c.probability_heat_score}
-                          </span>
-                        </div>
-                        <p style={{ color: 'var(--text-main)', fontSize: 12, margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                          {c.scenario_context}
-                        </p>
-                      </div>
-                      {/* Actions */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-                        <button
-                          onClick={() => handleEditCard(c, c.id)}
-                          title="Editar"
-                          style={{ padding: '5px 10px', borderRadius: 6, background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12 }}
-                        >
-                          ✏
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCard(c.id)}
-                          title="Apagar"
-                          style={{ padding: '5px 10px', borderRadius: 6, background: 'transparent', border: '1px solid #ef444433', color: '#ef4444', cursor: 'pointer', fontSize: 12 }}
-                        >
-                          🗑
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}
