@@ -13,7 +13,7 @@ function computeMatch(p1, p2, t) {
     return { type: 'lose', synergyDelta: -2, msg: t('simulatorResults.match_war') };
   }
   const exploiter = p1.strategy === 'defect' ? p1.name : p2.name;
-  const victim    = p1.strategy === 'cooperate' ? p1.name : p2.name;
+  const victim = p1.strategy === 'cooperate' ? p1.name : p2.name;
   return {
     type: 'exploit',
     synergyDelta: -1,
@@ -22,16 +22,17 @@ function computeMatch(p1, p2, t) {
 }
 
 const TYPE_STYLE = {
-  win:     { border: 'border-blue-800',   tag: 'bg-blue-900 text-blue-400 border-blue-500',   label: 'simulatorResults.match_win' },
-  lose:    { border: 'border-red-800',    tag: 'bg-red-900 text-red-400 border-red-500',      label: 'simulatorResults.match_lose' },
+  win: { border: 'border-blue-800', tag: 'bg-blue-900 text-blue-400 border-blue-500', label: 'simulatorResults.match_win' },
+  lose: { border: 'border-red-800', tag: 'bg-red-900 text-red-400 border-red-500', label: 'simulatorResults.match_lose' },
   exploit: { border: 'border-orange-800', tag: 'bg-orange-900 text-orange-400 border-orange-500', label: 'simulatorResults.match_exploit_label' },
-  neutral: { border: 'border-gray-700',   tag: 'bg-gray-800 text-gray-400 border-gray-600',   label: 'simulatorResults.match_neutral' },
+  neutral: { border: 'border-gray-700', tag: 'bg-gray-800 text-gray-400 border-gray-600', label: 'simulatorResults.match_neutral' },
 };
 
 
 export default function SimulatorResults({ population, onReset }) {
   const { t } = useTranslation();
   // Build matches via round-robin shuffle
+  // eslint-disable-next-line react-hooks/purity
   const pool = [...population].sort(() => Math.random() - 0.5);
   const matches = [];
   let totalSynergy = 0;
@@ -56,14 +57,14 @@ export default function SimulatorResults({ population, onReset }) {
   const scoreColor = synergyScore >= 70 ? '#60a5fa' : synergyScore >= 40 ? '#facc15' : '#ef4444';
   const scoreLabel =
     synergyScore >= 70 ? t('simulatorResults.ecosystem_prosperous') :
-    synergyScore >= 40 ? t('simulatorResults.environment_unstable') :
-    t('simulatorResults.system_collapse');
+      synergyScore >= 40 ? t('simulatorResults.environment_unstable') :
+        t('simulatorResults.system_collapse');
 
   return (
     <div className="flex flex-col h-full">
       {/* Header / HUD */}
       <div className="flex items-center justify-between mb-4 flex-shrink-0 pb-3"
-           style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div>
           <h2 className="font-title text-xl text-yellow-500 tracking-wider">{t('simulatorResults.title')}</h2>
           <p className="text-xs text-gray-400 uppercase tracking-widest mt-0.5">

@@ -64,6 +64,7 @@ export default function OnboardingTutorial({ onComplete, currentStep = 1 }) {
     }, [currentStepData]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         updateTargetRect();
         window.addEventListener('resize', updateTargetRect);
         window.addEventListener('scroll', updateTargetRect);
@@ -175,12 +176,14 @@ export default function OnboardingTutorial({ onComplete, currentStep = 1 }) {
 }
 
 // Hook to check if onboarding is needed
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOnboarding() {
     const [showOnboarding, setShowOnboarding] = useState(false);
 
     useEffect(() => {
         const completed = localStorage.getItem('omniflash_onboarding_complete');
         if (!completed) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setShowOnboarding(true);
         }
     }, []);

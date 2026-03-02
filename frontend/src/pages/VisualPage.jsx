@@ -43,6 +43,7 @@ export default function VisualPage() {
     };
 
     loadDomains();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleThemeChange = (newTheme) => {
@@ -64,19 +65,22 @@ export default function VisualPage() {
     document.documentElement.style.setProperty('--accent-dark', colorObj.dark);
   };
 
-  const themeState = theme === 'light' ? 0 : theme === 'auto' ? 1 : 2;
-  const COLORS = getColors(t);
+  const THEMES = ['light', 'auto', 'dark'];
+  const currentThemeKey = THEMES.includes(theme) ? theme : 'auto';
+  const themeIndex = THEMES.indexOf(currentThemeKey);
 
-  const getThemeName = (state) => {
-    if (state === 0) return t('visual.theme_light');
-    if (state === 1) return t('visual.theme_auto');
+  const getThemeLabel = (themeValue) => {
+    if (themeValue === 'light') return t('visual.theme_light');
+    if (themeValue === 'auto') return t('visual.theme_auto');
     return t('visual.theme_dark');
   };
 
   const cycleTheme = () => {
-    const nextState = (themeState + 1) % 3;
-    handleThemeChange(getThemeName(nextState));
+    const nextIndex = (themeIndex + 1) % 3;
+    handleThemeChange(THEMES[nextIndex]);
   };
+
+  const COLORS = getColors(t);
 
   const stats = useMemo(() => {
     const totalDecks = domains.length;
@@ -102,8 +106,8 @@ export default function VisualPage() {
             <div className="visual-field">
               <label>{t('visual.mode')}</label>
               <div className="day-night-toggle" title={t('visual.mode')}>
-                <span className="visual-mode-label">{getThemeName(themeState)}</span>
-                <div className={`toggle-track theme-${getThemeName(themeState)}`} onClick={cycleTheme}>
+                <span className="visual-mode-label">{getThemeLabel(currentThemeKey)}</span>
+                <div className={`toggle-track theme-${currentThemeKey}`} onClick={cycleTheme}>
                   <div className="toggle-bg-color" />
                   <div className="cloud cloud-1" />
                   <div className="cloud cloud-2" />

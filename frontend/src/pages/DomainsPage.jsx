@@ -125,7 +125,10 @@ export default function DomainsPage() {
     }
   };
 
-  useEffect(() => { loadDomains(); }, [isAuthenticated]);
+  useEffect(() => {
+    loadDomains();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   const handleCreate = async (name, theme) => {
     await domainsAPI.create(name, theme);

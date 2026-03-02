@@ -107,7 +107,7 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
     try {
       await cardsAPI.uploadImage(cardId, file);
       setImgMsg(t('cardEdit.image_removed'));
-    } catch (err) {
+    } catch {
       setImgMsg(t('cardEdit.error_image_upload'));
     } finally {
       setImgLoading(false);
@@ -158,7 +158,6 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
     }
   };
 
-  const tmpl = TEMPLATES.find(tp => tp.value === templateType) || TEMPLATES[0];
 
   return (
     <div

@@ -1,9 +1,9 @@
-# OmniFlash API
+# OmniFlash
 
-Plataforma fullstack para geração de avatares com IA. O produto principal é o **fotodenatal.me** — um gerador de avatares natalinos que transforma fotos de usuários em personagens de Natal usando Google Gemini. O projeto também inclui um agente de IA via WhatsApp para automação de redes sociais.
+Plataforma fullstack de flashcards gamificados com elementos de **Teoria dos Jogos**. O OmniFlash transforma os estudos utilizando repetição espaçada e mecânicas imersivas de análise de cenários virtuais — ideal para **concurseiros** e estudantes de qualquer área que queiram otimizar sua memorização e capacidade analítica. O projeto também inclui um agente de IA via WhatsApp para automação e lembretes de estudo.
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.120+-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Python](https://img.shields.io/badge/Python-3.14+-3776AB?style=flat-square&logo=python)](https://python.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongodb.com)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
 
@@ -11,272 +11,113 @@ Plataforma fullstack para geração de avatares com IA. O produto principal é o
 
 ## O que é este projeto
 
-O OmniFlash API é composto por três partes:
+O OmniFlash é composto por três partes principais:
 
-1. **Backend (FastAPI)** — API REST em Python que orquestra geração de imagens, autenticação, pagamentos e o agente de IA.
-2. **Frontend (React)** — SPA servida via Nginx com as páginas de landing, login, gerador de avatares, mural e painel do usuário.
-3. **Dashboard** — Painel administrativo em HTML/JS puro para gestão interna.
+1.  **Backend (FastAPI)** — API REST em Python que orquestra os domínios, deques de cartas, cálculo de repetição espaçada (SRS), autenticação e pagamentos.
+2.  **Frontend (React)** — SPA focada na experiência mobile via PWA servida com Vite. Contém a interface gamificada de flashcards (Cards, Simulador de Teorias) e dashboards de progresso estilo "Oráculo".
+3.  **Agente de IA via WhatsApp** — Sistema assíncrono para interações e lembretes de estudo.
 
 ---
 
-## Como funciona
+## Principais Funcionalidades
 
-### Fluxo principal: Geração de avatar natalino
+### Flashcards + Teoria dos Jogos
 
-1. O usuário acessa o site e faz upload de uma foto.
-2. O backend verifica se ele tem créditos (1 crédito grátis para novos usuários/convidados por IP; créditos pagos via PIX).
-3. A foto é enviada ao **Google Gemini WebAPI** (acesso via cookies de sessão do browser) com um prompt em inglês correspondente ao template escolhido (16 templates: Papai Noel, Elfo, Grinch, Boneco de Neve, etc.).
-4. A imagem retornada é processada pelo **image_cleaner** (OpenCV + Pillow) que detecta e remove a marca d'água do Gemini via template matching e inpainting.
-5. Se o crédito usado era gratuito, uma marca d'água da plataforma é adicionada. Se era pago, a imagem é entregue limpa.
-6. O resultado é transmitido de volta ao browser via **Server-Sent Events (SSE)** com atualizações de progresso (10% → 20% → 40% → 60% → 75% → completo).
+-   **Cards Gamificados**: As cartas de estudo (flashcards) recebem classificações e um "Heat Score" probabilístico (ex: Cenários de "Black Swan", "Payoff Matrix", "If Then").
+-   **Oráculo Neural**: Um modelo de IA que atua como mentor virtual ao virar a carta, fornecendo a resposta e uma análise preditiva do cenário.
+-   **Domínios de Estudo**: Organização por áreas temáticas com acompanhamento de progresso. Perfeito para dividir as matérias de um edital de concurso público ou disciplinas universitárias.
 
-### Autenticação
+### Autenticação & Economia (Créditos)
 
-- Registro com email/senha + verificação por código de 4 dígitos enviado via Gmail SMTP.
-- Login retorna JWT (HS256, validade de 30 dias).
-- Google OAuth suportado (verificação do ID token via `google-auth`).
-- Usuários não autenticados são tratados como convidados identificados por IP (`guest_<ip>`), recebem 1 crédito grátis e precisam criar conta para obter mais.
+-   Registro com email/senha (verificado via Gmail SMTP) ou Google OAuth.
+-   Ações avançadas no gerador de cenários e IA consomem créditos internos (integração PIX nativa via Mercado Pago).
 
-### Pagamentos (PIX via Mercado Pago)
+### Infraestrutura e Produtividade
 
-1. Usuário autenticado solicita `POST /api/payments/pix/create` com o valor desejado (mínimo R$ 1,00).
-2. A API chama o Mercado Pago para criar um pagamento PIX com validade de 24h e retorna o QR code e o código copia-e-cola.
-3. Ao receber o pagamento, o Mercado Pago envia um webhook para `POST /api/payments/webhook`.
-4. A API verifica a assinatura HMAC, confirma o status `approved` e adiciona os créditos pagos ao usuário.
-
-### Agente de IA via WhatsApp
-
-- Mensagens chegam via webhook do container `go-whatsapp-web-multidevice`.
-- O backend deduplica mensagens e as despacha para o agente **LangGraph** com `gemini-2.5-flash`.
-- O agente tem acesso a ferramentas via protocolo MCP (Obsidian, Google Drive, Instagram, LinkedIn) e mantém histórico de conversa por usuário usando `MemorySaver` com `thread_id = número_do_telefone`.
-- A resposta é enviada de volta ao usuário pelo serviço HTTP do WhatsApp.
-
-### Agendamento de redes sociais
-
-O **APScheduler** executa tarefas automáticas no fuso horário de São Paulo:
-
-| Horário | Tarefa |
-|---------|--------|
-| Diário 11:00 | Resumo do SIGAA (sistema acadêmico) |
-| Ter/Qui 8:00 e 14:00 | Publicação no LinkedIn |
-| Seg-Sex 10:00 | Publicação no Instagram |
-| Diário | Atualização de status no WhatsApp |
-
-Cada tarefa invoca o agente LangGraph com um prompt específico em Markdown (definido em `app/agents/prompts/`).
+-   **APScheduler** gerencia tarefas regulares como sumarizações e postagens sociais do progresso.
+-   **Agentes de Grafos**: Utiliza o *LangGraph* e *Protocolo MCP* para análise avançada de contexto em mensagens do WhatsApp.
 
 ---
 
 ## Arquitetura
 
 ```
-klique-api/
+omniflash/
 ├── app/
 │   ├── main.py               # Entrypoint: inicializa DB, serviços, APScheduler, monta routers
-│   ├── config.py             # Todas as variáveis de ambiente e constantes
-│   ├── database.py           # Cliente MongoDB assíncrono + acessores de coleções
-│   ├── dependencies.py       # JWT encode/decode, hashing de senha, dependências FastAPI
-│   ├── scheduler.py          # Definição dos cron jobs do APScheduler
-│   ├── agents/
-│   │   ├── agent.py          # Singleton LangGraph com MemorySaver + ferramentas MCP
-│   │   ├── tasks.py          # Funções que invocam o agente para cada tarefa agendada
-│   │   └── prompts/          # Prompts em Markdown por tarefa (Instagram, LinkedIn, etc.)
+│   ├── config.py             # Variáveis de ambiente e constantes
+│   ├── database.py           # Cliente MongoDB assíncrono
+│   ├── agents/               # Singleton LangGraph & ferramentas MCP (integração IA/WhatsApp)
 │   ├── routers/
-│   │   ├── auth.py           # Login, logout, Google OAuth, troca de senha/email
-│   │   ├── register.py       # Registro e verificação de email
-│   │   ├── christmas.py      # Geração de avatar natalino com SSE
-│   │   ├── credits.py        # Saldo, consumo e histórico de créditos
-│   │   ├── payments.py       # Criação de PIX, status e webhook do Mercado Pago
-│   │   ├── whatsapp.py       # Recebimento de webhook e despacho ao agente
-│   │   ├── analytics.py      # Serve OG images e rastreia cliques/visualizações
-│   │   ├── scheduler.py      # Endpoints HTTP para disparar tarefas manualmente
-│   │   ├── telemetry.py      # Rastreamento de links com redirect e cookie
-│   │   └── schemas.py        # Todos os modelos Pydantic (User, Payment, Credits...)
+│   │   ├── auth.py           # Login, Google OAuth, etc.
+│   │   ├── domains.py        # Gestão dos "Domínios" (matérias/tópicos)
+│   │   ├── cards.py          # Gestão e criação de flashcards
+│   │   ├── oracle_analytics.py # Dashboards preditivos
+│   │   ├── srs.py            # Lógica de Espaced Repetition System
+│   │   ├── payments.py       # Checkout PIX (Mercado Pago)
+│   │   └── whatsapp.py       # Webhook WhatsApp
 │   └── services/
-│       ├── gemini.py         # SDK oficial do Google Gemini (imagens via WhatsApp)
-│       ├── image_cleaner.py  # Remoção de marca d'água via OpenCV + inpainting
-│       ├── mercadopago.py    # Integração com API do Mercado Pago
-│       └── whatsapp.py       # Cliente HTTP para o container go-whatsapp
-├── frontend/                 # React 19 + Vite + Tailwind CSS v4
-├── dashboard/                # Painel admin em HTML/JS puro
-├── scripts/                 # Utilitários Python com saída formatada via `rich`
-│   ├── create_admin.py       # Cria usuário admin no MongoDB via CLI
-│   ├── setup_cookies.py      # Extrai cookies do Gemini WebAPI do browser
-│   ├── ngrok.py              # Abre túnel ngrok para testes locais
-│   ├── build_android.py      # Compila APK Android (via Capacitor)
-│   ├── hot_reload_android.py # Dev server + Capacitor livereload no dispositivo
-│   └── ...                  # demais scripts também usam `rich` para cores/panels
-├── docker-compose.yml        # Ambiente de desenvolvimento
-├── docker-compose.production.yml  # Produção com Traefik + Let's Encrypt
-└── Dockerfile                # Python 3.14 + uv
+│       └── gemini.py         # Google Gemini oficial para agentes
+├── frontend/                 # React 19 + Vite + Tailwind CSS v4 + PWA
+├── scripts/                  # Utilitários Python via `rich` (Taskipy)
+├── docker-compose.yml        # Ambiente local dockerizado
+└── Dockerfile                # Configuração do backend (Python 3.14 + uv)
 ```
 
 ---
 
-## Stack
+## Como executar localmente
 
-| Camada | Tecnologias |
-|--------|-------------|
-| **Backend** | FastAPI 0.120+, Python 3.14, uv |
-| **IA / Imagem** | Google Gemini WebAPI (cookies), Google Gemini SDK oficial, LangChain, LangGraph, OpenCV, Pillow |
-| **Banco de dados** | MongoDB (PyMongo assíncrono) |
-| **Autenticação** | JWT HS256, Argon2 (pwdlib), Google OAuth |
-| **Pagamentos** | Mercado Pago PIX |
-| **WhatsApp** | go-whatsapp-web-multidevice (container Docker) |
-| **Scheduler** | APScheduler |
-| **Agente MCP** | LangChain-MCP-Adapters via SSE |
-| **Frontend** | React 19, React Router 7, Vite 7, Tailwind CSS v4 |
-| **Infra** | Docker, Docker Compose, Traefik, Let's Encrypt |
+### Pré-requisitos
+- [uv](https://github.com/astral-sh/uv) (Gerenciador de pacotes ultra-rápido para Python)
+- Docker & Docker Compose
+- Node.js (se quiser rodar o frontend isoladamente)
 
----
-
-## Coleções MongoDB
-
-| Coleção | Conteúdo |
-|---------|----------|
-| `user` | Contas de usuário (email, senha Argon2, tipo) |
-| `profile` | Perfil estendido (nome, cidade, avatar_url) |
-| `user_credits` | Saldo de créditos gratuitos e pagos |
-| `payment_transactions` | Transações PIX (pending/approved/rejected) |
-| `mail_confirmation` | Códigos de verificação de email |
-| `password_recovery` | Tokens de recuperação de senha |
-| `processed_messages` | Deduplicação de mensagens WhatsApp |
-| `link_analytics` | Rastreamento de cliques em links |
-
----
-
-## Variáveis de ambiente
-
-Copie `.env.example` para `.env` e preencha:
-
-```bash
-# JWT
-SECRET_KEY=sua_chave_secreta
-
-# Google Gemini (WebAPI via cookies — necessário para geração de avatares)
-SECURE_1PSID=
-SECURE_1PSIDTS=
-
-# Google Gemini SDK oficial (necessário para o agente WhatsApp)
-GOOGLE_API_KEY=
-
-# Google OAuth
-GOOGLE_CLIENT_ID=
-
-# MongoDB
-DB_HOST=localhost
-DB_PORT=27017
-DB_DATABASE=omniflash
-DB_USERNAME=root
-DB_PASSWORD=password
-
-# Email (Gmail SMTP para códigos de verificação)
-GMAIL_EMAIL=
-GMAIL_APP_PASSWORD=
-
-# Mercado Pago (PIX)
-MP_ACCESS_TOKEN=
-MP_PUBLIC_KEY=
-MP_WEBHOOK_SECRET=
-
-# Preços
-FREE_CREDITS_PER_USER=1
-CREDITS_PER_REAL=1
-MIN_PAYMENT_AMOUNT=1.0
-
-# Produção (Traefik)
-DOMAIN=seudominio.com
-ACME_EMAIL=seuemail@exemplo.com
-```
-
-> **Atenção**: `SECURE_1PSID` e `SECURE_1PSIDTS` são cookies da sessão do browser em gemini.google.com. Use `scripts/setup_cookies.py` para extrai-los automaticamente de um browser LibreWolf/Firefox.
-
----
-
-## Instalação
-
-### Desenvolvimento local
+### Instalação
 
 ```bash
 git clone https://github.com/joaosnet/klique-api.git
 cd klique-api
+
+# Instala as dependências Python via uv
 uv sync
+
+# Copia e configura o .env
 cp .env.example .env
-# Edite .env com suas chaves
+# [!] Edite o .env com suas credenciais do Banco, JWT, Gemini, etc.
 ```
 
-### Desenvolvimento Android 📱
+### Inicialização (Dev Mode)
 
-Durante o desenvolvimento do frontend é comum querer testar alterações
-diretamente em um dispositivo físico ou emulador sem recompilar o APK a
-cada mudança.  para isso foi criado um modo *hot reload* acessível através
-da task do Taskipy:
-
+Para iniciar o servidor backend FastAPI com autoreload:
 ```bash
-# inicia o servidor de desenvolvimento e abre o projeto Android com
-# livereload habilitado (recarrega automaticamente quando o código web
-# muda).  o dispositivo precisa estar conectado via USB ou na mesma
-# rede e com depuração remota ativada.
-#
-# o script utiliza `npm install` com resolução padrão de dependências.
-task android-hot
-```
-
-A task executa `npm run dev` na pasta `frontend`, garante que a plataforma
-Android esteja adicionada e sincronizada (inclusive adicionando automaticamente
-se ela ainda não existir), e em seguida chama o Capacitor CLI com as opções
-`-l --external` usando o **endereço IP real da máquina** (não `0.0.0.0`).
-Isso faz com que o aplicativo móvel consiga carregar o conteúdo web de um
-computador na mesma rede; o endereço é detectado automaticamente pelo script.
-
-Se um dispositivo ou emulador estiver conectado via ADB, o script também
-detecta o ID e passa `--target=<id>` para o CLI, por isso você não precisa
-navegar pelo menu interativo (que não responde quando chamado de dentro do
-Python).  O app carrega os assets diretamente do servidor Vite em execução.
-
-A task `android` tradicional (build) agora também instala automaticamente o
-APK de debug no primeiro dispositivo detectado via `adb install -r`.  Se
-nenhum dispositivo estiver conectado, ele apenas informa o caminho do APK
-sem falhar; assim você pode rodar o `task android` e testar num telefone em
-um só comando.
-
 uv run task run
 ```
+A API ficará disponível em `http://localhost:8000`.
 
-O servidor FastAPI inicia em `http://localhost:8000` com hot-reload. Documentação interativa disponível em `http://localhost:8000/docs`.
-
-### Docker (ambiente completo)
-
+Para iniciar os containers auxiliares (Banco, WhatsApp server, etc):
 ```bash
-# Sobe FastAPI + MongoDB + WhatsApp + Frontend
 docker compose up -d
-
-# Criar usuário admin
-uv run task create-admin
 ```
 
-### Produção
+### Desenvolvimento Frontend
+O frontend tem hot-reload interativo e também script customizado para dispositivos físicos via Capacitor (App Android Híbrido).
 
 ```bash
-docker compose -f docker-compose.production.yml up -d
+cd frontend
+npm install
+npm run dev
 ```
 
-Requer `DOMAIN` e `ACME_EMAIL` definidos no `.env`. O Traefik gerencia HTTPS automaticamente via Let's Encrypt.
-
----
-
-## Comandos úteis
-
+### Comandos úteis Backend
 ```bash
-uv run task run          # Inicia servidor em modo dev
 uv run task test         # Executa testes (pytest)
-uv run task format       # Formata código (ruff)
 uv run task lint         # Verifica código (ruff)
 uv run task create-admin # Cria usuário admin no MongoDB
-uv run task ngrok        # Abre túnel ngrok para desenvolvimento
 ```
 
 ---
 
-## Licenca
+## Licença
 
-MIT License — Veja [LICENSE](./LICENSE)
+MIT License — Veja o arquivo [LICENSE](./LICENSE) para mais detalhes.

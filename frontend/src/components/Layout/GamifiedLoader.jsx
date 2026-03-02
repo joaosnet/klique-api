@@ -21,6 +21,7 @@ export default function GamifiedLoader({ fullScreen = true, label = null }) {
             setTipIndex((prev) => (prev + 1) % LORE_TIPS.length);
         }, 3500);
         return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (

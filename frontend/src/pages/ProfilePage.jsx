@@ -15,7 +15,7 @@ export default function ProfilePage() {
 
     // Profile data
     const [profile, setProfile] = useState(null);
-    const [profileLoading, setProfileLoading] = useState(true);
+    const [, setProfileLoading] = useState(true);
 
     // Avatar section state
     const [avatarSection, setAvatarSection] = useState(null); // null | 'generate' | 'upload'

@@ -1,10 +1,5 @@
-
 import { useTranslation } from 'react-i18next';
-// EntityCard — Unmatched-style card component
-// Props: entity { id, name, power, resources, influence, strategy, image, rank }
-//        showDelete, small, onDelete
 import { IconDelete, IconStrategy } from '../Icons/ActionIcons';
-
 
 const STRATEGIES = {
   cooperate: { name: 'entityCard.strategy_cooperate', color: '#22c55e', desc: 'entityCard.strategy_cooperate_desc' },
@@ -12,12 +7,14 @@ const STRATEGIES = {
   withdraw: { name: 'entityCard.strategy_withdraw', color: '#6b7280', desc: 'entityCard.strategy_withdraw_desc' },
 };
 
-
 export default function EntityCard({ entity, showDelete = true, small = false, onDelete }) {
   const { t } = useTranslation();
   const strat = STRATEGIES[entity.strategy] || STRATEGIES.cooperate;
   const total = entity.power + entity.resources + entity.influence;
   const rank = entity.rank ?? Math.round(total / 3);
+  const displayName = typeof entity.name === 'string' && entity.name.includes('.')
+    ? t(entity.name, { defaultValue: entity.name })
+    : entity.name;
 
   const w = small ? 'w-32' : 'w-48 sm:w-56';
   const titleSize = small ? 'text-xs' : 'text-base';
@@ -35,13 +32,11 @@ export default function EntityCard({ entity, showDelete = true, small = false, o
       )}
 
       <div className="relative w-full h-full card-inner-bg overflow-hidden flex flex-col">
-        {/* Art / photo area — 55% */}
-        <div className="w-full relative overflow-hidden bg-gray-900 border-b-2 border-white flex-shrink-0"
-          style={{ height: '55%' }}>
+        <div className="w-full relative overflow-hidden bg-gray-900 border-b-2 border-white flex-shrink-0" style={{ height: '55%' }}>
           {entity.image ? (
             <img
               src={entity.image}
-              alt={entity.name}
+              alt={displayName}
               className="w-full h-full object-cover absolute inset-0 opacity-90"
             />
           ) : (
@@ -53,10 +48,8 @@ export default function EntityCard({ entity, showDelete = true, small = false, o
             </div>
           )}
 
-          {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
 
-          {/* Rank tag — top left */}
           <div
             className="absolute top-0 left-0 px-2 py-0.5 font-title text-xs text-white z-10"
             style={{ background: strat.color, borderBottomRightRadius: '6px' }}
@@ -64,24 +57,19 @@ export default function EntityCard({ entity, showDelete = true, small = false, o
             {rank}
           </div>
 
-          {/* Total score badge */}
           <div className="absolute bottom-[-10px] right-2 z-20 w-7 h-7 rounded-full bg-black border-2 border-white flex items-center justify-center shadow-lg">
             <span className="font-title text-white text-[10px]">{total}</span>
           </div>
         </div>
 
-        {/* Text area — 45% */}
         <div className="w-full text-white p-2 flex flex-col bg-black" style={{ height: '45%' }}>
-          <h2
-            className={`font-title ${titleSize} tracking-wider leading-none mb-1 uppercase truncate`}
-            style={{ color: strat.color }}
-          >
+          <h2 className={`font-title ${titleSize} tracking-wider leading-none mb-1 uppercase truncate`} style={{ color: strat.color }}>
             {t(strat.name)}
           </h2>
           <div className="border-t border-gray-700 my-1" />
-          <p className={`${textSize} font-bold text-gray-200 truncate uppercase`}> {entity.name}</p>
+          <p className={`${textSize} font-bold text-gray-200 truncate uppercase`}>{displayName}</p>
           <p className={`${textSize} leading-tight text-gray-400 mt-0.5`}>
-            {t('entityCard.stats', { power: entity.power, resources: entity.resources, influence: entity.influence })}
+            {t('entityCard.power')} {entity.power} | {t('entityCard.resources')} {entity.resources} | {t('entityCard.influence')} {entity.influence}
           </p>
           <p className={`${textSize} leading-tight text-gray-500 mt-1 italic truncate`}>{t(strat.desc)}</p>
 

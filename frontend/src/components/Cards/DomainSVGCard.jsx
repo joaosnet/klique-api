@@ -24,7 +24,7 @@ function getTheme(themeValue) {
 
 export default function DomainSVGCard({ domain, stats, onClick }) {
     const themeObj = getTheme(domain.theme);
-    const { t } = useTranslation();
+    const { t: tr } = useTranslation();
     const cardRef = useRef(null);
     const [tilt, setTilt] = useState({ x: 0, y: 0 });
     const [hovered, setHovered] = useState(false);
@@ -62,7 +62,7 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                 perspective: '800px',
                 transition: 'box-shadow 0.3s ease',
                 boxShadow: hovered
-                    ? `0 0 40px ${t.color}55, 0 24px 48px rgba(0,0,0,0.5)`
+                    ? `0 0 40px ${themeObj.color}55, 0 24px 48px rgba(0,0,0,0.5)`
                     : `0 4px 20px rgba(0,0,0,0.3)`,
             }}
         >
@@ -70,7 +70,7 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                 style={{
                     borderRadius: 16,
                     overflow: 'hidden',
-                    border: `1px solid ${hovered ? t.color + '88' : 'var(--border-color)'}`,
+                    border: `1px solid ${hovered ? themeObj.color + '88' : 'var(--border-color)'}`,
                     background: 'var(--bg-card)',
                     transition: 'transform 0.15s ease, border-color 0.3s',
                     transform: hovered
@@ -83,12 +83,12 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                 <svg viewBox="0 0 300 130" width="100%" style={{ display: 'block' }}>
                     <defs>
                         <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor={t.dark} stopOpacity="0.9" />
-                            <stop offset="100%" stopColor={t.grad} stopOpacity="0.4" />
+                            <stop offset="0%" stopColor={themeObj.dark} stopOpacity="0.9" />
+                            <stop offset="100%" stopColor={themeObj.grad} stopOpacity="0.4" />
                         </linearGradient>
                         <radialGradient id={`${gradId}-glow`} cx="75%" cy="30%" r="60%">
-                            <stop offset="0%" stopColor={t.color} stopOpacity="0.25" />
-                            <stop offset="100%" stopColor={t.color} stopOpacity="0" />
+                            <stop offset="0%" stopColor={themeObj.color} stopOpacity="0.25" />
+                            <stop offset="100%" stopColor={themeObj.color} stopOpacity="0" />
                         </radialGradient>
                         <linearGradient id="imageOverlay" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="var(--bg-card)" stopOpacity="0.1" />
@@ -120,26 +120,26 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
 
                     {/* Grid lines — only without image */}
                     {!domain.image_url && [0, 60, 120, 180, 240, 300].map(x => (
-                        <line key={x} x1={x} y1="0" x2={x} y2="130" stroke={t.color} strokeOpacity="0.06" strokeWidth="1" />
+                        <line key={x} x1={x} y1="0" x2={x} y2="130" stroke={themeObj.color} strokeOpacity="0.06" strokeWidth="1" />
                     ))}
                     {!domain.image_url && [0, 43, 86, 130].map(y => (
-                        <line key={y} x1="0" y1={y} x2="300" y2={y} stroke={t.color} strokeOpacity="0.06" strokeWidth="1" />
+                        <line key={y} x1="0" y1={y} x2="300" y2={y} stroke={themeObj.color} strokeOpacity="0.06" strokeWidth="1" />
                     ))}
 
                     {/* Large background icon — only without image */}
                     {!domain.image_url && (
                         <g transform="translate(180, 50)">
-                            <ThemeIcon theme={t.type} width={90} height={90} color={t.color} />
+                            <ThemeIcon theme={themeObj.type} width={90} height={90} color={themeObj.color} />
                         </g>
                     )}
 
                     {/* Theme label chip */}
-                    <rect x="12" y="10" width="70" height="18" rx="9" fill={t.color} fillOpacity="0.25" />
-                    <rect x="12" y="10" width="70" height="18" rx="9" fill="none" stroke={t.color} strokeOpacity="0.5" strokeWidth="1" />
+                    <rect x="12" y="10" width="70" height="18" rx="9" fill={themeObj.color} fillOpacity="0.25" />
+                    <rect x="12" y="10" width="70" height="18" rx="9" fill="none" stroke={themeObj.color} strokeOpacity="0.5" strokeWidth="1" />
                     <text x="47" y="22" textAnchor="middle" dominantBaseline="middle"
                         fill={themeObj.color} fontSize="8" fontFamily="Courier New, monospace"
                         fontWeight="800" letterSpacing="1">
-                        {t(`domainCard.${themeObj.label}`).toUpperCase()}
+                        {tr(`domainCard.theme_${themeObj.label}`).toUpperCase()}
                     </text>
 
                     {/* Domain name */}
@@ -155,11 +155,11 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
 
                     {/* Stats row */}
                     {/* Cards */}
-                    <text x="14" y="105" fill={t.color} fontSize="20" fontFamily="Courier New, monospace" fontWeight="800">
+                    <text x="14" y="105" fill={themeObj.color} fontSize="20" fontFamily="Courier New, monospace" fontWeight="800">
                         {stats?.cards_count ?? 0}
                     </text>
                     <text x="14" y="118" fill={themeObj.color} fontSize="7" fontFamily="Courier New, monospace" fillOpacity="0.8" letterSpacing="1">
-                        {t('domainCard.cards')}
+                        {tr('domainCard.cards')}
                     </text>
 
                     {/* Due today */}
@@ -168,7 +168,7 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                         {stats?.due_today ?? 0}
                     </text>
                     <text x="82" y="118" fill="#6b7280" fontSize="7" fontFamily="Courier New, monospace" letterSpacing="1">
-                        {t('domainCard.due_today')}
+                        {tr('domainCard.due_today')}
                     </text>
 
                     {/* Accuracy */}
@@ -177,11 +177,11 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                         {accuracy !== null ? `${accuracy}%` : '—'}
                     </text>
                     <text x="150" y="118" fill="#6b7280" fontSize="7" fontFamily="Courier New, monospace" letterSpacing="1">
-                        {t('domainCard.accuracy')}
+                        {tr('domainCard.accuracy')}
                     </text>
 
                     {/* CTA arrow */}
-                    <text x="284" y="118" fill={t.color} fontSize="18" fontFamily="system-ui" fillOpacity={hovered ? 1 : 0.5}
+                    <text x="284" y="118" fill={themeObj.color} fontSize="18" fontFamily="system-ui" fillOpacity={hovered ? 1 : 0.5}
                         textAnchor="middle">
                         →
                     </text>
@@ -193,8 +193,8 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    background: hovered ? `${t.color}0f` : 'transparent',
-                    borderTop: `1px solid ${t.color}22`,
+                    background: hovered ? `${themeObj.color}0f` : 'transparent',
+                    borderTop: `1px solid ${themeObj.color}22`,
                     transition: 'background 0.3s',
                 }}>
                     <span style={{
@@ -208,7 +208,7 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                         color: themeObj.color, fontSize: 10, fontWeight: 700,
                         fontFamily: 'Courier New, monospace', letterSpacing: 1,
                     }}>
-                        {t('domainCard.generate')} →
+                        {tr('domainCard.generate')} →
                     </span>
                 </div>
             </div>

@@ -11,7 +11,7 @@ function StepBasicData({ data, onChange, onNext }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [usePasskey, setUsePasskey] = useState(false);
-  const { login, registerPasskey, loginWithGoogle } = useAuth();
+  const { login, registerPasskey } = useAuth();
   const { t } = useTranslation();
 
   const handleGoogleLogin = async () => {
@@ -22,7 +22,7 @@ function StepBasicData({ data, onChange, onNext }) {
       alert(t('register.google_placeholder'));
       // await loginWithGoogle("google-token");
       // onNext();
-    } catch (err) {
+    } catch {
       setError(t('register.error_google'));
     } finally {
       setLoading(false);
@@ -51,7 +51,7 @@ function StepBasicData({ data, onChange, onNext }) {
       if (usePasskey) {
         try {
           await registerPasskey();
-        } catch (pkErr) {
+        } catch {
           console.warn(t('register.error_passkey_cancel'));
         }
       }
@@ -264,7 +264,7 @@ function StepPrisonersDilemma({ onNext }) {
             style={{ background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.2)' }}>
             <span className="text-purple-300 font-semibold">{t('register.dilemma_nash')}</span>{' '}
             <span style={{ color: 'var(--text-muted)' }}>
-            {t('register.dilemma_nash_desc')}
+              {t('register.dilemma_nash_desc')}
             </span>
           </div>
           <button
@@ -337,7 +337,7 @@ function StepBattleCardCreator({ onNext }) {
                     : { background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-muted)' }
                 }
               >
-                {t(`registerForm.${q.id}_opt_${idx+1}`, opt)}
+                {t(`registerForm.${q.id}_opt_${idx + 1}`, opt)}
               </button>
             ))}
           </div>
@@ -476,6 +476,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [cardData, setCardData] = useState(null);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleChange = (field, value) => setFormData((d) => ({ ...d, [field]: value }));
 

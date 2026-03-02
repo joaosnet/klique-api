@@ -48,6 +48,7 @@ export default function BuyCredits() {
             }
         };
         fetchConfig();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleUnitPriceChange = (e) => {
@@ -109,6 +110,7 @@ export default function BuyCredits() {
 
         const interval = setInterval(checkStatus, 5000); // Verificar a cada 5s
         return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [payment?.payment_id, refreshCredits]);
 
     const handleNewPayment = () => {

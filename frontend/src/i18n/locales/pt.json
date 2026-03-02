@@ -849,7 +849,9 @@
     "peace_alliance": "Alianca Pacifica",
     "neutral_nation": "Nacao Neutra",
     "traditional_party": "Partido Tradicional",
-    "radical_candidate": "Candidato Radical"
+    "radical_candidate": "Candidato Radical",
+    "populist": "Populista",
+    "technocrat": "Tecnocrata"
   },
   "simulatorResults": {
     "results": "RESULTADOS",
@@ -902,7 +904,13 @@
     "power": "Pod:",
     "resources": "Rec:",
     "influence": "Inf:",
-    "stats": "STATS"
+    "stats": "STATS",
+    "strategy_cooperate": "COOPERADOR",
+    "strategy_cooperate_desc": "Colabora e retalia proporcionalmente.",
+    "strategy_defect": "EXPLORADOR",
+    "strategy_defect_desc": "Maximiza ganho individual; trai quando conveniente.",
+    "strategy_withdraw": "ISOLADO",
+    "strategy_withdraw_desc": "Evita interacoes; neutro em conflitos."
   },
   "entityEditor": {
     "edit_title": "EDITAR ENTIDADE",

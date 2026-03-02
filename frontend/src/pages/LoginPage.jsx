@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, loginWithGoogle, loginWithApple, loginWithOTP, loginWithMagicLink, lazyRegister, loginWithPasskey } = useAuth();
+  const { login, loginWithOTP, lazyRegister, loginWithPasskey } = useAuth();
   const navigate = useNavigate();
 
   const handlePasskeyLogin = async (e) => {

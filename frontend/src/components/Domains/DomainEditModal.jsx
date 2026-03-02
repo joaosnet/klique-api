@@ -100,7 +100,7 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
     try {
       await domainsAPI.uploadImage(domain.id, file);
       setImgMsg(t('domainEdit.image_uploaded_success'));
-    } catch (err) {
+    } catch {
       setImgMsg(t('domainEdit.error_image_upload'));
     } finally {
       setImgLoading(false);

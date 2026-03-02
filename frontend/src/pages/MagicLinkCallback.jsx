@@ -13,6 +13,7 @@ export default function MagicLinkCallback() {
 
     useEffect(() => {
         if (!token) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setStatus(t('magicLink.tokenNotFound'));
             return;
         }
@@ -21,7 +22,7 @@ export default function MagicLinkCallback() {
             try {
                 await loginWithMagicLink(token);
                 navigate('/');
-            } catch (err) {
+            } catch {
                 setStatus(t('magicLink.invalidOrExpired'));
             }
         };

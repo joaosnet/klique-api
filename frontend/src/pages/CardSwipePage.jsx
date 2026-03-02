@@ -16,14 +16,8 @@ const TEMPLATE_COLORS = {
   black_swan: '#ef4444',
 };
 
-function heatColor(score) {
-  if (score >= 67) return '#ef4444';
-  if (score >= 34) return '#f59e0b';
-  return '#22c55e';
-}
-
 export default function CardSwipePage() {
-    const { t } = useTranslation();
+  const { t } = useTranslation();
   const { domainId } = useParams();
   const navigate = useNavigate();
 
@@ -69,9 +63,10 @@ export default function CardSwipePage() {
     domainsAPI.getOne(domainId)
       .then((data) => setDomain(data.domain))
       .catch(() => navigate('/'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [domainId, isAuthenticated]);
 
-  const loadSavedCards = async (isInitial = false) => {
+  const loadSavedCards = async () => {
     if (!isAuthenticated) return;
     setLoadingCards(true);
     try {
@@ -85,7 +80,8 @@ export default function CardSwipePage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) loadSavedCards(true);
+    if (isAuthenticated) loadSavedCards();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, domainId]);
 
   const generateCard = async () => {

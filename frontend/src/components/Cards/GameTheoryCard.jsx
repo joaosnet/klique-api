@@ -55,9 +55,7 @@ const TEMPLATES = {
   },
 };
 
-function heatColor(score) {
-  return score >= 67 ? '#ef4444' : score >= 34 ? '#f59e0b' : '#22c55e';
-}
+
 
 function ContextMenuOverlay({ onClose, children }) {
   const { t } = useTranslation();
@@ -110,9 +108,6 @@ export default function GameTheoryCard({
   const tmpl = TEMPLATES[card.template_type] || TEMPLATES.if_then;
   const { t } = useTranslation();
   const heat = card.probability_heat_score;
-  const hc = heatColor(heat);
-  const total = 9; // Temporary mock total, or calculate from somewhere if needed
-  const rank = Math.round(total / 3);
 
   // Swipe / drag-to-flip state
   const dragRef = useRef(null);
@@ -181,7 +176,7 @@ export default function GameTheoryCard({
     setShowMenu(true);
   };
 
-  const handleCardClick = (e) => {
+  const handleCardClick = () => {
     if (showMenu) return; // Disallow flip if menu is active
     if (dragRef.current?.moved) return;
     if (onReveal) onReveal();

@@ -849,7 +849,9 @@
     "peace_alliance": "Peace Alliance",
     "neutral_nation": "Neutral Nation",
     "traditional_party": "Traditional Party",
-    "radical_candidate": "Radical Candidate"
+    "radical_candidate": "Radical Candidate",
+    "populist": "Populist",
+    "technocrat": "Technocrat"
   },
   "simulatorResults": {
     "results": "RESULTS",
@@ -902,7 +904,13 @@
     "power": "Pow:",
     "resources": "Res:",
     "influence": "Inf:",
-    "stats": "STATS"
+    "stats": "STATS",
+    "strategy_cooperate": "COOPERATOR",
+    "strategy_cooperate_desc": "Collaborates and retaliates proportionally.",
+    "strategy_defect": "EXPLOITER",
+    "strategy_defect_desc": "Maximizes individual gain; betrays when convenient.",
+    "strategy_withdraw": "ISOLATED",
+    "strategy_withdraw_desc": "Avoids interactions; neutral in conflicts."
   },
   "entityEditor": {
     "edit_title": "EDIT ENTITY",
