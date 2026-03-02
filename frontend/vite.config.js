@@ -4,7 +4,6 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import viteCompression from 'vite-plugin-compression'
-import obfuscatorPlugin from 'vite-plugin-javascript-obfuscator'
 
 export default defineConfig({
   plugins: [
@@ -39,41 +38,26 @@ export default defineConfig({
       algorithm: 'brotliCompress',
       ext: '.br',
     }),
-    obfuscatorPlugin({
-      include: ['src/**/*.js', 'src/**/*.jsx', 'src/**/*.ts', 'src/**/*.tsx'],
-      exclude: [/node_modules/],
-      apply: 'build', // only during build
-      options: {
-        compact: true,
-        controlFlowFlattening: false,
-        deadCodeInjection: false,
-        debugProtection: false,
-        disableConsoleOutput: true,
-        identifierNamesGenerator: 'hexadecimal',
-        log: false,
-        numbersToExpressions: true,
-        renameGlobals: false,
-        selfDefending: false,
-        simplify: true,
-        splitStrings: false,
-        stringArray: true,
-        stringArrayCallsTransform: true,
-        stringArrayEncoding: ['base64'],
-        stringArrayIndexShift: true,
-        stringArrayRotate: true,
-        stringArrayShuffle: true,
-        stringArrayWrappersCount: 2,
-        stringArrayWrappersChainedCalls: true,
-        stringArrayWrappersParametersMaxCount: 2,
-        stringArrayWrappersType: 'variable',
-        stringArrayThreshold: 0.75,
-        transformObjectKeys: false,
-        unicodeEscapeSequence: false
-      }
-    }),
   ],
   build: {
     sourcemap: false,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        passes: 2,
+      },
+      mangle: {
+        toplevel: true,
+        properties: {
+          regex: /^_/,  // mangle private properties (prefixed with _)
+        },
+      },
+      format: {
+        comments: false,
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {
