@@ -71,10 +71,10 @@ def _load_domain() -> str | None:
     if not env_path.exists():
         return None
     for line in env_path.read_text(encoding='utf-8').splitlines():
-        line = line.strip()
-        if line.startswith('#') or '=' not in line:
+        stripped_line = line.strip()
+        if stripped_line.startswith('#') or '=' not in stripped_line:
             continue
-        key, _, value = line.partition('=')
+        key, _, value = stripped_line.partition('=')
         if key.strip() == 'DOMAIN':
             return value.strip()
     return None

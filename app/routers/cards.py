@@ -46,15 +46,33 @@ from .schemas import (
 
 router = APIRouter(prefix='/api/cards', tags=['cards'])
 
-# Caminho para o system prompt do Oracle
-_ORACLE_PROMPT_PATH = os.path.join(
-    os.path.dirname(__file__), '..', 'agents', 'omniflash_oracle_prompt.md'
-)
+# Caminho para os system prompts
+_PROMPTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'agents')
 
 
-def _load_oracle_prompt() -> str:
-    with open(_ORACLE_PROMPT_PATH, 'r', encoding='utf-8') as f:
-        return f.read()
+def _load_prompt(card_format: str) -> str:
+    prompt_file_map = {
+        'game_theory': 'omniflash_oracle_prompt.md',
+        'concurso_certo_errado': 'concurso_ce_prompt.md',
+        'concurso_multipla_escolha': 'concurso_me_prompt.md',
+        'flashcard_basico': 'flashcard_basico_prompt.md',
+    }
+    filename = prompt_file_map.get(card_format, 'flashcard_basico_prompt.md')
+    prompt_path = os.path.join(_PROMPTS_DIR, filename)
+
+    try:
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        # Fallback to a basic prompt or game theory if not found
+        fallback = os.path.join(_PROMPTS_DIR, 'omniflash_oracle_prompt.md')
+        if os.path.exists(fallback):
+            with open(fallback, 'r', encoding='utf-8') as f:
+                return f.read()
+        return (
+            'You are an AI generating study flashcards. '
+            'Please output valid JSON matching the format.'
+        )
 
 
 async def generate_sse_event(event: str, data: dict) -> str:
@@ -66,6 +84,7 @@ async def _card_generation_stream(
     domain_theme: str,
     context: str | None,
     gemini_client,
+    card_format: str = 'game_theory',
 ):
     """Async generator que produz eventos SSE para geração de um card."""
     try:
@@ -79,8 +98,12 @@ async def _card_generation_stream(
             },
         )
 
-        oracle_prompt = _load_oracle_prompt()
-        user_message = f'Domínio: {domain_name}\nTema: {domain_theme}\n'
+        oracle_prompt = _load_prompt(card_format)
+        user_message = (
+            f'Domínio: {domain_name}\n'
+            f'Tema: {domain_theme}\n'
+            f'Formato Desejado: {card_format}\n'
+        )
         if context:
             user_message += f'Contexto adicional: {context}\n'
 
@@ -112,6 +135,8 @@ async def _card_generation_stream(
             return
 
         card_dict = json.loads(json_match.group(0))
+        # Ensure card_format is set correctly
+        card_dict['card_format'] = card_format
 
         yield await generate_sse_event(
             'progress',
@@ -176,6 +201,7 @@ async def generate_card_stream(
             domain_theme=domain['theme'],
             context=body.context,
             gemini_client=gemini_client,
+            card_format=body.card_format,
         ):
             yield chunk
 
@@ -228,6 +254,7 @@ async def swipe_card(  # noqa: PLR0913, PLR0917
     card_doc = {
         'domain_id': body.domain_id,
         'user_id': user_id,
+        'card_format': body.card_data.card_format,
         'template_type': body.card_data.template_type,
         'scenario_context': body.card_data.scenario_context,
         'question': body.card_data.question,
@@ -235,6 +262,9 @@ async def swipe_card(  # noqa: PLR0913, PLR0917
         'game_theory_explanation': body.card_data.game_theory_explanation,
         'probability_heat_score': body.card_data.probability_heat_score,
         'visual_prompt_idea': body.card_data.visual_prompt_idea,
+        'options': body.card_data.options,
+        'correct_answer': body.card_data.correct_answer,
+        'explanation': body.card_data.explanation,
         'media_urls': [],
         'created_at': now,
     }

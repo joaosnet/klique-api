@@ -57,7 +57,7 @@ const TEMPLATES = {
 
 
 
-function ContextMenuOverlay({ onClose, children }) {
+export function ContextMenuOverlay({ onClose, children }) {
   const { t } = useTranslation();
   return (
     <div

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { domainsAPI, cardsAPI, modelsAPI } from '../services/api';
 import GameTheoryCard from '../components/Cards/GameTheoryCard';
+import ConcursoCard from '../components/Cards/ConcursoCard';
+import FlashcardBasic from '../components/Cards/FlashcardBasic';
 import CardEditModal from '../components/Cards/CardEditModal';
 import { useAuth } from '../context/AuthContext';
 import { DEMO_CARDS, DEMO_DOMAINS } from '../utils/demoData';
@@ -29,6 +31,7 @@ export default function CardSwipePage() {
   const [error, setError] = useState('');
   const [swiping, setSwiping] = useState(null);
   const [context, setContext] = useState('');
+  const [cardFormat, setCardFormat] = useState('concurso_certo_errado');
 
   const [showCreateView, setShowCreateView] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
@@ -58,6 +61,7 @@ export default function CardSwipePage() {
     if (!isAuthenticated) {
       const demoDomain = DEMO_DOMAINS.find(d => d.domain.id === domainId);
       setDomain(demoDomain ? demoDomain.domain : DEMO_DOMAINS[0].domain);
+      setSavedCards(DEMO_CARDS); // Load demo cards straight to the deck
       return;
     }
     domainsAPI.getOne(domainId)
@@ -107,7 +111,8 @@ export default function CardSwipePage() {
         return;
       }
 
-      const result = await cardsAPI.generateStream(domainId, context || null, (p) => setProgress(p));
+      const requestBody = { domain_id: domainId, context: context || null, card_format: cardFormat };
+      const result = await cardsAPI.generateStream(requestBody, (p) => setProgress(p));
       if (result?.card) {
         setCard(result.card);
       } else {
@@ -190,6 +195,7 @@ export default function CardSwipePage() {
   };
 
   const handleCreateManual = () => {
+    setShowCreateView(true);
     setEditingCard({
       cardId: null,
       card: {
@@ -261,7 +267,8 @@ export default function CardSwipePage() {
     );
   }
 
-  const isCreating = savedCards.length === 0 || showCreateView;
+  // Not creating if unauth, show deck immediately
+  const isCreating = isAuthenticated ? (savedCards.length === 0 || showCreateView) : false;
 
   return (
     <div style={{ minHeight: 'calc(100vh - 56px)', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
@@ -335,6 +342,21 @@ export default function CardSwipePage() {
                     placeholder={t('training.contextPlaceholder')}
                     style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
                   />
+                </div>
+
+                {/* Format selection */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-highlight)', fontWeight: 600 }}>Formato da Questão</p>
+                  <select
+                    value={cardFormat}
+                    onChange={(e) => setCardFormat(e.target.value)}
+                    style={{ width: '100%', background: 'var(--bg-card-inner)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: 8, padding: '10px 12px', fontSize: 13, outline: 'none' }}
+                  >
+                    <option value="concurso_certo_errado">Concurso (Certo/Errado)</option>
+                    <option value="concurso_multipla_escolha">Concurso (Múltipla Escolha)</option>
+                    <option value="flashcard_basico">Flashcard Básico (Frente/Verso)</option>
+                    <option value="game_theory">Teoria dos Jogos (Avançado)</option>
+                  </select>
                 </div>
 
                 {/* Custom SVG Background Generator */}
@@ -426,15 +448,24 @@ export default function CardSwipePage() {
                   {t('cards.swipeInstruction')}
                 </p>
 
-                <GameTheoryCard
-                  card={card}
-                  revealed={revealed}
-                  onReveal={() => setRevealed(r => !r)}
-                  onSave={() => handleSwipe('save')}
-                  onDiscard={() => handleSwipe('discard')}
-                  swiping={swiping}
-                  customSvg={customSvg}
-                />
+                {(() => {
+                  const props = {
+                    card,
+                    revealed,
+                    onReveal: () => setRevealed(r => !r),
+                    onSave: () => handleSwipe('save'),
+                    onDiscard: () => handleSwipe('discard'),
+                    swiping,
+                    customSvg
+                  };
+                  if (card.card_format === 'concurso_certo_errado' || card.card_format === 'concurso_multipla_escolha') {
+                    return <ConcursoCard {...props} />;
+                  }
+                  if (card.card_format === 'flashcard_basico') {
+                    return <FlashcardBasic {...props} />;
+                  }
+                  return <GameTheoryCard {...props} />;
+                })()}
               </div>
             )}
 
@@ -451,52 +482,54 @@ export default function CardSwipePage() {
         {!isCreating && (
           <div>
             {/* FAB wrapper */}
-            <div style={{ position: 'fixed', bottom: '90px', right: '1.5rem', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+            {isAuthenticated && (
+              <div style={{ position: 'fixed', bottom: '90px', right: '1.5rem', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
 
-              {/* Mini buttons menu */}
-              {showFabMenu && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end', animation: 'fadeInUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
-                  <button
-                    onClick={() => { setShowFabMenu(false); setShowCreateView(true); }}
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
-                  >
-                    {t('training.generateOracleAI')}
-                    <IconSparkBoost width={16} height={16} />
-                  </button>
-                  <button
-                    onClick={() => { setShowFabMenu(false); handleCreateManual(); }}
-                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
-                  >
-                    {t('cards.createManual')}
-                    <IconEditPen width={16} height={16} />
-                  </button>
-                </div>
-              )}
+                {/* Mini buttons menu */}
+                {showFabMenu && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-end', animation: 'fadeInUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+                    <button
+                      onClick={() => { setShowFabMenu(false); setShowCreateView(true); }}
+                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
+                    >
+                      {t('training.generateOracleAI')}
+                      <IconSparkBoost width={16} height={16} />
+                    </button>
+                    <button
+                      onClick={() => { setShowFabMenu(false); handleCreateManual(); }}
+                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-main)', padding: '10px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8, transformOrigin: 'right center' }}
+                    >
+                      {t('cards.createManual')}
+                      <IconEditPen width={16} height={16} />
+                    </button>
+                  </div>
+                )}
 
-              {/* Main FAB */}
-              <button
-                onClick={() => setShowFabMenu(!showFabMenu)}
-                style={{
-                  width: 60, height: 60, borderRadius: 30, background: 'var(--accent)', color: '#fff', fontSize: 28,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.4)', border: 'none', cursor: 'pointer',
-                  transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s',
-                  transform: showFabMenu ? 'rotate(45deg)' : 'rotate(0deg)',
-                  paddingBottom: 2
-                }}
-                title="Adicionar carta"
-              >
-                +
-              </button>
+                {/* Main FAB */}
+                <button
+                  onClick={() => setShowFabMenu(!showFabMenu)}
+                  style={{
+                    width: 60, height: 60, borderRadius: 30, background: 'var(--accent)', color: '#fff', fontSize: 28,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.4)', border: 'none', cursor: 'pointer',
+                    transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s',
+                    transform: showFabMenu ? 'rotate(45deg)' : 'rotate(0deg)',
+                    paddingBottom: 2
+                  }}
+                  title="Adicionar carta"
+                >
+                  +
+                </button>
 
-              <style dangerouslySetInnerHTML={{
-                __html: `
-                @keyframes fadeInUp {
-                  from { opacity: 0; transform: translateY(20px) scale(0.9); }
-                  to { opacity: 1; transform: translateY(0) scale(1); }
-                }
-              `}} />
-            </div>
+                <style dangerouslySetInnerHTML={{
+                  __html: `
+                  @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(20px) scale(0.9); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                  }
+                `}} />
+              </div>
+            )}
 
             {loadingCards ? (
               <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: 40 }}>{t('common.loading')}</p>
@@ -508,39 +541,71 @@ export default function CardSwipePage() {
                 <div className="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-6 w-full px-2 sm:px-0 sm:flex-wrap sm:justify-center sm:gap-6 sm:overflow-visible sm:pb-0" style={{ scrollPadding: '1rem', WebkitOverflowScrolling: 'touch' }}>
                   {savedCards.map((c, idx) => {
                     const uniqueId = c.id ?? c._id ?? `card-${idx}`;
+                    const props = {
+                      card: c,
+                      revealed: !!revealedCards[uniqueId],
+                      onReveal: () => toggleReveal(uniqueId),
+                      customSvg: c.customSvg,
+                      footer: (
+                        <>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); document.body.click(); handleEditCard(c, c.id); }}
+                            style={{
+                              width: '100%', padding: '14px 0', borderRadius: 8, border: '1px solid var(--border-color)',
+                              background: 'var(--bg-card-inner)', color: '#fff', cursor: 'pointer',
+                              fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
+                              marginBottom: 8
+                            }}
+                          >
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconEditPen width={15} height={15} /> {t('cardEdit.editCard')}</span>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); document.body.click(); handleDeleteCard(c.id); }}
+                            style={{
+                              width: '100%', padding: '14px 0', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.4)',
+                              background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', cursor: 'pointer',
+                              fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1
+                            }}
+                          >
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconDelete width={15} height={15} /> {t('cardEdit.deleteCard')}</span>
+                          </button>
+                        </>
+                      )
+                    };
+
+                    let CardElem = GameTheoryCard;
+                    if (c.card_format === 'concurso_certo_errado' || c.card_format === 'concurso_multipla_escolha') {
+                      CardElem = ConcursoCard;
+                    } else if (c.card_format === 'flashcard_basico') {
+                      CardElem = FlashcardBasic;
+                    }
+
                     return (
                       <div key={uniqueId} className="snap-center shrink-0 w-[85vw] max-w-[380px] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)] flex flex-col items-center">
-                        <GameTheoryCard
-                          card={c}
-                          revealed={!!revealedCards[uniqueId]}
-                          onReveal={() => toggleReveal(uniqueId)}
-                          customSvg={c.customSvg}
-                          footer={
-                            <>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); document.body.click(); handleEditCard(c, c.id); }}
-                                style={{
-                                  width: '100%', padding: '14px 0', borderRadius: 8, border: '1px solid var(--border-color)',
-                                  background: 'var(--bg-card-inner)', color: '#fff', cursor: 'pointer',
-                                  fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
-                                  marginBottom: 8
-                                }}
-                              >
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconEditPen width={15} height={15} /> {t('cardEdit.editCard')}</span>
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); document.body.click(); handleDeleteCard(c.id); }}
-                                style={{
-                                  width: '100%', padding: '14px 0', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.4)',
-                                  background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', cursor: 'pointer',
-                                  fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1
-                                }}
-                              >
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconDelete width={15} height={15} /> {t('cardEdit.deleteCard')}</span>
-                              </button>
-                            </>
-                          }
-                        />
+                        <CardElem {...props} />
+                        {/* Fake Swipe Buttons for Demo */}
+                        {!isAuthenticated && (
+                          <div style={{ display: 'flex', gap: 12, marginTop: 16, width: '100%' }}>
+                            <button
+                              onClick={() => {
+                                setSwiping('left');
+                                setTimeout(() => setShowCTAModal(true), 350);
+                              }}
+                              style={{ flex: 1, padding: '14px 0', borderRadius: 8, border: '1px solid rgba(239, 68, 68, 0.4)', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', cursor: 'pointer', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}
+                            >
+                              Descarta
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSwiping('right');
+                                setTimeout(() => setShowCTAModal(true), 350);
+                              }}
+                              style={{ flex: 1, padding: '14px 0', borderRadius: 8, border: '1px solid rgba(74, 222, 128, 0.4)', background: 'rgba(74, 222, 128, 0.15)', color: '#4ade80', cursor: 'pointer', fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}
+                            >
+                              Guardar
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -563,7 +628,7 @@ export default function CardSwipePage() {
                 {t('training.createAccount')}
               </Link>
               <button onClick={handleModalDismiss} style={{ width: '100%', padding: '11px 0', borderRadius: 10, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' }}>
-                {demoIndex < DEMO_CARDS.length ? t('training.exploreNextCard') : t('training.seeDemoConclusion')}
+                {t('common.close')}
               </button>
             </div>
           </div>

@@ -245,24 +245,28 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
             <button
               onClick={() => { setImgAction('generate'); if (cardId) executeImageAction('generate'); }}
               disabled={imgLoading}
+              style={{ padding: '8px 0', borderRadius: 6, border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)', fontSize: 11, fontWeight: 700, cursor: imgLoading ? 'default' : 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}
             >
               {t('cardEdit.generate_ai')}
             </button>
             <button
               onClick={() => setImgAction(imgAction === 'improve' ? null : 'improve')}
               disabled={imgLoading}
+              style={{ padding: '8px 0', borderRadius: 6, border: '1px solid var(--accent)', background: imgAction === 'improve' ? 'var(--accent)' : 'transparent', color: imgAction === 'improve' ? '#fff' : 'var(--accent)', fontSize: 11, fontWeight: 700, cursor: imgLoading ? 'default' : 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}
             >
               {t('cardEdit.improve_ai')}
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={imgLoading}
+              style={{ padding: '8px 0', borderRadius: 6, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-main)', fontSize: 11, fontWeight: 700, cursor: imgLoading ? 'default' : 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}
             >
               {t('cardEdit.upload')}
             </button>
             <button
               onClick={() => { setImgAction('remove'); if (cardId) executeImageAction('remove'); }}
               disabled={imgLoading || !currentImageUrl}
+              style={{ padding: '8px 0', borderRadius: 6, border: '1px solid rgba(239, 68, 68, 0.4)', background: 'transparent', color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: (imgLoading || !currentImageUrl) ? 'default' : 'pointer', letterSpacing: 1, textTransform: 'uppercase', opacity: (imgLoading || !currentImageUrl) ? 0.4 : 1 }}
             >
               {t('cardEdit.remove')}
             </button>
@@ -281,6 +285,7 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
                 <button
                   onClick={() => executeImageAction('improve', stylePrompt)}
                   disabled={imgLoading || !stylePrompt}
+                  style={{ padding: '8px 14px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: (imgLoading || !stylePrompt) ? 'default' : 'pointer', letterSpacing: 1, textTransform: 'uppercase', opacity: (imgLoading || !stylePrompt) ? 0.5 : 1, flexShrink: 0 }}
                 >
                   {imgLoading ? '...' : t('cardEdit.apply')}
                 </button>
@@ -308,12 +313,14 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <button
             onClick={onClose}
+            style={{ flex: 1, padding: '12px 0', borderRadius: 8, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 1, textTransform: 'uppercase' }}
           >
             {t('cardEdit.cancel')}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
+            style={{ flex: 1, padding: '12px 0', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: saving ? 'default' : 'pointer', letterSpacing: 1, textTransform: 'uppercase', opacity: saving ? 0.6 : 1 }}
           >
             {saving ? t('cardEdit.saving') : t('cardEdit.save_card')}
           </button>

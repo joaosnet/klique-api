@@ -432,36 +432,46 @@ class DomainWithStats(BaseModel):
 class ScenarioCardData(BaseModel):
     """Raw card data returned by Gemini (not yet persisted)."""
 
-    template_type: str
-    scenario_context: str
+    card_format: str = 'game_theory'
+    template_type: Optional[str] = None
+    scenario_context: Optional[str] = None
     question: str
-    predicted_outcome: str
-    game_theory_explanation: str
-    probability_heat_score: int
+    predicted_outcome: Optional[str] = None
+    game_theory_explanation: Optional[str] = None
+    probability_heat_score: Optional[int] = None
     visual_prompt_idea: Optional[str] = None
+    options: Optional[list[str]] = None
+    correct_answer: Optional[str] = None
+    explanation: Optional[str] = None
 
 
 class ScenarioCard(MongoBaseModel):
     id: Optional[str] = Field(None, alias='_id')
     domain_id: str
     user_id: str
-    template_type: str
-    scenario_context: str
+    card_format: str = 'game_theory'
+    template_type: Optional[str] = None
+    scenario_context: Optional[str] = None
     question: str
-    predicted_outcome: str
-    game_theory_explanation: str
+    predicted_outcome: Optional[str] = None
+    game_theory_explanation: Optional[str] = None
     media_urls: list[str] = []
-    probability_heat_score: int
+    probability_heat_score: Optional[int] = None
     visual_prompt_idea: Optional[str] = None
+    options: Optional[list[str]] = None
+    correct_answer: Optional[str] = None
+    explanation: Optional[str] = None
     created_at: datetime
 
 
 class GenerateCardRequest(BaseModel):
     domain_id: str
     context: Optional[str] = None
+    card_format: str = 'game_theory'
 
 
 class ScenarioCardUpdate(BaseModel):
+    card_format: Optional[str] = None
     template_type: Optional[str] = None
     scenario_context: Optional[str] = None
     question: Optional[str] = None
@@ -469,6 +479,9 @@ class ScenarioCardUpdate(BaseModel):
     game_theory_explanation: Optional[str] = None
     probability_heat_score: Optional[int] = None
     visual_prompt_idea: Optional[str] = None
+    options: Optional[list[str]] = None
+    correct_answer: Optional[str] = None
+    explanation: Optional[str] = None
 
 
 class ImageImproveRequest(BaseModel):

@@ -1,59 +1,71 @@
 export const DEMO_CARDS = [
     {
         id: 'demo-1',
+        card_format: 'concurso_certo_errado',
         template_type: 'if_then',
-        probability_heat_score: 72,
-        scenario_context:
-            'Você está a negociar um aumento salarial. O teu gestor diz que o orçamento para aumentos está "congelado este trimestre", mas você sabe que um colega acabou de ser promovido.',
-        question:
-            'Se o gestor usa a restrição de "budget congelado", qual é a jogada dominante que maximiza o teu payoff sem queimar a relação?',
-        predicted_outcome:
-            'O "budget congelado" é uma âncora de negociação, não uma restrição real. Aceitar silenciosamente sinaliza que este frame funcionou e será repetido.',
-        game_theory_explanation:
-            'Este é um Jogo de Barganha com Assimetria de Informação. O gestor tem incentivo em minimizar o custo salarial. A estratégia dominante é converter o jogo de 1 rodada para multi-rodada: "Entendo o constrangimento de agora. Posso propor definirmos métricas concretas para revisitar isto em Janeiro?" Isto preserva a relação, sinaliza valor e cria um compromisso público do gestor.',
-        media_urls: ['/media/cards/demo-1.png'],
+        probability_heat_score: 95,
+        scenario_context: 'Direito Administrativo - Atos Administrativos',
+        question: 'A presunção de legitimidade dos atos administrativos é absoluta, o que impede que o particular produza prova em contrário até que haja decisão judicial transitada em julgado.',
+        predicted_outcome: 'Errado',
+        correct_answer: 'Errado',
+        explanation: 'A presunção de legitimidade e veracidade dos atos administrativos é RELATIVA (juris tantum). Ela admite prova em contrário pelo particular, que tem o ônus de provar eventual vício no ato.',
+        media_urls: [],
     },
     {
         id: 'demo-2',
-        template_type: 'black_swan',
+        card_format: 'concurso_multipla_escolha',
+        template_type: 'payoff_matrix',
         probability_heat_score: 88,
-        scenario_context:
-            'Combinaste um jantar com alguém que conheceste online. 20 minutos antes do encontro, ela cancela com "surgiu uma emergência de trabalho". Três horas depois envia uma selfie num bar com amigos.',
-        question:
-            'Como interpretas este sinal pela lente da Teoria dos Jogos, e qual é o próximo movimento que melhor preserva o teu Status Signal?',
-        predicted_outcome:
-            'O sinal indica teste de reacção ou baixo custo percebido da tua presença. Reagir imediatamente confirma alto investimento emocional e reduz o teu poder de barganha.',
-        game_theory_explanation:
-            'Em jogos de atracção, o valor percebido (Status Signal) é inversamente proporcional à disponibilidade aparente. O cancelamento foi um teste de Costly Signal — a selfie foi a verificação. A jogada ótima: não reages por 24–48h. Depois reinicias com um frame diferente de alto status: "Vi algo que acho que ia interessar-te — [referência específica ao que ela gosta]." Isto reposiciona-te como o agente de iniciativa, não o receptor.',
-        media_urls: ['/media/cards/demo-2.png'],
+        scenario_context: 'Direito Constitucional - Direitos Fundamentais',
+        question: 'Sobre o direito de propriedade garantido na Constituição Federal de 1988, é correto afirmar:',
+        options: [
+            'A propriedade atenderá a sua função social, exceto a propriedade rural produtiva.',
+            'No caso de perigo público iminente, a autoridade competente não poderá usar de propriedade particular sem autorização judicial prévia.',
+            'A lei estabelecerá o procedimento para desapropriação por necessidade ou utilidade pública, mediante justa e prévia indenização em dinheiro.',
+            'A sucessão de bens de estrangeiros situados no País será sempre regulada pela lei brasileira em benefício do cônjuge brasileiro.',
+            'A pequena propriedade rural, mesmo que não trabalhada pela família, é impenhorável para pagamento de débitos.'
+        ],
+        predicted_outcome: 'A lei estabelece o procedimento para desapropriação por necessidade ou utilidade pública, mediante justa e prévia indenização em dinheiro.',
+        correct_answer: 'A lei estabelecerá o procedimento para desapropriação por necessidade ou utilidade pública, mediante justa e prévia indenização em dinheiro.',
+        explanation: 'A alternativa correta é a C (Art. 5º, XXIV da CF/88). Exceções à indenização prévia e em dinheiro incluem a desapropriação-sanção urbana (títulos da dívida pública) e rural (títulos da dívida agrária).',
+        media_urls: [],
     },
     {
         id: 'demo-3',
-        template_type: 'payoff_matrix',
-        probability_heat_score: 61,
-        scenario_context:
-            'O teu colega apresentou o trabalho que desenvolvestes juntos numa reunião com a direção, sem te mencionar. O teu gestor elogiou o colega publicamente.',
-        question:
-            'Cooperas em silêncio, confrontas o colega em privado, ou clarificas a tua contribuição ao gestor? Qual estratégia maximiza o teu payoff a longo prazo?',
-        predicted_outcome:
-            'Silêncio cria precedente que o comportamento tem custo zero. Confronto directo tem risco de parecer mesquinho. A jogada ótima é reframing de contribuição com o gestor num contexto natural.',
-        game_theory_explanation:
-            'Este é um Dilema do Prisioneiro assimétrico com elemento de Reputação. Cooperação silenciosa é dominada — cria incentivo para o colega repetir. Confronto directo tem alto risco de reputação negativa. A estratégia ótima: "Fico contente que a análise que o X e eu trabalhámos sobre [tema] tenha ressoado — temos mais dados se quiserem aprofundar." Clarifica a tua contribuição, posiciona-te como colaborador valioso e não como queixoso.',
-        media_urls: ['/media/cards/demo-3.png'],
+        card_format: 'flashcard_basico',
+        template_type: 'black_swan',
+        probability_heat_score: 50,
+        scenario_context: 'Língua Portuguesa - Crase',
+        question: 'Quais são as três palavras essenciais em que a crase NUNCA ocorre antes?',
+        predicted_outcome: 'Verbos, palavras masculinas e pronomes de tratamento',
+        correct_answer: 'Verbos, palavras masculinas e pronomes de tratamento (na maioria dos casos)',
+        explanation: 'Dica: "Crase antes de verbo é tiro no nervo!"',
+        media_urls: [],
+    },
+    {
+        id: 'demo-4',
+        card_format: 'game_theory',
+        template_type: 'black_swan',
+        probability_heat_score: 88,
+        scenario_context: 'Combinaste um jantar com alguém que conheceste online. 20 minutos antes do encontro, ela cancela com "surgiu uma emergência de trabalho".',
+        question: 'Como interpretas este sinal pela lente da Teoria dos Jogos, e qual é o próximo movimento?',
+        predicted_outcome: 'O sinal indica teste de reacção ou baixo custo percebido da tua presença.',
+        game_theory_explanation: 'Em jogos de atracção, o valor percebido é inversamente proporcional à disponibilidade aparente...',
+        media_urls: [],
     },
 ];
 
 export const DEMO_DOMAINS = [
     {
-        domain: { id: 'demo-domain-1', name: 'Dinâmicas de Escritório', theme: 'office' },
-        stats: { cards_count: 14, due_today: 3, accuracy: 0.82 }
+        domain: { id: 'demo-domain-1', name: 'Direito Constitucional', theme: 'office' },
+        stats: { cards_count: 140, due_today: 32, accuracy: 0.82 }
     },
     {
-        domain: { id: 'demo-domain-2', name: 'Negociação Salarial', theme: 'finance' },
-        stats: { cards_count: 8, due_today: 0, accuracy: 0.95 }
+        domain: { id: 'demo-domain-2', name: 'Língua Portuguesa', theme: 'finance' },
+        stats: { cards_count: 85, due_today: 10, accuracy: 0.95 }
     },
     {
-        domain: { id: 'demo-domain-3', name: 'Atracção e Status', theme: 'dating' },
+        domain: { id: 'demo-domain-3', name: 'Dinâmicas de Escritório', theme: 'dating' },
         stats: { cards_count: 22, due_today: 5, accuracy: 0.64 }
     }
 ];
