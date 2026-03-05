@@ -1,6 +1,8 @@
 import axios from 'axios';
 import localforage from 'localforage';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 // Initialize offline storage configs
 localforage.config({
     name: 'OmniFlash',
