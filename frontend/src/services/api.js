@@ -1,6 +1,17 @@
 import axios from 'axios';
+import localforage from 'localforage';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// Initialize offline storage configs
+localforage.config({
+    name: 'OmniFlash',
+    version: 1.0,
+    storeName: 'api_cache', // GET requests
+});
+
+const offlineQueue = localforage.createInstance({
+    name: 'OmniFlash',
+    storeName: 'offline_queue', // POST actions
+});
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -21,14 +32,58 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Interceptor para tratar erros de autenticação
+// Function to generate cache keys
+const getCacheKey = (config) => {
+    return `${config.method}:${config.url}${config.params ? '?' + new URLSearchParams(config.params).toString() : ''}`;
+};
+
+// Interceptor para tratar respostas e gerenciar cache offline
 api.interceptors.response.use(
-    (response) => response,
-    (error) => {
+    async (response) => {
+        // Cache successful GET requests
+        if (response.config.method.toUpperCase() === 'GET') {
+            try {
+                const key = getCacheKey(response.config);
+                await localforage.setItem(key, response.data);
+            } catch (err) {
+                console.error('Failed to cache response', err);
+            }
+        }
+        return response;
+    },
+    async (error) => {
+        const config = error.config;
+
         if (error.response?.status === 401) {
             localStorage.removeItem('access_token');
             window.location.href = '/login';
+            return Promise.reject(error);
         }
+
+        // If network error occurs on a GET request, fallback to cache
+        if (config && config.method.toUpperCase() === 'GET' && (!error.response || error.code === 'ERR_NETWORK')) {
+            console.log('App is offline, checking cache for: ', config.url);
+            try {
+                const key = getCacheKey(config);
+                const cachedData = await localforage.getItem(key);
+
+                if (cachedData) {
+                    console.log('Serving from cache!');
+                    // Resolve with fake Axios response containing cached data
+                    return Promise.resolve({
+                        data: cachedData,
+                        status: 200,
+                        statusText: 'OK',
+                        headers: {},
+                        config: config,
+                        request: {}
+                    });
+                }
+            } catch (err) {
+                console.error('Failed fetching from cache', err);
+            }
+        }
+
         return Promise.reject(error);
     }
 );
@@ -397,11 +452,41 @@ export const srsAPI = {
     },
 
     submitReview: async (cardId, performanceRating) => {
-        const response = await api.post('/api/srs/review', {
-            card_id: cardId,
-            performance_rating: performanceRating,
-        });
-        return response.data;
+        try {
+            const response = await api.post('/api/srs/review', {
+                card_id: cardId,
+                performance_rating: performanceRating,
+            });
+            return response.data;
+        } catch (error) {
+            if (!error.response || error.code === 'ERR_NETWORK') {
+                console.log('Offline: Queuing review', cardId);
+                // Queue the review locally
+                const queue = await offlineQueue.getItem('reviews') || [];
+                queue.push({
+                    card_id: cardId,
+                    performance_rating: performanceRating,
+                    timestamp: Date.now()
+                });
+                await offlineQueue.setItem('reviews', queue);
+
+                // Optimistically update the SRS Due Cache so the card disappears from the stack
+                try {
+                    const dueKey = getCacheKey({ method: 'get', url: '/api/srs/due' });
+                    const cachedDue = await localforage.getItem(dueKey);
+                    if (cachedDue && cachedDue.due_cards) {
+                        cachedDue.due_cards = cachedDue.due_cards.filter(c => c._id !== cardId);
+                        cachedDue.total_due = Math.max(0, cachedDue.total_due - 1);
+                        await localforage.setItem(dueKey, cachedDue);
+                    }
+                } catch (e) {
+                    console.error("Failed to update optimisitic cache", e);
+                }
+
+                return { success: true, offline: true };
+            }
+            throw error;
+        }
     },
 
     getStats: async () => {
@@ -445,5 +530,46 @@ export const modelsAPI = {
         return response.data;
     },
 };
+
+// ========================================
+// Offline Sync Service
+// ========================================
+
+export const syncOfflineData = async () => {
+    if (!navigator.onLine) return;
+
+    try {
+        const queue = await offlineQueue.getItem('reviews');
+        if (queue && queue.length > 0) {
+            console.log(`Syncing ${queue.length} offline reviews...`);
+
+            // Note: We sync them one by one. In a real world we'd bulk them via a separate endpoint.
+            const successful = [];
+            for (const review of queue) {
+                try {
+                    await api.post('/api/srs/review', {
+                        card_id: review.card_id,
+                        performance_rating: review.performance_rating
+                    });
+                    successful.push(review.card_id);
+                } catch (e) {
+                    console.error("Failed to sync review", review, e);
+                }
+            }
+
+            // Remove successful from queue
+            const remaining = queue.filter(r => !successful.includes(r.card_id));
+            await offlineQueue.setItem('reviews', remaining);
+            if (successful.length > 0) {
+                console.log(`Successfully synced ${successful.length} reviews.`);
+            }
+        }
+    } catch (err) {
+        console.error('Error syncing offline data', err);
+    }
+};
+
+// Register online event listener to trigger sync automatically
+window.addEventListener('online', syncOfflineData);
 
 export default api;
