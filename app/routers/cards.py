@@ -32,7 +32,9 @@ from ..database import (
 from ..dependencies import get_current_active_user
 from ..services.image_generation import (
     MEDIA_DIR,
+    build_card_image_prompt,
     get_or_generate_card_image,
+    improve_image_with_ai,
 )
 from .schemas import (
     DefautMessage,
@@ -459,16 +461,13 @@ async def improve_card_image(  # noqa: PLR0913, PLR0917
     base_prompt = doc.get('visual_prompt_idea') or doc.get(
         'scenario_context', ''
     )
-    combined_prompt = (
-        f'{base_prompt}. Aplica o seguinte estilo artístico: {body.style_prompt}. '  # noqa: E501
-        'Mantém a qualidade cinematográfica, fotorealista, sem texto na imagem.'  # noqa: E501
-    )
     background_tasks.add_task(
-        get_or_generate_card_image,
+        improve_image_with_ai,
+        'cards',
         card_id,
-        combined_prompt,
+        body.style_prompt,
+        build_card_image_prompt(base_prompt),
         gemini_client,
-        True,
     )
 
     return DefautMessage(

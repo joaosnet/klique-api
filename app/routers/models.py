@@ -66,7 +66,10 @@ async def generate_svg_from_image(
 
         # We pass the image alongside the text prompt.
         logger.info('Enviando imagem para o Gemini para gerar modelo SVG...')
-        response = await gemini_client.generate_content([prompt, file_bytes])
+        response = await gemini_client.generate_content(
+            prompt,
+            files=[file_bytes],
+        )
 
         raw_text = response.text.strip()
 

@@ -1,7 +1,6 @@
 import asyncio
+import os
 import sys
-
-import httpx
 
 
 async def test_generation():
@@ -11,43 +10,34 @@ async def test_generation():
     from app.config import SECURE_1PSID, SECURE_1PSIDTS  # noqa: PLC0415
 
     gemini_client = GeminiClient(SECURE_1PSID, SECURE_1PSIDTS)
-    await gemini_client.init(timeout=30)
+    await gemini_client.init(
+        timeout=30,
+        auto_close=True,
+        close_delay=15,
+        auto_refresh=True,
+    )
     print('Client initialized. Generating image...')
 
-    response = await gemini_client.generate_content(
-        'Generate a picture of a house'
-    )
-    images = getattr(response, 'images', None)
+    try:
+        response = await gemini_client.generate_content(
+            'Generate an original image of a house. Do not send web images.'
+        )
+        images = getattr(response, 'images', None)
 
-    if images:
-        img = images[0]
-        url = img.url
-        print('Image url:', url)
-
-        # Pass cookies from GeminiClient
-        cookies = getattr(gemini_client, 'cookies', {})
-        if not cookies:
-            print('No cookies found on gemini_client.cookies')
-            cookies = {
-                '__Secure-1PSID': SECURE_1PSID,
-                '__Secure-1PSIDTS': SECURE_1PSIDTS,
+        if images:
+            img = images[0]
+            output_dir = os.path.join('generated_media', 'test_outputs')
+            os.makedirs(output_dir, exist_ok=True)
+            save_kwargs = {
+                'path': output_dir,
+                'filename': 'app-test-house.png',
             }
-        else:
-            print('Found cookies dict:', type(cookies))
-
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'  # noqa: E501
-        }
-
-        try:
-            async with httpx.AsyncClient(
-                follow_redirects=True, headers=headers, cookies=cookies
-            ) as client:
-                res = await client.get(url)
-                print('Cookie Download status:', res.status_code)
-                print('Downloaded bytes len:', len(res.content))
-        except Exception as e:
-            print('Cookie download failed:', e)
+            if hasattr(img, 'cookies'):
+                save_kwargs['full_size'] = True
+            saved_path = await img.save(**save_kwargs)
+            print('Saved image:', saved_path)
+    finally:
+        await gemini_client.close()
 
 
 if __name__ == '__main__':

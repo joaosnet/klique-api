@@ -9,7 +9,13 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from gemini_webapi import GeminiClient
 
-from .config import SECURE_1PSID, SECURE_1PSIDTS
+from .config import (
+    GEMINI_AUTO_CLOSE,
+    GEMINI_CLOSE_DELAY,
+    GEMINI_TIMEOUT,
+    SECURE_1PSID,
+    SECURE_1PSIDTS,
+)
 from .database import close_db_connection, get_client
 from .logger import logger
 from .routers import (
@@ -49,7 +55,12 @@ async def lifespan(app: FastAPI):
         try:
             logger.info('Inicializando cliente GeminiWeb API (MCP)')
             gemini_client = GeminiClient(SECURE_1PSID, SECURE_1PSIDTS)
-            await gemini_client.init(timeout=30)
+            await gemini_client.init(
+                timeout=GEMINI_TIMEOUT,
+                auto_close=GEMINI_AUTO_CLOSE,
+                close_delay=GEMINI_CLOSE_DELAY,
+                auto_refresh=True,
+            )
             app.state.gemini_webapi_client = gemini_client
             logger.success('Cliente GeminiWeb API inicializado com sucesso')
         except Exception as e:
@@ -74,6 +85,11 @@ async def lifespan(app: FastAPI):
     # Encerra os serviços ao finalizar a aplicação
     app.state.process_pool.shutdown()
     await stop_scheduler()
+    if gemini_client is not None:
+        try:
+            await gemini_client.close()
+        except Exception as e:
+            logger.warning(f'Falha ao encerrar GeminiWeb API: {e}')
     await close_db_connection()
 
 

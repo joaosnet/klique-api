@@ -32,6 +32,7 @@ from ..database import (
 from ..dependencies import get_current_active_user
 from ..services.image_generation import (
     MEDIA_DIR,
+    build_domain_image_prompt,
     get_or_generate_domain_image,
     improve_image_with_ai,
 )
@@ -394,10 +395,7 @@ async def improve_domain_image(  # noqa: PLR0913, PLR0917
         )
 
     theme = doc['theme']
-    base_prompt = (
-        f"Ilustração 3D atmosférica cinematográfica do conceito '{theme}', "
-        'tema de teoria dos jogos, qualidade premium.'
-    )
+    base_prompt = build_domain_image_prompt(theme)
     # Use domain_id as filename so it doesn't conflict with the shared theme cache  # noqa: E501
     background_tasks.add_task(
         improve_image_with_ai,

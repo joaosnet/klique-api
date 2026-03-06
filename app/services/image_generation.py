@@ -1,9 +1,9 @@
+import asyncio
 import os
 from typing import Any, Optional
-
-import httpx
 from bson import ObjectId
 
+from ..config import GEMINI_CONCURRENCY_LIMIT
 from ..database import (
     get_domain_images_collection,
     get_domains_collection,
@@ -15,6 +15,81 @@ MEDIA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
     'generated_media',
 )
+IMAGE_GENERATION_SEMAPHORE = asyncio.Semaphore(
+    max(1, GEMINI_CONCURRENCY_LIMIT)
+)
+
+IMAGE_NEGATIVE_PROMPT = (
+    'Sem texto, sem tipografia, sem legendas, sem watermark, '
+    'sem interface, sem colagens, sem múltiplos painéis.'
+)
+
+
+def _get_image_output_path(output_dir: str, filename: str) -> tuple[str, str]:
+    base_name = filename.rsplit('.', 1)[0]
+    expected_path = os.path.join(MEDIA_DIR, output_dir, f'{base_name}.png')
+    return base_name, expected_path
+
+
+def _build_image_request_prompt(
+    prompt: str, source_image_path: str | None = None
+) -> str:
+    cleaned_prompt = prompt.strip()
+    if source_image_path:
+        return (
+            'Edit the provided image and return a newly generated image. '
+            'Do not search for, send, or reuse web images.\n\n'
+            f'{cleaned_prompt}'
+        )
+
+    return (
+        'Generate an original image based on the following description. '
+        'Do not search for, send, or reuse web images.\n\n'
+        f'{cleaned_prompt}'
+    )
+
+
+def build_domain_image_prompt(theme: str) -> str:
+    return (
+        'Cria uma ilustração conceitual premium com estética 3D editorial, '
+        'cinematográfica e atmosférica para representar o domínio '
+        f"'{theme}'. Composição limpa, um único símbolo central forte, "
+        'iluminação dramática de estúdio, profundidade elegante, materiais '
+        'sofisticados, detalhes de alto nível e um subtil tom futurista. '
+        'A imagem deve transmitir estratégia, decisão, poder e leitura social. '
+        f'{IMAGE_NEGATIVE_PROMPT}'
+    )
+
+
+def build_card_image_prompt(visual_prompt: str) -> str:
+    return (
+        f'{visual_prompt}. Cria uma cena cinematográfica premium, '
+        'fotorealista ou hiper-realista, com foco narrativo claro, um único '
+        'momento dramático, linguagem visual editorial, profundidade de campo '
+        'controlada, iluminação intencional e composição forte. A cena deve '
+        'simbolizar tensão estratégica, consequência e leitura de contexto. '
+        f'{IMAGE_NEGATIVE_PROMPT}'
+    )
+
+
+def build_avatar_image_prompt(prompt: str) -> str:
+    return (
+        f'{prompt}. Retrato premium de busto ou close-up, expressão natural, '
+        'foco no rosto, enquadramento limpo, fundo simples e sofisticado, '
+        'iluminação cinematográfica de estúdio, pele realista, aparência '
+        'elegante, visual contemporâneo e alta definição. '
+        f'{IMAGE_NEGATIVE_PROMPT}'
+    )
+
+
+def build_style_improvement_prompt(base_prompt: str, style_prompt: str) -> str:
+    return (
+        f'{base_prompt}. Refina a imagem com o seguinte direcionamento de '
+        f'estilo: {style_prompt}. Preserva a identidade central da cena, '
+        'melhora composição, luz, materiais, contraste, coerência visual e '
+        'acabamento premium. '
+        f'{IMAGE_NEGATIVE_PROMPT}'
+    )
 
 
 async def generate_and_save_image(
@@ -23,6 +98,7 @@ async def generate_and_save_image(
     filename: str,
     gemini_client: Any,
     force: bool = False,
+    source_image_path: str | None = None,
 ) -> Optional[str]:
     """
     Usa a GeminiWeb API para gerar uma imagem.
@@ -30,8 +106,7 @@ async def generate_and_save_image(
     Se force=True, ignora o cache e regenera a imagem.
     """
     os.makedirs(os.path.join(MEDIA_DIR, output_dir), exist_ok=True)
-    base_name = filename.rsplit('.', 1)[0]
-    expected_path = os.path.join(MEDIA_DIR, output_dir, f'{base_name}.png')
+    base_name, expected_path = _get_image_output_path(output_dir, filename)
 
     if not force and os.path.exists(expected_path):
         logger.debug(f'Imagem já gerada em cache local: {expected_path}')
@@ -40,40 +115,44 @@ async def generate_and_save_image(
     try:
         logger.info(f'Gerando imagem via GeminiWeb API para: {prompt[:50]}...')
 
-        response = await gemini_client.generate_content(prompt)
-        images = getattr(response, 'images', None)
+        files = None
+        if source_image_path and os.path.exists(source_image_path):
+            files = [source_image_path]
+        elif source_image_path:
+            logger.warning(
+                f'Imagem base não encontrada para edição: {source_image_path}'
+            )
+
+        request_prompt = _build_image_request_prompt(prompt, source_image_path)
+
+        async with IMAGE_GENERATION_SEMAPHORE:
+            response = await gemini_client.generate_content(
+                request_prompt,
+                files=files,
+            )
+
+        images = getattr(response, 'images', None) or []
 
         if not images:
             logger.warning(
-                f'Gemini não retornou imagens para o prompt: {prompt[:50]}'
+                'Gemini não retornou imagens para o prompt: '
+                f'{prompt[:50]}. Resposta textual: '
+                f'{getattr(response, "text", "")[:160]}'
             )
             return None
 
-        image = images[0]
-        image_url = getattr(image, 'url', None)
-
-        if not image_url:
-            logger.warning(f'URL de imagem não encontrada para: {prompt[:50]}')
-            return None
-
-        # Headers and cookies to bypass 403 Forbidden
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-            'AppleWebKit/537.36 (KHTML, like Gecko) '
-            'Chrome/120.0.0.0 Safari/537.36'
+        image = next(
+            (candidate for candidate in images if hasattr(candidate, 'cookies')),
+            images[0],
+        )
+        save_kwargs = {
+            'path': os.path.join(MEDIA_DIR, output_dir),
+            'filename': f'{base_name}.png',
         }
-        cookies = getattr(gemini_client, 'cookies', {})
+        if hasattr(image, 'cookies'):
+            save_kwargs['full_size'] = True
 
-        # Descarregar a imagem usando httpx
-        async with httpx.AsyncClient(
-            follow_redirects=True, headers=headers, cookies=cookies
-        ) as client:
-            img_res = await client.get(image_url)
-            img_res.raise_for_status()
-            image_bytes = img_res.content
-
-        with open(expected_path, 'wb') as f:
-            f.write(image_bytes)
+        await image.save(**save_kwargs)
 
         logger.success(f'Imagem gerada e salva: {expected_path}')
         return f'{output_dir}/{base_name}.png'
@@ -106,17 +185,7 @@ async def get_or_generate_domain_image(
         )
         return abs_url
 
-    prompt = (
-        'Cria uma ilustração 3D incrivelmente atmosférica, '
-        'cinematográfica e high-end '
-        f"do conceito '{theme}'. Usa um tema visual que simbolize "
-        'estratégia e teoria dos jogos, '
-        'com um toque de tecnologia futurista subtil, iluminação '
-        'de estúdio dramática (chiaroscuro) '
-        'e um objeto simbólico central '
-        '(ex: xadrez, escalas, mapa holográfico, cartas). '
-        'Qualidade super premium, hiper detalhado, sem texto na imagem.'
-    )
+    prompt = build_domain_image_prompt(theme)
 
     path = await generate_and_save_image(
         prompt=prompt,
@@ -152,13 +221,7 @@ async def get_or_generate_card_image(
     Gera uma imagem para um card específico baseado na ideia
     sugerida pelo oráculo.
     """
-    prompt = (
-        f'{visual_prompt}. A imagem deve ter qualidade fotorealista de alto '
-        'nível, '
-        'cinematográfica, iluminação dramática, simbolizando o dilema '
-        'estratégico do '
-        'cenário em questão. Sem texto na imagem.'
-    )
+    prompt = build_card_image_prompt(visual_prompt)
 
     path = await generate_and_save_image(
         prompt=prompt,
@@ -197,17 +260,18 @@ async def improve_image_with_ai(
 
     Returns o path relativo da nova imagem ou None em caso de falha.
     """
-    combined_prompt = (
-        f'{base_prompt}. Aplica o seguinte estilo artístico: {style_prompt}. '
-        'Mantém a qualidade cinematográfica, fotorealista, '
-        'sem texto na imagem.'
+    combined_prompt = build_style_improvement_prompt(
+        base_prompt,
+        style_prompt,
     )
+    _, source_image_path = _get_image_output_path(output_dir, filename)
     return await generate_and_save_image(
         prompt=combined_prompt,
         output_dir=output_dir,
         filename=filename,
         gemini_client=gemini_client,
         force=True,
+        source_image_path=source_image_path,
     )
 
 
@@ -236,25 +300,11 @@ async def init_demo_images(gemini_client: Any) -> None:
     logger.info('Iniciando geração de mockups do modo Demo...')
 
     for theme, desc in themes.items():
-        prompt = (
-            'Cria uma ilustração 3D incrivelmente atmosférica, '
-            'cinematográfica e high-end '
-            f"do conceito '{desc}'. Usa um tema visual que simbolize "
-            'estratégia e teoria dos jogos, '
-            'com um toque de tecnologia futurista subtil, iluminação '
-            'de estúdio dramática (chiaroscuro) '
-            'e um objeto simbólico central. Sem texto na imagem.'
-        )
+        prompt = build_domain_image_prompt(desc)
         await generate_and_save_image(prompt, 'domains', theme, gemini_client)
         await asyncio.sleep(2)  # Previne rate limits
 
     for card_id, desc in cards.items():
-        prompt = (
-            f'{desc}. A imagem deve ter qualidade fotorealista de alto '
-            'nível, '
-            'cinematográfica, iluminação dramática, simbolizando o dilema '
-            'estratégico do '
-            'cenário em questão. Sem texto na imagem.'
-        )
+        prompt = build_card_image_prompt(desc)
         await generate_and_save_image(prompt, 'cards', card_id, gemini_client)
         await asyncio.sleep(2)

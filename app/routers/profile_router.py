@@ -23,6 +23,7 @@ from ..dependencies import get_current_active_user
 from ..logger import logger
 from ..services.image_generation import (
     MEDIA_DIR,
+    build_avatar_image_prompt,
     generate_and_save_image,
     improve_image_with_ai,
 )
@@ -126,10 +127,7 @@ async def generate_avatar(
             status_code=503, detail='Motor de IA não está configurado.'
         )
 
-    full_prompt = (
-        f'{prompt}. Retrato artístico de alta qualidade, '
-        'cinematográfico, iluminação dramática de estúdio, sem texto.'
-    )
+    full_prompt = build_avatar_image_prompt(prompt)
 
     async def _generate_and_update():
         avatars_dir = os.path.join(MEDIA_DIR, 'avatars')
@@ -202,7 +200,7 @@ async def upload_avatar(  # noqa: PLR0913, PLR0917
         )  # noqa: E501
         if gemini_client:
             base_prompt = (
-                'Retrato artístico de alta qualidade, cinematográfico'  # noqa: E501
+                'Retrato premium cinematográfico com foco no rosto'  # noqa: E501
             )
             background_tasks.add_task(
                 improve_image_with_ai,
