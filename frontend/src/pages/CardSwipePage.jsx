@@ -55,6 +55,10 @@ export default function CardSwipePage() {
   const [showCTAModal, setShowCTAModal] = useState(false);
   const [demoComplete, setDemoComplete] = useState(false);
 
+  const progressLabel = typeof progress?.message === 'string' && progress.message.trim()
+    ? progress.message
+    : t('training.generating');
+
   useEffect(() => {
     if (!isAuthenticated) {
       const demoDomain = DEMO_DOMAINS.find(d => d.domain.id === domainId);
@@ -406,7 +410,7 @@ export default function CardSwipePage() {
                   disabled={generating}
                   style={{ width: '100%', padding: '12px 0', borderRadius: 10, border: '1px solid var(--accent)', background: generating ? 'var(--bg-card-inner)' : 'transparent', color: 'var(--accent)', fontSize: 12, fontWeight: 700, letterSpacing: 1, cursor: generating ? 'default' : 'pointer', textTransform: 'uppercase', transition: 'background 0.2s' }}
                 >
-                  {generating ? (progress ? `${progress.message} (${progress.percent}%)` : t('training.generating')) : t('training.generateNewScenario')}
+                  {generating ? (progress ? `${progressLabel} (${progress.percent}%)` : t('training.generating')) : t('training.generateNewScenario')}
                 </button>
 
                 {error && (

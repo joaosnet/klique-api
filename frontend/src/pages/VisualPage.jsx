@@ -28,23 +28,37 @@ export default function VisualPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const loadDomains = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await domainsAPI.list();
-        setDomains(Array.isArray(data) ? data : []);
-      } catch (e) {
-        setError(e?.message || t('visual.error_load_decks'));
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadDomains = async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError('');
+    try {
+      const data = await domainsAPI.list();
+      setDomains(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setError(e?.message || t('visual.error_load_decks'));
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadDomains();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (domains.length === 0) return;
+
+    const hasPendingImages = domains.some(({ domain }) => !domain.image_url);
+    if (!hasPendingImages) return;
+
+    const intervalId = window.setInterval(() => {
+      loadDomains(true);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [domains]);
 
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme);

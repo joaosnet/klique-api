@@ -91,34 +91,46 @@ export default function DashboardPage() {
   });
 
   // Fetch domains from API
-  useEffect(() => {
-    const loadDomains = async () => {
-      setDomainsLoading(true);
-      try {
-        const data = await domainsAPI.list();
-        setDomains(data);
-        // Initialize studyData for any new domains
-        setStudyData(prev => {
-          const updated = { ...prev };
-          data.forEach(({ domain }) => {
-            if (!updated[domain.id]) {
-              updated[domain.id] = { hours: 0, questions: 0, correct: 0, progress: 0 };
-            }
-          });
-          return updated;
+  const loadDomains = async (silent = false) => {
+    if (!silent) setDomainsLoading(true);
+    try {
+      const data = await domainsAPI.list();
+      setDomains(data);
+      setStudyData(prev => {
+        const updated = { ...prev };
+        data.forEach(({ domain }) => {
+          if (!updated[domain.id]) {
+            updated[domain.id] = { hours: 0, questions: 0, correct: 0, progress: 0 };
+          }
         });
-        // Set default logForm subject to first domain
-        if (data.length > 0) {
-          setLogForm(prev => prev.subject ? prev : { ...prev, subject: data[0].domain.id });
-        }
-      } catch (e) {
-        console.error('Error fetching domains:', e);
-      } finally {
-        setDomainsLoading(false);
+        return updated;
+      });
+      if (data.length > 0) {
+        setLogForm(prev => prev.subject ? prev : { ...prev, subject: data[0].domain.id });
       }
-    };
+    } catch (e) {
+      console.error('Error fetching domains:', e);
+    } finally {
+      if (!silent) setDomainsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadDomains();
   }, []);
+
+  useEffect(() => {
+    if (domains.length === 0) return;
+
+    const hasPendingImages = domains.some(({ domain }) => !domain.image_url);
+    if (!hasPendingImages) return;
+
+    const intervalId = window.setInterval(() => {
+      loadDomains(true);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [domains]);
 
   // Build a map of domain id -> label for easy lookup
   const domainLabels = {};

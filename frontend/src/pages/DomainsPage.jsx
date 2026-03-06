@@ -109,8 +109,8 @@ export default function DomainsPage() {
   const [editingDomain, setEditingDomain] = useState(null);
   const { t } = useTranslation();
 
-  const loadDomains = async () => {
-    setLoading(true);
+  const loadDomains = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       if (!isAuthenticated) {
         setDomains(DEMO_DOMAINS);
@@ -121,7 +121,7 @@ export default function DomainsPage() {
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -129,6 +129,20 @@ export default function DomainsPage() {
     loadDomains();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || domains.length === 0) return;
+
+    const hasPendingImages = domains.some(({ domain }) => !domain.image_url);
+    if (!hasPendingImages) return;
+
+    const intervalId = window.setInterval(() => {
+      loadDomains(true);
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, domains]);
 
   const handleCreate = async (name, theme) => {
     await domainsAPI.create(name, theme);

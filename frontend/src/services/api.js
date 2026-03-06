@@ -12,6 +12,37 @@ export function resolveApiUrl(path = '') {
     return `${API_BASE_URL}${normalizedPath}`;
 }
 
+function normalizeErrorDetail(detail) {
+    if (!detail) return null;
+    if (typeof detail === 'string') return detail;
+
+    if (Array.isArray(detail)) {
+        const parts = detail
+            .map((item) => normalizeErrorDetail(item))
+            .filter(Boolean);
+        return parts.length ? parts.join(' | ') : null;
+    }
+
+    if (typeof detail === 'object') {
+        if (typeof detail.message === 'string' && detail.message.trim()) {
+            return detail.message;
+        }
+
+        const location = Array.isArray(detail.loc) ? detail.loc.join('.') : null;
+        const message = typeof detail.msg === 'string' ? detail.msg : null;
+
+        if (location && message) {
+            return `${location}: ${message}`;
+        }
+
+        if (message) {
+            return message;
+        }
+    }
+
+    return null;
+}
+
 // Initialize offline storage configs
 localforage.config({
     name: 'OmniFlash',
@@ -372,7 +403,8 @@ export const cardsAPI = {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || 'Error generating card');
+            const message = normalizeErrorDetail(errorData.detail) || 'Error generating card';
+            throw new Error(message);
         }
 
         return _readSSEStream(response, onProgress);
