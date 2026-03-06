@@ -123,7 +123,7 @@ export default function ProfilePage() {
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 }}>
                     <button
                         onClick={() => setAvatarSection(avatarSection === 'generate' ? null : 'generate')}
-                        style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #7c3aed', background: avatarSection === 'generate' ? '#7c3aed22' : 'transparent', color: '#a78bfa', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
+                        style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--accent)', background: avatarSection === 'generate' ? 'color-mix(in srgb, var(--accent) 13%, transparent)' : 'transparent', color: 'var(--accent-light)', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
                     >
                         {t('profile.change_avatar')}
                     </button>
@@ -156,7 +156,7 @@ export default function ProfilePage() {
                         <button
                             onClick={handleGenerateAvatar}
                             disabled={avatarLoading || !generatePrompt.trim()}
-                            style={{ marginTop: 6, width: '100%', padding: '8px 0', borderRadius: 6, background: '#7c3aed', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: (!generatePrompt.trim() || avatarLoading) ? 0.5 : 1 }}
+                            style={{ marginTop: 6, width: '100%', padding: '8px 0', borderRadius: 6, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: (!generatePrompt.trim() || avatarLoading) ? 0.5 : 1 }}
                         >
                             {avatarLoading ? t('common.loading') : t('profile.change_avatar')}
                         </button>

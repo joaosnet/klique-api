@@ -1,13 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errorHandler';
-import { googleSignInNative, appleSignInWeb, appleSignInNative, isNativePlatform } from '../utils/socialAuth';
-import { IconPasswordLock, IconWhatsApp, IconEmailMagic, IconPasskeyBadge, IconGoogle, IconApple } from '../components/Icons/AuthIcons';
-
+import { IconPasswordLock, IconWhatsApp, IconEmailMagic, IconPasskeyBadge } from '../components/Icons/AuthIcons';
+import GoogleLoginButton from '../components/Auth/GoogleLoginButton';
+import AppleLoginButton from '../components/Auth/AppleLoginButton';
 export default function LoginPage() {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
@@ -18,69 +17,8 @@ export default function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, loginWithOTP, loginWithGoogle, loginWithApple, lazyRegister, loginWithPasskey } = useAuth();
+  const { login, loginWithOTP, lazyRegister, loginWithPasskey } = useAuth();
   const navigate = useNavigate();
-
-  const handleGoogleLoginWeb = useGoogleLogin({
-    flow: 'implicit',
-    onSuccess: async (tokenResponse) => {
-      setError('');
-      setLoading(true);
-      try {
-        await loginWithGoogle(tokenResponse.access_token);
-        navigate('/dominios');
-      } catch (err) {
-        setError(getErrorMessage(err, t('login.error_google')));
-      } finally {
-        setLoading(false);
-      }
-    },
-    onError: () => setError(t('login.error_google')),
-  });
-
-  const handleGoogleLogin = useCallback(async () => {
-    setError('');
-    setLoading(true);
-    try {
-      if (isNativePlatform()) {
-        // Native Android: Capacitor plugin returns id_token directly
-        const idToken = await googleSignInNative();
-        await loginWithGoogle(idToken);
-        navigate('/dominios');
-      } else {
-        // Web: trigger the Google OAuth popup
-        setLoading(false);
-        handleGoogleLoginWeb();
-      }
-    } catch (err) {
-      setError(getErrorMessage(err, t('login.error_google')));
-      setLoading(false);
-    }
-  }, [handleGoogleLoginWeb, loginWithGoogle, navigate, t]);
-
-  const handleAppleLogin = useCallback(async () => {
-    setError('');
-    setLoading(true);
-    try {
-      let idToken, name;
-      if (isNativePlatform()) {
-        ({ idToken, name } = await appleSignInNative());
-      } else {
-        ({ idToken, name } = await appleSignInWeb());
-      }
-      await loginWithApple(idToken, name);
-      navigate('/dominios');
-    } catch (err) {
-      // User cancelled the popup — don't show error
-      if (err?.message?.includes('popup') || err?.code === 'SIGN_IN_CANCELED') {
-        setLoading(false);
-        return;
-      }
-      setError(getErrorMessage(err, t('login.error_apple')));
-    } finally {
-      setLoading(false);
-    }
-  }, [loginWithApple, navigate, t]);
 
   const handlePasskeyLogin = async (e) => {
     e.preventDefault();
@@ -210,24 +148,8 @@ export default function LoginPage() {
 
           {/* Social Buttons */}
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-[var(--text-main)] transition-all hover:bg-[var(--bg-card-inner)]"
-              style={{ border: '1px solid var(--border-color)' }}
-            >
-              <IconGoogle className="w-4 h-4" />
-              {t('login.google')}
-            </button>
-            <button
-              type="button"
-              onClick={handleAppleLogin}
-              className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold text-[var(--text-main)] transition-all hover:bg-[var(--bg-card-inner)]"
-              style={{ border: '1px solid var(--border-color)' }}
-            >
-              <IconApple className="w-4 h-4" />
-              {t('login.apple')}
-            </button>
+            <GoogleLoginButton setLoading={setLoading} setError={setError} isRegister={false} />
+            <AppleLoginButton setLoading={setLoading} setError={setError} isRegister={false} />
           </div>
 
           <div className="relative mb-6">

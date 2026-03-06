@@ -94,3 +94,19 @@ export async function appleSignInNative() {
 export function isNativePlatform() {
     return Capacitor.isNativePlatform();
 }
+
+/**
+ * Check if the Google Client ID is valid enough to render the Google Auth Provider
+ */
+export function isGoogleAuthValid() {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    return Boolean(clientId && clientId !== 'undefined' && clientId.trim().length > 5);
+}
+
+/**
+ * Check if the Apple Client ID is valid enough to render the Apple Auth Button
+ */
+export function isAppleAuthValid() {
+    const clientId = import.meta.env.VITE_APPLE_CLIENT_ID;
+    return Boolean(clientId && clientId !== 'undefined' && clientId.trim().length > 5);
+}

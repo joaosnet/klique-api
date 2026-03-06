@@ -73,27 +73,27 @@ export default function TrainingPage() {
 
   if (done) {
     return (
-      <div style={{ minHeight: 'calc(100vh - 56px)', background: '#12121a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: '2rem' }}>
+      <div style={{ minHeight: 'calc(100vh - 56px)', background: 'var(--bg-app)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: '2rem' }}>
         <div style={{ textAlign: 'center' }}><IconSparkBoost width={56} height={56} /></div>
-        <h2 style={{ color: '#e9d5ff', fontSize: 22, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
+        <h2 style={{ color: 'var(--text-highlight)', fontSize: 22, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', margin: 0 }}>
           {t('training.finish')}
         </h2>
-        <p style={{ color: '#6b7280', fontSize: 14, textAlign: 'center', maxWidth: 320 }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', maxWidth: 320 }}>
           {t('training.results', { count: dueCards.length || 0 })}
         </p>
         {stats && (
           <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ color: '#7c3aed', fontSize: 28, fontWeight: 800 }}>{stats.total_trained}</div>
-              <div style={{ color: '#6b7280', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>{t('training.cards_reviewed')}</div>
+              <div style={{ color: 'var(--accent)', fontSize: 28, fontWeight: 800 }}>{stats.total_trained}</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>{t('training.cards_reviewed')}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: '#f59e0b', fontSize: 28, fontWeight: 800 }}>{stats.streak_days}</div>
-              <div style={{ color: '#6b7280', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>{t('training.streak')}</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>{t('training.streak')}</div>
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ color: '#22c55e', fontSize: 28, fontWeight: 800 }}>{stats.cards_mastered}</div>
-              <div style={{ color: '#6b7280', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>{t('training.mastered')}</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>{t('training.mastered')}</div>
             </div>
           </div>
         )}

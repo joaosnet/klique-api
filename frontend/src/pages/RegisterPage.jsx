@@ -1,80 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
 import { getErrorMessage } from '../utils/errorHandler';
-import { googleSignInNative, appleSignInWeb, appleSignInNative, isNativePlatform } from '../utils/socialAuth';
 import { IconCameraShot, IconSparkBoost } from '../components/Icons/ActionIcons';
-import { IconGoogle, IconApple } from '../components/Icons/AuthIcons';
 import { useTranslation } from 'react-i18next';
+import GoogleLoginButton from '../components/Auth/GoogleLoginButton';
+import AppleLoginButton from '../components/Auth/AppleLoginButton';
 
 // ── Step 1: Basic Data ───────────────────────────────────────────────────────
 function StepBasicData({ data, onChange, onNext }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [usePasskey, setUsePasskey] = useState(false);
-  const { login, loginWithGoogle, loginWithApple, registerPasskey } = useAuth();
+  const { login, registerPasskey } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
-
-  const handleGoogleLoginWeb = useGoogleLogin({
-    flow: 'implicit',
-    onSuccess: async (tokenResponse) => {
-      setError('');
-      setLoading(true);
-      try {
-        await loginWithGoogle(tokenResponse.access_token);
-        navigate('/dominios');
-      } catch (err) {
-        setError(getErrorMessage(err, t('register.error_google')));
-      } finally {
-        setLoading(false);
-      }
-    },
-    onError: () => setError(t('register.error_google')),
-  });
-
-  const handleGoogleLogin = useCallback(async () => {
-    setError('');
-    setLoading(true);
-    try {
-      if (isNativePlatform()) {
-        const idToken = await googleSignInNative();
-        await loginWithGoogle(idToken);
-        navigate('/dominios');
-      } else {
-        setLoading(false);
-        handleGoogleLoginWeb();
-      }
-    } catch (err) {
-      setError(getErrorMessage(err, t('register.error_google')));
-      setLoading(false);
-    }
-  }, [handleGoogleLoginWeb, loginWithGoogle, navigate, t]);
-
-  const handleAppleLogin = useCallback(async () => {
-    setError('');
-    setLoading(true);
-    try {
-      let idToken, name;
-      if (isNativePlatform()) {
-        ({ idToken, name } = await appleSignInNative());
-      } else {
-        ({ idToken, name } = await appleSignInWeb());
-      }
-      await loginWithApple(idToken, name);
-      navigate('/dominios');
-    } catch (err) {
-      if (err?.message?.includes('popup') || err?.code === 'SIGN_IN_CANCELED') {
-        setLoading(false);
-        return;
-      }
-      setError(getErrorMessage(err, t('register.error_apple')));
-    } finally {
-      setLoading(false);
-    }
-  }, [loginWithApple, navigate, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -121,32 +62,8 @@ function StepBasicData({ data, onChange, onNext }) {
     <div className="space-y-6">
       {/* Social Buttons */}
       <div className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all"
-          style={{
-            color: 'var(--text-main)',
-            border: '1px solid var(--border-color)',
-            background: 'transparent',
-          }}
-        >
-          <IconGoogle className="w-4 h-4" />
-          {t('register.google')}
-        </button>
-        <button
-          type="button"
-          onClick={handleAppleLogin}
-          className="flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition-all"
-          style={{
-            color: 'var(--text-main)',
-            border: '1px solid var(--border-color)',
-            background: 'transparent',
-          }}
-        >
-          <IconApple className="w-4 h-4" />
-          {t('register.apple')}
-        </button>
+        <GoogleLoginButton setLoading={setLoading} setError={setError} isRegister={true} />
+        <AppleLoginButton setLoading={setLoading} setError={setError} isRegister={true} />
       </div>
 
       <div className="relative">

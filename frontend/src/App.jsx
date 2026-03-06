@@ -50,6 +50,7 @@ function AppRoutes() {
 
 import { useDynamicStatusBar } from './hooks/useDynamicStatusBar';
 import { useThemeInit } from './hooks/useThemeInit';
+import { isGoogleAuthValid } from './utils/socialAuth';
 
 function DynamicStatusBarHandler() {
   useDynamicStatusBar();
@@ -71,6 +72,7 @@ function AppShell() {
 }
 
 export default function App() {
+  const isGoogleValid = isGoogleAuthValid();
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   const inner = (
@@ -82,7 +84,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      {googleClientId ? (
+      {isGoogleValid ? (
         <GoogleOAuthProvider clientId={googleClientId}>
           {inner}
         </GoogleOAuthProvider>
