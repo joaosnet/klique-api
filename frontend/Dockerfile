@@ -14,6 +14,15 @@ RUN npm install
 
 # Copy source code and build static assets
 COPY --chown=node:node . .
+
+# Receive build arguments (must be declared after FROM to be in scope)
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ARG VITE_APPLE_CLIENT_ID
+ENV VITE_APPLE_CLIENT_ID=$VITE_APPLE_CLIENT_ID
+ARG VITE_APPLE_REDIRECT_URI
+ENV VITE_APPLE_REDIRECT_URI=$VITE_APPLE_REDIRECT_URI
+
 RUN npm run build
 
 # Serve static assets with an unprivileged Nginx runtime

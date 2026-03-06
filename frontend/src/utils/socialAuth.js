@@ -32,6 +32,9 @@ export async function appleSignInWeb() {
     }
 
     const clientId = import.meta.env.VITE_APPLE_CLIENT_ID;
+    if (!clientId) {
+        throw new Error('Apple Sign-In is not configured (missing VITE_APPLE_CLIENT_ID).');
+    }
     const redirectURI = import.meta.env.VITE_APPLE_REDIRECT_URI || window.location.origin;
 
     window.AppleID.auth.init({
@@ -63,8 +66,12 @@ export async function appleSignInWeb() {
  */
 export async function appleSignInNative() {
     const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
+    const clientId = import.meta.env.VITE_APPLE_CLIENT_ID;
+    if (!clientId) {
+        throw new Error('Apple Sign-In is not configured (missing VITE_APPLE_CLIENT_ID).');
+    }
     const result = await SignInWithApple.authorize({
-        clientId: import.meta.env.VITE_APPLE_CLIENT_ID,
+        clientId,
         redirectURI: import.meta.env.VITE_APPLE_REDIRECT_URI || window.location.origin,
         scopes: 'name email',
     });

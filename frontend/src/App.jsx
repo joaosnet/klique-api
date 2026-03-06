@@ -73,14 +73,22 @@ function AppShell() {
 export default function App() {
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
+  const inner = (
+    <AuthProvider>
+      <DynamicStatusBarHandler />
+      <AppShell />
+    </AuthProvider>
+  );
+
   return (
     <BrowserRouter>
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <AuthProvider>
-          <DynamicStatusBarHandler />
-          <AppShell />
-        </AuthProvider>
-      </GoogleOAuthProvider>
+      {googleClientId ? (
+        <GoogleOAuthProvider clientId={googleClientId}>
+          {inner}
+        </GoogleOAuthProvider>
+      ) : (
+        inner
+      )}
     </BrowserRouter>
   );
 }
