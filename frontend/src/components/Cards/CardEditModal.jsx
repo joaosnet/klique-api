@@ -1,14 +1,12 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cardsAPI } from '../../services/api';
+import { cardsAPI, resolveApiUrl } from '../../services/api';
 
 const TEMPLATES = [
   { value: 'if_then', labelKey: 'cardEdit.type_if_then', color: '#3b82f6' },
   { value: 'payoff_matrix', labelKey: 'cardEdit.type_payoff', color: '#f59e0b' },
   { value: 'black_swan', labelKey: 'cardEdit.type_black_swan', color: '#ef4444' },
 ];
-
-const API_URL = import.meta.env.VITE_API_URL || '';
 
 const inputStyle = {
   width: '100%',
@@ -67,7 +65,7 @@ export default function CardEditModal({ card, cardId, onSave, onClose }) {
   const [error, setError] = useState('');
 
   const currentImageUrl = card.media_urls && card.media_urls[0]
-    ? `${API_URL}${card.media_urls[0]}`
+    ? resolveApiUrl(card.media_urls[0])
     : null;
 
   const executeImageAction = async (action, prompt) => {

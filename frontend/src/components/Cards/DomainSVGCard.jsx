@@ -4,6 +4,7 @@
 
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { resolveApiUrl } from '../../services/api';
 import { ThemeIcon } from './../Icons/ThemeIcons';
 
 const THEME_MAP = {
@@ -105,7 +106,7 @@ export default function DomainSVGCard({ domain, stats, onClick }) {
                         {domain.image_url ? (
                             <>
                                 <image
-                                    href={`${import.meta.env.VITE_API_URL || ''}${domain.image_url}`}
+                                    href={resolveApiUrl(domain.image_url)}
                                     x="0" y="0" width="300" height="130"
                                     preserveAspectRatio="xMidYMid slice"
                                 />

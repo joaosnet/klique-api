@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { domainsAPI } from '../../services/api';
+import { domainsAPI, resolveApiUrl } from '../../services/api';
 
 const THEMES = [
   { value: 'dating', labelKey: 'domains.theme_dating' },
@@ -11,8 +11,6 @@ const THEMES = [
   { value: 'social', labelKey: 'domains.theme_social' },
   { value: 'custom', labelKey: 'domains.theme_custom' },
 ];
-
-const API_URL = import.meta.env.VITE_API_URL || '';
 
 const inputStyle = {
   width: '100%',
@@ -64,7 +62,7 @@ export default function DomainEditModal({ domain, onSave, onClose }) {
   const [error, setError] = useState('');
 
   const currentImageUrl = domain.image_url
-    ? (domain.image_url.startsWith('http') ? domain.image_url : `${API_URL}${domain.image_url}`)
+    ? resolveApiUrl(domain.image_url)
     : null;
 
   const finalTheme = theme === 'custom'

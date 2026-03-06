@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { profileAPI } from '../services/api';
+import { profileAPI, resolveApiUrl } from '../services/api';
 import { IconLogout } from '../components/Icons/StatIcons';
 import './ProfilePage.css';
 import { useTranslation } from 'react-i18next';
-
-const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function ProfilePage() {
     const { user, logout } = useAuth();
@@ -88,7 +86,7 @@ export default function ProfilePage() {
     };
 
     const avatarUrl = profile?.avatar_url
-        ? (profile.avatar_url.startsWith('http') ? profile.avatar_url : `${API_URL}${profile.avatar_url}`)
+        ? resolveApiUrl(profile.avatar_url)
         : null;
 
     const displayName = profile?.name || profile?.nickname || user?.name || '';

@@ -1,7 +1,16 @@
 import axios from 'axios';
 import localforage from 'localforage';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const ENV_API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || '';
+export const API_BASE_URL = ENV_API_BASE_URL.replace(/\/+$/, '');
+
+export function resolveApiUrl(path = '') {
+    if (!path) return API_BASE_URL;
+    if (/^https?:\/\//i.test(path)) return path;
+
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${API_BASE_URL}${normalizedPath}`;
+}
 
 // Initialize offline storage configs
 localforage.config({
@@ -333,15 +342,32 @@ async function _readSSEStream(response, onProgress) {
 }
 
 export const cardsAPI = {
-    generateStream: async (domainId, context = null, onProgress) => {
+    generateStream: async (domainOrRequest, contextOrOnProgress = null, onProgressMaybe) => {
         const token = localStorage.getItem('access_token');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers.Authorization = `Bearer ${token}`;
 
-        const response = await fetch(`${API_BASE_URL}/api/cards/generate-stream`, {
+        const isRequestObject = typeof domainOrRequest === 'object' && domainOrRequest !== null && !Array.isArray(domainOrRequest);
+        const requestBody = isRequestObject
+            ? {
+                domain_id: domainOrRequest.domain_id,
+                context: domainOrRequest.context ?? null,
+                card_format: domainOrRequest.card_format ?? 'game_theory',
+            }
+            : {
+                domain_id: domainOrRequest,
+                context: typeof contextOrOnProgress === 'function' ? null : contextOrOnProgress,
+                card_format: 'game_theory',
+            };
+
+        const onProgress = typeof contextOrOnProgress === 'function'
+            ? contextOrOnProgress
+            : onProgressMaybe;
+
+        const response = await fetch(resolveApiUrl('/api/cards/generate-stream'), {
             method: 'POST',
             headers,
-            body: JSON.stringify({ domain_id: domainId, context }),
+            body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {

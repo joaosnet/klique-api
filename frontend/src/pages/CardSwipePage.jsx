@@ -10,8 +10,6 @@ import { useAuth } from '../context/AuthContext';
 import { DEMO_CARDS, DEMO_DOMAINS } from '../utils/demoData';
 import { IconDeckCard, IconDelete, IconEditPen, IconSparkBoost } from '../components/Icons/ActionIcons';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
-
 const TEMPLATE_COLORS = {
   if_then: '#3b82f6',
   payoff_matrix: '#f59e0b',

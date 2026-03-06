@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { resolveApiUrl } from '../../services/api';
 import { CustomSymbolTemplate } from '../Icons/ThemeIcons';
 // Props:
 //   card: { template_type, probability_heat_score, scenario_context, question,
@@ -185,7 +186,7 @@ export default function GameTheoryCard({
   const artVisual = customSvg
     ? <div className="w-full h-full absolute inset-0 z-0" dangerouslySetInnerHTML={{ __html: customSvg }} style={{ background: '#000' }} />
     : card.media_urls && card.media_urls[0]
-      ? <img src={`${import.meta.env.VITE_API_URL || ''}${card.media_urls[0]}`} className="w-full h-full object-cover absolute inset-0 z-0 opacity-90" />
+      ? <img src={resolveApiUrl(card.media_urls[0])} className="w-full h-full object-cover absolute inset-0 z-0 opacity-90" />
       : <div className="w-full h-full absolute inset-0 z-0 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${tmpl.darkColor}, ${tmpl.color})` }}>
         <CustomSymbolTemplate type={card.template_type} width={120} height={120} color={tmpl.accentColor} opacity={0.3} />
       </div>;
