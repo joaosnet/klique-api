@@ -2,13 +2,13 @@
 
 [🇺🇸 English](#) | [🇧🇷 Português](./README.md) | [🇪🇸 Español](./README.es.md)
 
----
+<p align="center">
+  <img src="docs/demo.gif" alt="OmniFlash App Demo" width="360" />
+</p>
 
-## 🇺🇸 OmniFlash (Klique API)
+Fullstack tactical flashcards platform based on Game Theory and Spaced Repetition (SRS). The system models decision-making scenarios for students and competitive exam candidates through an analytical strategic inference engine and procedural visual synthesis.
 
-Fullstack platform for gamified flashcards with **Game Theory** elements and Artificial Intelligence. OmniFlash transforms studies using Spaced Repetition (SRS) and immersive virtual scenario analysis — ideal for student and lifelong learners who seek to optimize memorization and analytical capacity through an intelligent "Oracle".
-
-[![FastAPI](https://img.shields.io/badge/FastAPI-1.0+-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
 [![MongoDB](https://img.shields.io/badge/MongoDB-4.10+-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongodb.com)
 [![Docker](https://img.shields.io/badge/Docker-24.0+-2496ED?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
@@ -16,56 +16,97 @@ Fullstack platform for gamified flashcards with **Game Theory** elements and Art
 
 ---
 
-### 🚀 Current Project State
+## System Architecture
 
-OmniFlash has evolved into a complete study ecosystem, integrating cutting-edge technologies to offer a gamified and smart experience:
+The architecture consists of five core subsystems integrated through asynchronous events and REST interfaces:
 
-1.  **Modern Backend (FastAPI)**: Robust asynchronous REST API managing domains, card decks, Spaced Repetition logic (SRS), payments, and AI agents.
-2.  **High-Performance Frontend (React 19)**: Mobile-first interface built with Vite and Tailwind CSS v4, offering native PWA support and Android/iOS builds via Capacitor.
-3.  **Artificial Intelligence (Oracle)**: Deep integration with Google Gemini (via Official API and WebAPI) for scenario analysis, personalized feedback, and virtual mentoring.
-4.  **Automation and Notifications**: Task scheduling system (APScheduler) and WhatsApp integration for study reminders and asynchronous interactions.
-5.  **Internal Economy**: Credit system integrated with real payments via Mercado Pago (PIX).
-
-### 📂 File Structure (Filetree)
-
-```text
-klique-api/
-├── app/                        # Backend (FastAPI + Python 3.12+)
-│   ├── main.py                 # Entry point: DB, services, and route init
-│   ├── config.py               # Global settings and environment variables
-│   ├── database.py             # Asynchronous MongoDB connection layer
-│   ├── scheduler.py            # Task scheduling (Retention, Notifications)
-│   ├── logger.py               # Structured logs centralization
-│   ├── agents/                 # Intelligent Agents (LangGraph & MCP Tools)
-│   ├── routers/                # API Endpoints divided by domain
-│   └── services/               # Business logic and external integrations
-├── frontend/                   # Frontend (React 19 + Vite + Tailwind v4)
-│   ├── src/
-│   │   ├── pages/              # Screens (Dashboard, CardSwipe, Oracle, etc.)
-│   │   ├── components/         # UI Atoms, Molecules, and Organisms
-│   │   └── context/            # Global states (Auth, Theme, Multi-language)
-├── scripts/                    # Automation scripts (Create Admin, Hot Reload)
-└── pyproject.toml              # Project manifesto and dependencies via UV
-```
-
-### ⚙️ How to Run
-
-The project uses **uv** for ultra-fast Python dependency management.
-
-1.  **Backend**:
-    ```bash
-    uv sync
-    uv run task run
-    ```
-2.  **Frontend**:
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
+| Subsystem | Primary Technologies | Technical Function |
+| :--- | :--- | :--- |
+| **REST Backend** | FastAPI, Motor (AsyncIO), Pydantic v2 | Manages JWT/Passkey authentication, domains, cards, and payment settlements. |
+| **SRS Engine** | SuperMemo-2 (`_apply_sm2`), MongoDB | Calculates review intervals, ease factors (EF), and queries overdue cards. |
+| **Cognitive Agent** | LangGraph, `MemorySaver`, MultiServerMCP | Executes strategic analysis with per-user conversation isolation (`thread_id`). |
+| **Visual Synthesizer** | Gemini WebAPI, Async Semaphore, Pillow | Generates procedural 3D scenario illustrations with disk and database caching. |
+| **Reactive Frontend** | React 19, Vite, Tailwind v4, Capacitor 6 | Mobile-first UI with gesture-based card swiping, analytics, and PWA/Android packaging. |
 
 ---
 
-## 📄 License
+## Spaced Repetition Algorithm (SM-2)
 
-MIT License — See [LICENSE](./LICENSE) for details.
+Card reviews implement the SuperMemo-2 algorithm adapted for asynchronous execution:
+
+$$I(n) = \begin{cases} 1 & \text{if } q < 3 \\ 1 & \text{if } q \ge 3 \text{ and } n = 0 \\ 6 & \text{if } q \ge 3 \text{ and } n = 1 \\ \text{round}(I \times EF) & \text{if } q \ge 3 \text{ and } n \ge 2 \end{cases}$$
+
+$$EF' = \max\left(1.3, \; EF + 0.1 - (5 - q) \times (0.08 + (5 - q) \times 0.02)\right)$$
+
+- **Performance Scale ($q$)**: Ranging from 0 (complete blackout) to 5 (perfect recall).
+- **Ease Factor ($EF$)**: Initialized at 2.5 with a strict lower bound of 1.3.
+- **Persistence**: Historical review logs are stored in `simulation_logs` and scheduling state in `reviews`.
+
+---
+
+## Repository Structure
+
+```text
+klique-api/
+├── app/                        # Asynchronous API core (FastAPI + Python 3.12+)
+│   ├── main.py                 # Application entrypoint, lifespan lifecycle, and middleware
+│   ├── config.py               # Environment configuration and operational constants
+│   ├── database.py             # Asynchronous MongoDB connection pools (Motor)
+│   ├── scheduler.py            # Background job scheduling (APScheduler)
+│   ├── agents/                 # LangGraph agent, checkpointer, and MultiServerMCP client
+│   ├── routers/                # API route modules (auth, cards, srs, payments, credits, whatsapp)
+│   └── services/               # Integration clients (Mercado Pago, WhatsApp, Gemini)
+├── frontend/                   # Client application (React 19 + Vite + Tailwind v4)
+│   ├── src/pages/              # Views (CardSwipePage, TrainingPage, DashboardPage, DomainsPage)
+│   ├── src/components/         # Modular interface components and scenario card renderers
+│   └── src/context/            # Global state providers for authentication, theme, and locale
+├── docs/                       # Visual demos, architectural diagrams, and documentation assets
+├── scripts/                    # Automation utilities for admin setup, capture, and media creation
+└── pyproject.toml              # Project dependencies and tool definitions managed via uv
+```
+
+---
+
+## Setup & Execution
+
+### Prerequisites
+- Python 3.12+ with `uv` package manager
+- Node.js 20+ and npm
+- Running MongoDB instance (local or Docker container)
+
+### 1. Backend
+```bash
+# Synchronize Python dependencies
+uv sync
+
+# Start the API server
+uv run task run
+```
+The API listens by default on `http://localhost:8000`. Interactive OpenAPI documentation is accessible at `/docs`.
+
+### 2. Frontend
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the Vite development server
+npm run dev
+```
+The web application runs by default on `http://localhost:5173`.
+
+---
+
+## Architectural Documentation & Knowledge Graph
+
+This repository contains a knowledge graph generated by Graphify located in `graphify-out/`:
+- **[Architectural Report (GRAPH_REPORT.md)](./graphify-out/GRAPH_REPORT.md)**: Coupling metrics, god nodes, and cross-boundary analysis.
+- **[Engineering Wiki](./graphify-out/wiki/index.md)**: 122 articles detailing modules, including deep dives on [WhatsAppService](./graphify-out/wiki/WhatsAppService.md), [AI Agents & Visual Synthesis](./graphify-out/wiki/AI_Agents_&_Image_Generation.md), [Spaced Repetition SM-2](./graphify-out/wiki/SRS_Spaced_Repetition_&_Gamification.md), and [Virtual Economy & PIX](./graphify-out/wiki/Internal_Economy_&_PIX_Payments.md).
+- **[Interactive Graph (HTML)](./graphify-out/graph.html)**: Interactive visualizer containing 1,446 nodes and 2,882 edges.
+
+---
+
+## License
+
+MIT License. See [LICENSE](./LICENSE) for full details.
